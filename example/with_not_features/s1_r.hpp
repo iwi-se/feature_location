@@ -1,9 +1,6 @@
 #include <concepts>
 
-template <typename T>
-T factorial(T n) requires unsigned_integral<T>
+auto factorial(unsigned_integral auto n)
 {
-   return (n == 0 ? 
-              1 : 
-              n * factorial<T>(n - 1));
+  return (n == 0 ? 1 : n * factorial<T>(n - 1));
 }
