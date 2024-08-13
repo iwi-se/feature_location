@@ -1,10 +1,8 @@
-from copy import deepcopy
-from functools import reduce, cmp_to_key
 import tree_sitter_cpp as tscpp
 import sys as sys
 from tree_sitter import Language, Parser
-from itertools import product, permutations
-from treelib import Node, Tree
+from itertools import product
+from treelib import Tree
 from math import prod
 
 minimumFeatureSize = 1
