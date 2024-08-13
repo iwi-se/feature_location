@@ -14,4 +14,4 @@ example_difference_iterative:
 	python3 feature_location/feature_location.py difference example/with_not_features/s5_i.hpp example/with_not_features/s8_icl.hpp -- example/with_not_features/s1_r.hpp example/with_not_features/s4_rcl.hpp
 
 
-.PHONY: requirements test test_difference_logging test_difference_checked test_difference_iterative
+.PHONY: requirements test example_difference_logging example_difference_checked example_difference_iterative
