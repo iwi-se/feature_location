@@ -5,6 +5,7 @@ import sys as sys
 from tree_sitter import Language, Parser
 from itertools import product, permutations
 from treelib import Node, Tree
+from math import prod
 
 minimumFeatureSize = 1
 
@@ -20,9 +21,14 @@ class SourcePosition:
         self.end_point = end_point
 
     def render(self):
-        return self.file + ":" + str(self.start_point.row + 1) + "/" + str(self.start_point.column + 1) + "-" + str(self.end_point.row + 1) + "/" + str(self.end_point.column + 1)
+        return (self.file + ":" +
+                str(self.start_point.row + 1) + "/" + str(self.start_point.column + 1) +
+                "-" + str(self.end_point.row + 1) + "/" + str(self.end_point.column + 1))
 
     def relative_position(self, other):
+        # -1: self is before other, non-overlapping
+        # 0: self and other are overlapping in some way
+        # 1: self is after other, non-overlapping
         if self.start_point.row > other.end_point.row:
             return -1
         elif self.end_point.row < other.start_point.row:
@@ -35,17 +41,20 @@ class SourcePosition:
                 return 1
         else:
             return 0
-    
+
     def __eq__(self, other):
-        return self.file == other.file and self.start_point == other.start_point and self.end_point == other.end_point
-    
+        return (self.file == other.file
+                and self.start_point == other.start_point
+                and self.end_point == other.end_point)
+
     def __hash__(self):
         return hash((self.file, self.start_point, self.end_point))
 
 
 class NodeData:
     def __init__(self, node_type, node_text, source_positions: list[str],
-                 tree_positions: list[list[int]], subtree_hash=None, is_ts_leaf=False, indirect=False):
+                 tree_positions: list[list[int]], subtree_hash=None,
+                 is_ts_leaf=False, indirect=False):
         self.type = node_type
         self.text = node_text
         self.source_positions = source_positions
@@ -89,22 +98,11 @@ def preprocess(treesitter_node, file, position: list[int]):
     return tree
 
 
-def readAndPreprocess(filename):
+def read_and_preprocess(filename):
     with open(filename, "rb") as f:
         content = f.read()
         tree = parser.parse(content)
-        treePreprocessed = preprocess(tree.root_node, filename, [0])
-        return treePreprocessed
-
-
-def hasLeafs(tree):
-    potential_leaves = tree.leaves
-    return any(node.data.is_ts_leaf for node in potential_leaves)
-
-
-def hasIdentifier(tree):
-    potential_identifiers = tree.leaves
-    return any(child.data.type == "identifier" for child in potential_identifiers)
+        return preprocess(tree.root_node, filename, [0])
 
 
 def positions_do_not_cross(positions, other_positions_list):
@@ -112,239 +110,84 @@ def positions_do_not_cross(positions, other_positions_list):
         return True
     for other_positions in other_positions_list:
         result = []
-        for position, other_position in zip(positions, other_positions):
-            result.append(position.relative_position(other_position))
+        for position, other_position in product(positions, other_positions):
+            if position.file == other_position.file:
+                result.append(position.relative_position(other_position))
         if not (result[0] != 0 and all(x == result[0] for x in result)):
             return False
     return True
 
 
-intersectionResultStore = {}
-
-
-def intersection(trees):
-    if not trees:
-        return None
-    if tuple(trees) in intersectionResultStore:
-        return intersectionResultStore[tuple(trees)]
-
-    root_nodes = [tree.get_node(tree.root) for tree in trees]
-
-    # Check for IndirectDescendants
-    if any(root_node.data.indirect for root_node in root_nodes):
-        result = largestNonOverlappingIntersections(trees)
-        result.data.indirect = True
-        return result
-
-    # Check if all trees are of the same type
-    first_type = root_nodes[0].data.type
-    if any(root_node.data.type != first_type for root_node in root_nodes):
-        return largestNonOverlappingIntersections(trees)
-
-    if all(root_node.data.is_ts_leaf for root_node in root_nodes):
-        first_text = root_nodes[0].data.text
-        if not all(root_node.data.text == first_text for root_node in root_nodes):
-            return None
-
-    # Generate all combinations of indices for the children of each node
-    tl_child_identifiers_per_tree = []
+def remove_overlapping(trees):
+    result = []
+    used_source_positions = set()
+    used_root_node_source_positions = []
     for tree in trees:
-        tl_identifiers = []
-        for child_node in tree.children(tree.root):
-            tl_identifiers.append(child_node.identifier)
-        tl_child_identifiers_per_tree.append(tl_identifiers)
-
-    nodeCombinationSubtrees = []
-    for combination in product(*tl_child_identifiers_per_tree):
-        # Fetch the corresponding child from each node based on the current combination of indices
-        child_subtrees = [trees[i].subtree(combination[i])
-                          for i in range(len(trees))]
-        # Apply intersection recursively to the list of children
-        result = intersection(child_subtrees)
-        nodeCombinationSubtrees.append((combination, result))
-
-    def findResultSubtrees(nodeCombinationSubtrees):
-        if len(nodeCombinationSubtrees) == 0:
-            return []
-        resultSubtrees = []
-        biggestSubtree = None
-        biggestSize = 0
-        for indexList, subtree in nodeCombinationSubtrees:
-            if subtree is not None:
-                if subtree.size() > biggestSize:
-                    biggestSize = subtree.size()
-                    biggestSubtree = (indexList, subtree)
-
-        if biggestSubtree is not None:
-            before = []
-            for indexList, subtree in nodeCombinationSubtrees:
-                if all(index < big_index for index, big_index in zip(indexList, biggestSubtree[0])):
-                    before.append((indexList, subtree))
-
-            after = []
-            for indexList, subtree in nodeCombinationSubtrees:
-                if all(index > big_index for index, big_index in zip(indexList, biggestSubtree[0])):
-                    after.append((indexList, subtree))
-
-            resultSubtrees.extend(findResultSubtrees(before))
-            resultSubtrees.append(biggestSubtree[1])
-            resultSubtrees.extend(findResultSubtrees(after))
-
-        # if biggestSubtree == None:
-        #     treesForLargestIntersections = [[] for _ in trees]
-        #     for indexList, subtree in nodeCombinationSubtrees:
-        #         for treeIndex, childIndex in enumerate(indexList):
-        #             treesForLargestIntersections[treeIndex].append(
-        #                 trees[treeIndex].children[childIndex])
-        #     largestNonOverlappingIntersectionsL = largestNonOverlappingIntersections(
-        #             treesForLargestIntersections)
-        #     if len(largestNonOverlappingIntersectionsL) > 0:
-        #         for lnoi in largestNonOverlappingIntersectionsL:
-        #             resultSubtrees.append(IndirectDescendant(lnoi))
-
-        return resultSubtrees
-
-    resultSubtrees = findResultSubtrees(nodeCombinationSubtrees)
-
-    result_node_data = NodeData(root_nodes[0].data.type, root_nodes[0].data.text if not trees[0].size() > 1 else "".encode(),
-                                [source_position for root_node in root_nodes for source_position in root_node.data.source_positions],
-                                [tree_position for root_node in root_nodes for tree_position in root_node.data.tree_positions], root_nodes[0].data.is_ts_leaf)
-
-    new_tree = Tree()
-    new_root_node = new_tree.create_node(
-        result_node_data.type, None, None, result_node_data)
-    for subtree in resultSubtrees:
-        new_tree.paste(new_root_node.identifier, subtree, False)
-    intersectionResultStore[tuple(trees)] = new_tree
-    return new_tree
+        all_source_positions_in_tree = set()
+        all_nodes = tree.all_nodes()
+        root_node = tree.get_node(tree.root)
+        for node in all_nodes:
+            all_source_positions_in_tree.update(node.data.source_positions)
+        if ((not (all_source_positions_in_tree & used_source_positions))
+            and positions_do_not_cross(
+                root_node.data.source_positions, used_root_node_source_positions)):
+            result.append(tree)
+            used_source_positions.update(all_source_positions_in_tree)
+            used_root_node_source_positions.append(
+                root_node.data.source_positions)
+    return result
 
 
-def findIn(nodeToFind, treeToFindNodeIn):
-    if containsOneOf(nodeToFind.identifiers, treeToFindNodeIn.identifiers):
-        return treeToFindNodeIn
-    else:
-        for child in treeToFindNodeIn.children:
-            result = findIn(nodeToFind, child)
-            if result is not None:
-                return result
-        return None
+def subtraction(leftSide, treesToSubtract):
+    all_intersections = []
+    for treeToSubtract in treesToSubtract:
+        all_intersections.extend(
+            intersect_all_subtrees([leftSide, [treeToSubtract]]))
+
+    all_intersections.sort(key=lambda x: x.size(), reverse=True)
+
+    intersections_without_overlaps = remove_overlapping(all_intersections)
+
+    all_positions_to_subtract = []  # enough to include root node positions
+    for intersection in intersections_without_overlaps:
+        all_positions_to_subtract.extend(intersection.get_node(
+            intersection.root).data.source_positions)
+
+    for tree in leftSide:
+        for node in tree.all_nodes():
+            # if set intersection not empty, remove
+            if set(node.data.source_positions) & set(all_positions_to_subtract):
+                try:
+                    tree.remove_node(node.identifier)
+                except:
+                    pass
+    return leftSide
 
 
-def subtraction(leftSide, nodesToSubtract):
-    allSubtractedIdentifiers = set()
+def intersect_all_subtrees(tree_groups):
+    trees = []
+    for group in tree_groups:
+        common_tree = Tree()
+        common_root = common_tree.create_node("common_root")
+        for tree in group:
+            common_tree.paste(common_root.identifier, tree, False)
+        trees.append(common_tree)
 
-    def markSubtract(currentNode, subtractTree):
-        # Begonnen mit TODO siehe unten, aber das ist es noch nicht ganz, prüfe auf die Identifiers vom subtractTree und nicht vom currentNode. Oder?
-        if containsOneOf(currentNode.identifiers, subtractTree.allIdentifiers()) and not containsOneOf(currentNode.identifiers, allSubtractedIdentifiers):
-            currentNode.subtractMarker = True
-            allSubtractedIdentifiers.update(currentNode.identifiers)
-        if isinstance(currentNode, IndirectDescendant):
-            markSubtract(currentNode.tree, subtractTree)
-        else:
-            for child in currentNode.children:
-                markSubtract(child, subtractTree)
-
-    removeMarkedNodesResult = []
-
-    def removeMarkedNodes(currentNode, parentIsNotSubtract):
-        if isinstance(currentNode, IndirectDescendant):
-            removeMarkedNodes(currentNode.tree, False)
-        elif currentNode.subtractMarker:
-            for el in currentNode.children:
-                removeMarkedNodes(el, False)
-        elif not currentNode.subtractMarker and parentIsNotSubtract:
-            children = [removeMarkedNodes(el, True)
-                        for el in currentNode.children]
-            tree = Tree(currentNode.type, currentNode.text, currentNode.identifiers,
-                        currentNode.positions, currentNode.isLeaf())
-            tree.children = children
-            return tree
-        else:
-            children = [removeMarkedNodes(el, True)
-                        for el in currentNode.children]
-            tree = Tree(currentNode.type, currentNode.text, currentNode.identifiers,
-                        currentNode.positions, currentNode.isLeaf())
-            tree.children = children
-            removeMarkedNodesResult.append(tree)
-
-    result = deepcopy(leftSide)
-    for index, el in enumerate(nodesToSubtract):
-        i = intersection([result, el])
-        print("------------------------------------------------Intersection " + str(index) + ":")
-        printTreeComplex(i, 0, True)
-        markSubtract(result, i)
-
-    print("------------------------------------------------LeftSide:")
-    printTreeComplex(leftSide, 0, True)
-
-    print("------------------------------------------------Marked Nodes:")
-    printTreeComplex(result, 0, False)
-
-    print("------------------------------------------------Result:")
-
-    removeMarkedNodes(result, False)
-    return removeMarkedNodesResult
-
-
-def removeIndirectDescendants(tree):
-    if type(tree) == IndirectDescendant:
-        return None
-    else:
-        newChildren = []
-        for child in tree.children:
-            newChild = removeIndirectDescendants(child)
-            if newChild is not None:
-                newChildren.append(newChild)
-        tree.children = newChildren
-        return tree
-
-
-lnoiResultStore = {}
-
-
-def largestNonOverlappingIntersections(trees: list[Tree]):
-
-    if str(trees) in lnoiResultStore:
-        return lnoiResultStore[tuple(trees)]
-
-    # Get all nodes from trees
+    print("Intersecting " + str(len(trees)) + " trees", flush=True)
     all_nodes = []
     for tree in trees:
-        all_nodes.append(tree.all_nodes())
-
-    # Generate all possible combinations of nodes across different trees
-    all_combinations = product(*all_nodes)
-
-    # Compute intersections for each combination
-    intersections = []
-    for combination in all_combinations:
-        intersection_result = intersection(list(combination))
-        if intersection_result:
-            intersections.append(intersection_result)
-
-    # Sort intersections by size in descending order
-    intersections.sort(key=lambda x: x.size(), reverse=True)
-
-    # Select the largest non-overlapping intersection that satisifies the criteria
-    for intersection_ in intersections:
-        if (hasLeafs(intersection_)
-            and hasIdentifier(intersection_)
-            and intersection_.size() >= minimumFeatureSize
-            ):
-            lnoiResultStore[str(trees)] = intersection_
-            return intersection_
-
-
-def intersect_all_subtrees(trees):
-    all_nodes = []
-    for tree in trees:
-        all_nodes.append(tree.all_nodes())
+        # Filter out common root
+        all_nodes.append(tree.filter_nodes(
+            lambda x: x.tag != "common_root"))
 
     all_combinations = product(*all_nodes)
 
     equal_combinations = []
+    combination_count = prod([tree.size() for tree in trees])
+    print("Comparing " + str(combination_count) + " node combinations", flush=True)
     for combination in all_combinations:
-        if all(node.data.subtree_hash == combination[0].data.subtree_hash for node in combination):
+        if all(node.data.subtree_hash == combination[0].data.subtree_hash
+               for node in combination):
             equal_combinations.append(combination)
 
     matched_subtrees = []
@@ -363,80 +206,60 @@ def intersect_all_subtrees(trees):
 
     matched_subtrees.sort(key=lambda x: x.size(), reverse=True)
 
-    result = []
-    used_source_positions = set()
-    used_root_node_source_positions = []
-    for tree in matched_subtrees:
-        all_source_positions_in_tree = set()
-        all_nodes = tree.all_nodes()
-        root_node = tree.get_node(tree.root)
-        for node in all_nodes:
-            all_source_positions_in_tree.update(node.data.source_positions)
-        if (not (all_source_positions_in_tree & used_source_positions)) and positions_do_not_cross(root_node.data.source_positions, used_root_node_source_positions):
-            result.append(tree)
-            used_source_positions.update(all_source_positions_in_tree)
-            used_root_node_source_positions.append(root_node.data.source_positions)
-
-    return result
+    return remove_overlapping(matched_subtrees)
 
 
-def printTree(tree):
-    # print(tree.show(data_property="rendered",
-    #       line_type="ascii", stdout=False, sorting=False))
-    for node_id in tree.expand_tree(mode=Tree.DEPTH, sorting=False):
-        print(4*" " * tree.depth(node_id), end="")
-        node = tree.get_node(node_id)
-        rendered = node.data.type + " " + \
-            str(node.data.subtree_hash) + " " + \
-            str(list(map(lambda x: x.render(), node.data.source_positions)))
-        print(rendered)
+def print_tree(tree):
+    if tree.size() > 0:
+        for node_id in tree.expand_tree(mode=Tree.DEPTH, sorting=False):
+            print(4*" " * tree.depth(node_id), end="")
+            node = tree.get_node(node_id)
+            rendered = node.data.type + " " + \
+                str(node.data.subtree_hash) + " " + \
+                str(list(map(lambda x: x.render(), node.data.source_positions)))
+            print(rendered)
 
-    print("\n")
-    print("------------------------------------------------")
-    print("\n")
+        print("\n")
+        print("------------------------------------------------")
+        print("\n")
 
 
-if sys.argv[1] == "intersection":
-    trees = []
-    for i in range(2, len(sys.argv)):
-        trees.append(readAndPreprocess(sys.argv[i]))
+if __name__ == "__main__":
 
-    result = intersection(trees)
-    printTree(result)
+    if sys.argv[1] == "intersection":
+        trees = []
+        for i in range(2, len(sys.argv)):
+            trees.append([read_and_preprocess(sys.argv[i])])
 
-elif sys.argv[1] == "difference":
-    treesIntersection = []
-    treesSubtraction = []
-    afterSeparator = False
-    separator = "--"
-    for i in range(2, len(sys.argv)):
-        if not afterSeparator and sys.argv[i] == separator:
-            afterSeparator = True
-        elif afterSeparator:
-            treesSubtraction.append(readAndPreprocess(sys.argv[i]))
-        else:
-            treesIntersection.append(readAndPreprocess(sys.argv[i]))
+        print("Starting intersection", flush=True)
+        result = intersect_all_subtrees(trees)
+        for tree in result:
+            print_tree(tree)
 
-    leftSide = intersection(treesIntersection)
+    elif sys.argv[1] == "difference":
+        treesIntersection = []
+        treesSubtraction = []
+        afterSeparator = False
+        separator = "--"
+        for i in range(2, len(sys.argv)):
+            if not afterSeparator and sys.argv[i] == separator:
+                afterSeparator = True
+            elif afterSeparator:
+                treesSubtraction.append(read_and_preprocess(sys.argv[i]))
+            else:
+                treesIntersection.append([read_and_preprocess(sys.argv[i])])
 
-    results = subtraction(leftSide, treesSubtraction)
+        leftSide = intersect_all_subtrees(treesIntersection)
 
-    for node in results:
-        printTreeComplex(node, 0, True)
+        results = subtraction(leftSide, treesSubtraction)
 
-elif sys.argv[1] == "show_ast":
-    trees = []
-    for i in range(2, len(sys.argv)):
-        trees.append(readAndPreprocess(sys.argv[i]))
+        for node in results:
+            print_tree(node)
 
-    for tree in trees:
-        printTree(tree)
+    elif sys.argv[1] == "show_ast":
+        trees = []
+        for i in range(2, len(sys.argv)):
+            trees.append(read_and_preprocess(sys.argv[i]))
 
-elif sys.argv[1] == "test":
-    trees = []
-    for i in range(2, len(sys.argv)):
-        trees.append(readAndPreprocess(sys.argv[i]))
-
-    result = intersect_all_subtrees(trees)
-    for tree in result:
-        printTree(tree)
+        for tree in trees:
+            print_tree(tree)
