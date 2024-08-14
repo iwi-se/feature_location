@@ -1,7 +1,7 @@
 import tree_sitter_cpp as tscpp
 import sys as sys
 from tree_sitter import Language, Parser
-from itertools import product
+from itertools import chain, product
 from treelib import Tree
 from math import prod
 
@@ -161,6 +161,40 @@ def subtraction(leftSide, treesToSubtract):
                     pass
     return leftSide
 
+def cart_product_of_equally_sized_subtrees(trees) -> list[list[Tree]]:
+    all_nodes_per_tree = []
+    for tree in trees:
+        all_nodes_per_tree.append(list(tree.filter_nodes(
+            lambda x: x.tag != "common_root")))
+
+    partition_by_size = []
+    for index, tree in enumerate(trees):
+        nodes_per_size = {}
+        for node in all_nodes_per_tree[index]:
+            size = tree.subtree(node.identifier).size()
+            if size not in nodes_per_size:
+                nodes_per_size[size] = []
+            nodes_per_size[size].append(node)
+        partition_by_size.append(nodes_per_size)
+    
+    combinations = (x for x in [])
+    all_sizes_collected = False
+    i = 1
+    while not all_sizes_collected:
+        all_nodes_per_tree_size_i = []
+        for sizeDict in partition_by_size:
+            if i in sizeDict:
+                all_nodes_per_tree_size_i.append(sizeDict[i])
+            else:
+                all_nodes_per_tree_size_i.append([])
+        if all(len(x) > 0 for x in all_nodes_per_tree_size_i):
+            cart_product = product(*all_nodes_per_tree_size_i)
+            combinations = chain(combinations, cart_product)
+        if min([tree.size() for tree in trees]) == i:
+            all_sizes_collected = True
+        i += 1
+
+    return combinations
 
 def intersect_all_subtrees(tree_groups):
     trees = []
@@ -172,13 +206,7 @@ def intersect_all_subtrees(tree_groups):
         trees.append(common_tree)
 
     print("Intersecting " + str(len(trees)) + " trees", flush=True)
-    all_nodes = []
-    for tree in trees:
-        # Filter out common root
-        all_nodes.append(tree.filter_nodes(
-            lambda x: x.tag != "common_root"))
-
-    all_combinations = product(*all_nodes)
+    all_combinations = cart_product_of_equally_sized_subtrees(trees)
 
     equal_combinations = []
     combination_count = prod([tree.size() for tree in trees])
