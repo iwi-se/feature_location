@@ -1,3 +1,5 @@
 treelib
 tree_sitter
 tree_sitter_cpp
+numpy
+more_itertools

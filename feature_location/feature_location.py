@@ -1,9 +1,15 @@
+import time
 import tree_sitter_cpp as tscpp
 import sys as sys
 from tree_sitter import Language, Parser
 from itertools import chain, product
+from more_itertools import chunked
 from treelib import Tree
 from math import prod
+from multiprocessing import Pool
+import numpy as np
+import pandas as pd
+import cProfile
 
 minimumFeatureSize = 1
 
@@ -135,6 +141,29 @@ def remove_overlapping(trees):
                 root_node.data.source_positions)
     return result
 
+# Extra variant for combinations because perfomance
+
+
+def remove_overlapping_combinations(combinations, trees):
+    result = []
+    used_source_positions = set()
+    used_root_node_source_positions = []
+    for combination in combinations:
+        all_source_positions_in_combination = set()
+        all_nodes = [single_node for index, node in enumerate(combination) for single_node in trees[index].subtree(node.identifier).all_nodes()]
+        all_root_node_source_positions = [position for node in combination for position in node.data.source_positions]
+        for node in all_nodes:
+            all_source_positions_in_combination.update(
+                node.data.source_positions)
+        if ((not (all_source_positions_in_combination & used_source_positions))
+            and positions_do_not_cross(
+                all_root_node_source_positions, used_root_node_source_positions)):
+            result.append(combination)
+            used_source_positions.update(all_source_positions_in_combination)
+            used_root_node_source_positions.append(
+                all_root_node_source_positions)
+    return result
+
 
 def subtraction(leftSide, treesToSubtract):
     all_intersections = []
@@ -161,40 +190,37 @@ def subtraction(leftSide, treesToSubtract):
                     pass
     return leftSide
 
-def cart_product_of_equally_sized_subtrees(trees) -> list[list[Tree]]:
+
+def compute_combinations(trees) -> list[list[Tree]]:
     all_nodes_per_tree = []
     for tree in trees:
         all_nodes_per_tree.append(list(tree.filter_nodes(
             lambda x: x.tag != "common_root")))
 
-    partition_by_size = []
+    partition_by_subtree_hash = []
     for index, tree in enumerate(trees):
-        nodes_per_size = {}
+        current_dict = {}
         for node in all_nodes_per_tree[index]:
-            size = tree.subtree(node.identifier).size()
-            if size not in nodes_per_size:
-                nodes_per_size[size] = []
-            nodes_per_size[size].append(node)
-        partition_by_size.append(nodes_per_size)
-    
-    combinations = (x for x in [])
-    all_sizes_collected = False
-    i = 1
-    while not all_sizes_collected:
-        all_nodes_per_tree_size_i = []
-        for sizeDict in partition_by_size:
-            if i in sizeDict:
-                all_nodes_per_tree_size_i.append(sizeDict[i])
+            hash_ = node.data.subtree_hash
+            if hash_ not in current_dict:
+                current_dict[hash_] = []
+            current_dict[hash_].append(node)
+        partition_by_subtree_hash.append(current_dict)
+
+    combinations = []
+    for hash_, nodes in partition_by_subtree_hash[0].items():
+        nodes_with_same_hash = [nodes]
+        for index in range(1, len(partition_by_subtree_hash)):
+            if hash_ in partition_by_subtree_hash[index]:
+                nodes_with_same_hash.append(
+                    partition_by_subtree_hash[index][hash_])
             else:
-                all_nodes_per_tree_size_i.append([])
-        if all(len(x) > 0 for x in all_nodes_per_tree_size_i):
-            cart_product = product(*all_nodes_per_tree_size_i)
-            combinations = chain(combinations, cart_product)
-        if min([tree.size() for tree in trees]) == i:
-            all_sizes_collected = True
-        i += 1
+                break
+        if len(nodes_with_same_hash) == len(partition_by_subtree_hash):
+            combinations.extend(list(product(*nodes_with_same_hash)))
 
     return combinations
+
 
 def intersect_all_subtrees(tree_groups):
     trees = []
@@ -206,33 +232,34 @@ def intersect_all_subtrees(tree_groups):
         trees.append(common_tree)
 
     print("Intersecting " + str(len(trees)) + " trees", flush=True)
-    all_combinations = cart_product_of_equally_sized_subtrees(trees)
+    equal_combinations = compute_combinations(trees)
 
-    equal_combinations = []
-    combination_count = prod([tree.size() for tree in trees])
-    print("Comparing " + str(combination_count) + " node combinations", flush=True)
-    for combination in all_combinations:
-        if all(node.data.subtree_hash == combination[0].data.subtree_hash
-               for node in combination):
-            equal_combinations.append(combination)
+    print("Found " + str(len(equal_combinations)) + " combinations", flush=True)
+
+    equal_combinations.sort(key=lambda comb: trees[0].subtree(comb[0].identifier).size(), reverse=True)
+
+    equal_combinations = remove_overlapping_combinations(
+        equal_combinations, trees)
 
     matched_subtrees = []
+
     for combination in equal_combinations:
         first_subtree = Tree(trees[0].subtree(
-            combination[0].identifier), deep=True)
+            combination[0].identifier))
         all_nodes_first = first_subtree.all_nodes()
         for index in range(1, len(combination)):
             subtree = trees[index].subtree(combination[index].identifier)
             all_nodes = subtree.all_nodes()
             for node_first, node in zip(all_nodes_first, all_nodes):
-                node_first.data.source_positions.extend(
-                    node.data.source_positions)
-                node_first.data.tree_positions.append(node.data.tree_positions)
+                for position in node.data.source_positions:
+                    if position not in node_first.data.source_positions:
+                        node_first.data.source_positions.append(position)
+                for position in node.data.tree_positions:
+                    if position not in node_first.data.tree_positions:
+                        node_first.data.tree_positions.append(position)
         matched_subtrees.append(first_subtree)
 
-    matched_subtrees.sort(key=lambda x: x.size(), reverse=True)
-
-    return remove_overlapping(matched_subtrees)
+    return matched_subtrees
 
 
 def print_tree(tree):
@@ -258,9 +285,11 @@ if __name__ == "__main__":
             trees.append([read_and_preprocess(sys.argv[i])])
 
         print("Starting intersection", flush=True)
-        result = intersect_all_subtrees(trees)
-        for tree in result:
-            print_tree(tree)
+
+        cProfile.run("intersect_all_subtrees(trees)")
+        # result = intersect_all_subtrees(trees)
+        # for tree in result:
+        #     print_tree(tree)
 
     elif sys.argv[1] == "difference":
         treesIntersection = []
