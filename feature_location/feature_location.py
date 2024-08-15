@@ -1,17 +1,12 @@
-import time
 import tree_sitter_cpp as tscpp
 import sys as sys
 from tree_sitter import Language, Parser
-from itertools import chain, product
-from more_itertools import chunked
+from itertools import product
 from treelib import Tree
-from math import prod
-from multiprocessing import Pool
-import numpy as np
-import pandas as pd
-import cProfile
 
-minimumFeatureSize = 1
+minimum_trace_size = 1
+
+only_named_nodes = True
 
 CPP_LANGUAGE = Language(tscpp.language())
 
@@ -38,13 +33,12 @@ class SourcePosition:
         elif self.end_point.row < other.start_point.row:
             return 1
         elif self.start_point.row == other.end_point.row:
-            if self.start_point.column > other.end_point.column:
+            if self.start_point.column >= other.end_point.column:
                 return -1
         elif self.end_point.row == other.start_point.row:
-            if self.end_point.column < other.start_point.column:
+            if self.end_point.column <= other.start_point.column:
                 return 1
-        else:
-            return 0
+        return 0
 
     def __eq__(self, other):
         return (self.file == other.file
@@ -58,7 +52,7 @@ class SourcePosition:
 class NodeData:
     def __init__(self, node_type, node_text, source_positions: list[str],
                  tree_positions: list[list[int]], subtree_hash=None,
-                 is_ts_leaf=False, indirect=False):
+                 is_ts_leaf=False, indirect=False, subtree_size=None):
         self.type = node_type
         self.text = node_text
         self.source_positions = source_positions
@@ -66,6 +60,7 @@ class NodeData:
         self.is_ts_leaf = is_ts_leaf
         self.indirect = indirect
         self.subtree_hash = subtree_hash
+        self.subtree_size = subtree_size
 
 
 def get_root_node(tree):
@@ -87,7 +82,7 @@ def preprocess(treesitter_node, file, position: list[int]):
 
     def traverse_and_build(parent_id, ts_node, position):
         node_data = NodeData(ts_node.type, ts_node.text,
-                             [SourcePosition(file, ts_node.start_point, ts_node.end_point)], [position], hash_ts_node(ts_node))
+                             [SourcePosition(file, ts_node.start_point, ts_node.end_point)], [position], hash_ts_node(ts_node), subtree_size=ts_node.descendant_count)
 
         if ts_node.named_child_count == 0:
             node_data.is_ts_leaf = True
@@ -95,8 +90,8 @@ def preprocess(treesitter_node, file, position: list[int]):
         node = tree.create_node(node_data.type, None, parent_id, node_data)
 
         for index, child in enumerate(ts_node.children):
-            # if child.is_named:
-            traverse_and_build(node.identifier, child, position + [index])
+            if child.is_named or not only_named_nodes:
+                traverse_and_build(node.identifier, child, position + [index])
 
     traverse_and_build(None, treesitter_node, position)
     return tree
@@ -141,15 +136,15 @@ def remove_overlapping(trees):
                 root_node.data.source_positions)
     return result
 
+
 # Extra variant for combinations because perfomance
-
-
-def remove_overlapping_combinations(combinations, trees):
+def remove_overlapping_combinations(combinations):
     result = []
     used_root_node_source_positions = []
     for combination in combinations:
-        all_root_node_source_positions = [position for node in combination for position in node.data.source_positions]
-        if  positions_do_not_cross(
+        all_root_node_source_positions = [
+            position for node in combination for position in node.data.source_positions]
+        if positions_do_not_cross(
                 all_root_node_source_positions, used_root_node_source_positions):
             result.append(combination)
             used_root_node_source_positions.append(
@@ -193,6 +188,8 @@ def compute_combinations(trees) -> list[list[Tree]]:
     for index, tree in enumerate(trees):
         current_dict = {}
         for node in all_nodes_per_tree[index]:
+            if node.data.subtree_size < minimum_trace_size:
+                continue
             hash_ = node.data.subtree_hash
             if hash_ not in current_dict:
                 current_dict[hash_] = []
@@ -224,14 +221,15 @@ def intersect_all_subtrees(tree_groups):
         trees.append(common_tree)
 
     print("Intersecting " + str(len(trees)) + " trees", flush=True)
+
     equal_combinations = compute_combinations(trees)
 
-    print("Found " + str(len(equal_combinations)) + " combinations", flush=True)
+    print("Found " + str(len(equal_combinations)) + " subtrees that occur in all trees", flush=True)
 
-    equal_combinations.sort(key=lambda comb: trees[0].subtree(comb[0].identifier).size(), reverse=True)
+    equal_combinations.sort(
+        key=lambda comb: comb[0].data.subtree_size, reverse=True)
 
-    equal_combinations = remove_overlapping_combinations(
-        equal_combinations, trees)
+    equal_combinations = remove_overlapping_combinations(equal_combinations)
 
     matched_subtrees = []
 
@@ -268,6 +266,11 @@ def print_tree(tree):
         print("------------------------------------------------")
         print("\n")
 
+def print_trees(trees):
+    print("\n")
+    for tree in trees:
+        print_tree(tree)
+
 
 if __name__ == "__main__":
 
@@ -278,10 +281,8 @@ if __name__ == "__main__":
 
         print("Starting intersection", flush=True)
 
-        #cProfile.run("intersect_all_subtrees(trees)")
         result = intersect_all_subtrees(trees)
-        for tree in result:
-            print_tree(tree)
+        print_trees(result)
 
     elif sys.argv[1] == "difference":
         treesIntersection = []
@@ -300,13 +301,11 @@ if __name__ == "__main__":
 
         results = subtraction(leftSide, treesSubtraction)
 
-        for node in results:
-            print_tree(node)
+        print_trees(results)
 
     elif sys.argv[1] == "show_ast":
         trees = []
         for i in range(2, len(sys.argv)):
             trees.append(read_and_preprocess(sys.argv[i]))
 
-        for tree in trees:
-            print_tree(tree)
+        print_trees(trees)
