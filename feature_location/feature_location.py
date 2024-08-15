@@ -146,20 +146,12 @@ def remove_overlapping(trees):
 
 def remove_overlapping_combinations(combinations, trees):
     result = []
-    used_source_positions = set()
     used_root_node_source_positions = []
     for combination in combinations:
-        all_source_positions_in_combination = set()
-        all_nodes = [single_node for index, node in enumerate(combination) for single_node in trees[index].subtree(node.identifier).all_nodes()]
         all_root_node_source_positions = [position for node in combination for position in node.data.source_positions]
-        for node in all_nodes:
-            all_source_positions_in_combination.update(
-                node.data.source_positions)
-        if ((not (all_source_positions_in_combination & used_source_positions))
-            and positions_do_not_cross(
-                all_root_node_source_positions, used_root_node_source_positions)):
+        if  positions_do_not_cross(
+                all_root_node_source_positions, used_root_node_source_positions):
             result.append(combination)
-            used_source_positions.update(all_source_positions_in_combination)
             used_root_node_source_positions.append(
                 all_root_node_source_positions)
     return result
@@ -286,10 +278,10 @@ if __name__ == "__main__":
 
         print("Starting intersection", flush=True)
 
-        cProfile.run("intersect_all_subtrees(trees)")
-        # result = intersect_all_subtrees(trees)
-        # for tree in result:
-        #     print_tree(tree)
+        #cProfile.run("intersect_all_subtrees(trees)")
+        result = intersect_all_subtrees(trees)
+        for tree in result:
+            print_tree(tree)
 
     elif sys.argv[1] == "difference":
         treesIntersection = []
