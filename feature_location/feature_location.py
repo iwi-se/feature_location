@@ -152,6 +152,18 @@ def remove_overlapping_combinations(combinations):
     return result
 
 
+def remove_subtree(tree, node):
+    result = []
+    sibling_nodes = tree.siblings(node.identifier)
+    sibling_trees = [tree.subtree(sibling_node.identifier)
+                     for sibling_node in sibling_nodes]
+    result.extend(sibling_trees)
+    parent = tree.parent(node.identifier)
+    if parent is not None:
+        result.extend(remove_subtree(tree, parent))
+    return result
+
+
 def subtraction(leftSide, treesToSubtract):
     all_intersections = []
     for treeToSubtract in treesToSubtract:
@@ -167,15 +179,19 @@ def subtraction(leftSide, treesToSubtract):
         all_positions_to_subtract.extend(intersection.get_node(
             intersection.root).data.source_positions)
 
+    result = []
     for tree in leftSide:
+        tree_result = [tree]
         for node in tree.all_nodes():
             # if set intersection not empty, remove
             if set(node.data.source_positions) & set(all_positions_to_subtract):
-                try:
-                    tree.remove_node(node.identifier)
-                except:
-                    pass
-    return leftSide
+                for res_tree in tree_result:
+                    if res_tree.contains(node.identifier):
+                        tree_result.remove(res_tree)
+                        tree_result.extend(remove_subtree(res_tree, node))
+                        break
+        result.extend(tree_result)
+    return result
 
 
 def compute_combinations(trees) -> list[list[Tree]]:
@@ -224,7 +240,8 @@ def intersect_all_subtrees(tree_groups):
 
     equal_combinations = compute_combinations(trees)
 
-    print("Found " + str(len(equal_combinations)) + " subtrees that occur in all trees", flush=True)
+    print("Found " + str(len(equal_combinations)) +
+          " subtrees that occur in all trees", flush=True)
 
     equal_combinations.sort(
         key=lambda comb: comb[0].data.subtree_size, reverse=True)
@@ -265,6 +282,7 @@ def print_tree(tree):
         print("\n")
         print("------------------------------------------------")
         print("\n")
+
 
 def print_trees(trees):
     print("\n")
