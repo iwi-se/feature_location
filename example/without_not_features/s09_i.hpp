@@ -1,6 +1,6 @@
 #include <concepts>
 
-auto factorial(unsigned_integral auto n)
+template<std::unsigned_integral T> T factorial(T n)
 {
   decltype(n) result { 1 };
   while (n > 1)

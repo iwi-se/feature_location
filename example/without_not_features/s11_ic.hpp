@@ -2,8 +2,8 @@
 #include <exception>
 #include <string>
 
-auto unsigned_checked_product(const unsigned_integral auto& a,
-                              const unsigned_integral auto& b)
+auto unsigned_checked_product(const std::unsigned_integral auto& a,
+                              const std::unsigned_integral auto& b)
 {
   auto x { static_cast<decltype(a)>(a * b) };
   if (a && x / a != b)
@@ -13,7 +13,7 @@ auto unsigned_checked_product(const unsigned_integral auto& a,
   return x;
 }
 
-auto factorial(unsigned_integral auto n)
+template<std::unsigned_integral T> T factorial(T n)
 {
   decltype(n) result { 1 };
   while (n > 1)

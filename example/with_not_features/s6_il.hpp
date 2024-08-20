@@ -3,10 +3,12 @@
 #include <source_location>
 #include <string>
 
+using namespace std::string_literals;
+
 class Logger
 {
   public:
-    Logger(const std::string arguments = ""s,
+    Logger(const std::string arguments = "",
            const std::source_location location
            = std::source_location::current())
         : m_arguments { arguments }
@@ -25,7 +27,7 @@ class Logger
     std::source_location m_location;
 };
 
-auto factorial(unsigned_integral auto n)
+template<std::unsigned_integral T> T factorial(T n)
 {
   Logger      log { std::to_string(n) };
   decltype(n) result { 1 };

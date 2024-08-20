@@ -1,22 +1,7 @@
 #include <concepts>
-#include <exception>
 #include <iostream>
 #include <source_location>
 #include <string>
-
-auto unsigned_checked_product(const std::unsigned_integral auto& a,
-                              const std::unsigned_integral auto& b)
-{
-  // Inspired by
-  // https://stackoverflow.com/questions/1815367/
-  // catch-and-compute-overflow-during-multiplication-of-two-large-integers
-  auto x { static_cast<decltype(a)>(a * b) };
-  if (a && x / a != b)
-  {
-    throw std::overflow_error(std::to_string(a) + " * " + std::to_string(b));
-  }
-  return x;
-}
 
 class Logger
 {
@@ -40,8 +25,13 @@ class Logger
     std::source_location m_location;
 };
 
-template<std::unsigned_integral T> T factorial(T n)
+auto factorial(std::unsigned_integral auto n)
 {
-  Logger log { std::to_string(n) };
-  return (n == 0 ? 1 : unsigned_checked_product(n, factorial<T>(n - 1)));
+  Logger      log { std::to_string(n) };
+  decltype(n) result { 1 };
+  while (n > 1)
+  {
+    result *= n--;
+  }
+  return result;
 }

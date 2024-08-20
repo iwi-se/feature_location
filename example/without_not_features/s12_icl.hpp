@@ -3,8 +3,8 @@
 #include <iostream>
 #include <source_location>
 #include <string>
-auto unsigned_checked_product(const unsigned_integral auto& a,
-                              const unsigned_integral auto& b)
+auto unsigned_checked_product(const std::unsigned_integral auto& a,
+                              const std::unsigned_integral auto& b)
 {
   auto x { static_cast<decltype(a)>(a * b) };
   if (a && x / a != b)
@@ -17,7 +17,7 @@ auto unsigned_checked_product(const unsigned_integral auto& a,
 class Logger
 {
   public:
-    Logger(const std::string arguments = ""s,
+    Logger(const std::string arguments = "",
            const std::source_location location
            = std::source_location::current())
         : m_arguments { arguments }
@@ -36,7 +36,7 @@ class Logger
     std::source_location m_location;
 };
 
-auto factorial(unsigned_integral auto n)
+template<std::unsigned_integral T> T factorial(T n)
 {
   Logger      log { std::to_string(n) };
   decltype(n) result { 1 };
