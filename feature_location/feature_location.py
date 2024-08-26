@@ -3,6 +3,7 @@ import sys as sys
 from tree_sitter import Language, Parser
 from itertools import product
 from treelib import Tree
+import render
 
 minimum_trace_size = 1
 
@@ -30,12 +31,12 @@ class SourcePosition:
         # 1: self is after other, non-overlapping
         if self.start_point.row > other.end_point.row:
             return -1
-        elif self.end_point.row < other.start_point.row:
+        if self.end_point.row < other.start_point.row:
             return 1
-        elif self.start_point.row == other.end_point.row:
+        if self.start_point.row == other.end_point.row:
             if self.start_point.column >= other.end_point.column:
                 return -1
-        elif self.end_point.row == other.start_point.row:
+        if self.end_point.row == other.start_point.row:
             if self.end_point.column <= other.start_point.column:
                 return 1
         return 0
@@ -165,12 +166,20 @@ def remove_subtree(tree, node):
 
 
 def subtraction(leftSide, treesToSubtract):
+    # Intersect treesToSubtract first
+    intersection_trees_to_subtract = intersect_all_subtrees([[tree] for tree in treesToSubtract])
+
     all_intersections = []
+    all_intersections.extend(intersect_all_subtrees([leftSide, intersection_trees_to_subtract]))
+    all_intersections.sort(key=lambda x: x.size(), reverse=True)
+
+    single_subtract_subtree_intersections = []
     for treeToSubtract in treesToSubtract:
-        all_intersections.extend(
+        single_subtract_subtree_intersections.extend(
             intersect_all_subtrees([leftSide, [treeToSubtract]]))
 
-    all_intersections.sort(key=lambda x: x.size(), reverse=True)
+    single_subtract_subtree_intersections.sort(key=lambda x: x.size(), reverse=True)
+    all_intersections.extend(single_subtract_subtree_intersections)
 
     intersections_without_overlaps = remove_overlapping(all_intersections)
 
@@ -301,25 +310,35 @@ if __name__ == "__main__":
 
         result = intersect_all_subtrees(trees)
         print_trees(result)
+        
+        source_ranges = [result.get_node(result.root).data.source_positions for result in result]
+        with open("feature_location.html", "w") as f:
+            f.write(render.render_feature_location(sys.argv[2:], source_ranges))
 
     elif sys.argv[1] == "difference":
-        treesIntersection = []
-        treesSubtraction = []
+        filesBeforeSeparator = []
+        filesAfterSeparator = []
         afterSeparator = False
         separator = "--"
         for i in range(2, len(sys.argv)):
             if not afterSeparator and sys.argv[i] == separator:
                 afterSeparator = True
             elif afterSeparator:
-                treesSubtraction.append(read_and_preprocess(sys.argv[i]))
+                filesAfterSeparator.append(sys.argv[i])
             else:
-                treesIntersection.append([read_and_preprocess(sys.argv[i])])
+                filesBeforeSeparator.append(sys.argv[i])
+        
+        treesIntersection = [[read_and_preprocess(file)] for file in filesBeforeSeparator]
+        treesSubtraction = [read_and_preprocess(file) for file in filesAfterSeparator]
 
         leftSide = intersect_all_subtrees(treesIntersection)
 
         results = subtraction(leftSide, treesSubtraction)
 
         print_trees(results)
+        source_ranges = [result.get_node(result.root).data.source_positions for result in results]
+        with open("feature_location.html", "w") as f:
+            f.write(render.render_feature_location(filesBeforeSeparator, source_ranges))
 
     elif sys.argv[1] == "show_ast":
         trees = []
