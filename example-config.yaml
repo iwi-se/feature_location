@@ -1,0 +1,39 @@
+action: difference
+name-file-mappings:
+  - name: S1
+    file: example/with_not_features/s1_r.hpp
+  - name: S2
+    file: example/with_not_features/s2_rl.hpp
+  - name: S3
+    file: example/with_not_features/s3_rc.hpp
+  - name: S4
+    file: example/with_not_features/s4_rcl.hpp
+  - name: S5
+    file: example/with_not_features/s5_i.hpp
+  - name: S6
+    file: example/with_not_features/s6_il.hpp
+  - name: S7
+    file: example/with_not_features/s7_ic.hpp
+  - name: S8
+    file: example/with_not_features/s8_icl.hpp
+options:
+  minimum_trace_size: 1
+  only_named_nodes: true
+expressions:
+  - left-side: [S2, S8]
+    right-side: [S1, S7]
+    labels:
+      - logging
+      - F
+  - left-side: [S3, S8]
+    right-side: [S1, S6]
+    labels:
+      - checked
+      - F
+  - left-side: [S2, S3, S4, S6, S7, S8]
+    right-side: [S1, S5]
+    labels:
+      - logging_or_checked
+      - O
+run:
+  - F
