@@ -173,16 +173,12 @@ def subtraction(leftSide, treesToSubtract, options={}):
     all_intersections = []
     all_intersections.extend(intersect_all_subtrees(
         [leftSide, intersection_trees_to_subtract], options))
-    all_intersections.sort(key=lambda x: x.size(), reverse=True)
 
-    single_subtract_subtree_intersections = []
     for treeToSubtract in treesToSubtract:
-        single_subtract_subtree_intersections.extend(
+        all_intersections.extend(
             intersect_all_subtrees([leftSide, [treeToSubtract]], options))
 
-    single_subtract_subtree_intersections.sort(
-        key=lambda x: x.size(), reverse=True)
-    all_intersections.extend(single_subtract_subtree_intersections)
+    all_intersections.sort(key=lambda x: (x.size(), len(x.get_node(x.root).data.source_positions)), reverse=True)
 
     intersections_without_overlaps = remove_overlapping(all_intersections)
 
@@ -240,6 +236,8 @@ def compute_combinations(trees, options={}) -> list[list[Tree]]:
 
 
 def intersect_all_subtrees(tree_groups, options={}):
+    if not tree_groups:
+        return []
     trees = []
     for group in tree_groups:
         common_tree = Tree()
