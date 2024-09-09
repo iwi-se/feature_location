@@ -49,6 +49,10 @@ class SourcePosition:
     def __hash__(self):
         return hash((self.file, self.start_point, self.end_point))
 
+    def value_start_point(self):
+        return (self.start_point.row * 1000 + self.start_point.column)
+
+
 
 class NodeData:
     def __init__(self, node_type, node_text, source_positions: list[str],
@@ -254,7 +258,7 @@ def intersect_all_subtrees(tree_groups, options={}):
           " subtrees that occur in all trees", flush=True)
 
     equal_combinations.sort(
-        key=lambda comb: comb[0].data.subtree_size, reverse=True)
+        key=lambda comb: (comb[0].data.subtree_size, -sum(map(lambda x: x.data.source_positions[0].value_start_point(), comb))) , reverse=True)
 
     equal_combinations = remove_overlapping_combinations(equal_combinations)
 
