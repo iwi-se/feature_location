@@ -1,3 +1,4 @@
+import re
 from feature_location import read_and_preprocess, intersect_all_subtrees, difference, print_trees
 import render
 import sys
@@ -94,6 +95,53 @@ def process_show_ast(files):
     print_trees(trees)
 
 
+def parse_difference_expression(expression: str):
+    left_part, right_part = expression.split(' \\ ')
+    
+    left_numbers = re.findall(r'\d+', left_part)
+    right_numbers = re.findall(r'\d+', right_part)
+    
+    left_numbers = list(map(int, left_numbers))
+    right_numbers = list(map(int, right_numbers))
+    
+    return left_numbers, right_numbers
+
+
+def generate_yaml_from_isolation_result(file):
+    data = []
+    with open(file, "r") as f:
+        is_after_isolation_headline = False
+        for line in f:
+            if is_after_isolation_headline and not "FEATURE ID" in line:
+                print(line)
+                cols = line.split("\t")
+                data.append({
+                    "feature_id": cols[0],
+                    "feature_name": cols[1],
+                    "isolation_result": cols[2],
+                    "number_min_differences": cols[3],
+                    "min_differences": cols[4:]
+                })
+            if "=== ISOLATION RESULTS ===" in line:
+                is_after_isolation_headline = True
+
+    yaml_data = []
+    for feature in data:
+        for i, min_difference in enumerate(feature["min_differences"]):
+            if min_difference.strip() == "":
+                continue
+            print(min_difference)
+            left_numbers, right_numbers = parse_difference_expression(min_difference)
+            yaml_data.append({
+                "left-side": left_numbers,
+                "right-side": right_numbers,
+                "labels": [feature["feature_id"], feature["feature_name"], feature["feature_name"] + "_" + str(i)]
+            })
+
+    with open("isolation_results.yaml", "w") as f:
+        yaml.dump(yaml_data, f)
+
+
 if __name__ == "__main__":
 
     if sys.argv[1] == "intersection":
@@ -108,3 +156,6 @@ if __name__ == "__main__":
 
     elif sys.argv[1] == "file":
         process_file(sys.argv[2])
+
+    elif sys.argv[1] == "generate_yaml":
+        generate_yaml_from_isolation_result(sys.argv[2])
