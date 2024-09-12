@@ -53,7 +53,6 @@ class SourcePosition:
         return (self.start_point.row * 1000 + self.start_point.column)
 
 
-
 class NodeData:
     def __init__(self, node_type, node_text, source_positions: list[str],
                  tree_positions: list[list[int]], subtree_hash=None,
@@ -171,18 +170,21 @@ def remove_subtree(tree, node):
 
 def subtraction(leftSide, treesToSubtract, options={}):
     # Intersect treesToSubtract first
-    intersection_trees_to_subtract = intersect_all_subtrees(
-        [[tree] for tree in treesToSubtract], options)
+    # intersection_trees_to_subtract = intersect_all_subtrees(
+    #     [[tree] for tree in treesToSubtract], options)
 
     all_intersections = []
-    all_intersections.extend(intersect_all_subtrees(
-        [leftSide, intersection_trees_to_subtract], options))
+    # all_intersections.extend(intersect_all_subtrees(
+    #     [leftSide, intersection_trees_to_subtract], options))
 
     for treeToSubtract in treesToSubtract:
         all_intersections.extend(
             intersect_all_subtrees([leftSide, [treeToSubtract]], options))
 
-    all_intersections.sort(key=lambda x: (x.size(), len(x.get_node(x.root).data.source_positions)), reverse=True)
+    all_intersections.sort(key=lambda x: (x.size(), len(
+        x.get_node(x.root).data.source_positions)), reverse=True)
+
+    all_intersections = sort_by_size_to_remove_ratio_tree(all_intersections)
 
     intersections_without_overlaps = remove_overlapping(all_intersections)
 
@@ -239,6 +241,43 @@ def compute_combinations(trees, options={}) -> list[list[Tree]]:
     return combinations
 
 
+def sort_by_size_to_remove_ratio_tree(trees):
+    nodes = [[get_root_node(tree)] for tree in trees]
+    sorted_nodes = sort_by_size_to_remove_ratio(nodes)
+    sorted_trees = []
+    for node in sorted_nodes:
+        for tree in trees:
+            if get_root_node(tree).data.source_positions == node[0].data.source_positions:
+                sorted_trees.append(tree)
+    return sorted_trees
+
+
+
+def calculate_size_to_remove_ratio(combination, combinations):
+    own_size = combination[0].data.subtree_size
+    own_positions = [
+        position for node in combination for position in node.data.source_positions]
+
+    other_size_total = 0
+    for other_combination in combinations:
+        if not other_combination is combination:
+            other_positions = [
+                position for node in other_combination for position in node.data.source_positions]
+            if not positions_do_not_cross(own_positions, [other_positions]):
+                other_size = other_combination[0].data.subtree_size
+                other_size_total += other_size
+    return other_size_total / own_size
+
+
+def sort_by_size_to_remove_ratio(combinations):
+    combination_with_ratio = []
+    for combination in combinations:
+        ratio = calculate_size_to_remove_ratio(combination, combinations)
+        combination_with_ratio.append((combination, ratio))
+    combination_with_ratio.sort(key=lambda comb: (comb[1], -sum(map(lambda x: x.data.source_positions[0].value_start_point(), comb[0]))))
+    return [x[0] for x in combination_with_ratio]
+
+
 def intersect_all_subtrees(tree_groups, options={}):
     if not tree_groups:
         return []
@@ -257,8 +296,7 @@ def intersect_all_subtrees(tree_groups, options={}):
     print("Found " + str(len(equal_combinations)) +
           " subtrees that occur in all trees", flush=True)
 
-    equal_combinations.sort(
-        key=lambda comb: (comb[0].data.subtree_size, -sum(map(lambda x: x.data.source_positions[0].value_start_point(), comb))) , reverse=True)
+    equal_combinations = sort_by_size_to_remove_ratio(equal_combinations)
 
     equal_combinations = remove_overlapping_combinations(equal_combinations)
 
