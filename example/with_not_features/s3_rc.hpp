@@ -1,5 +1,6 @@
 #include <concepts>
 #include <exception>
+#include <stdexcept>
 #include <string>
 
 auto unsigned_checked_product(const std::unsigned_integral auto& a,

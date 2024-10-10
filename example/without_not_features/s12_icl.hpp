@@ -2,7 +2,9 @@
 #include <exception>
 #include <iostream>
 #include <source_location>
+#include <stdexcept>
 #include <string>
+
 auto unsigned_checked_product(const std::unsigned_integral auto& a,
                               const std::unsigned_integral auto& b)
 {
@@ -36,7 +38,7 @@ class Logger
     std::source_location m_location;
 };
 
-template<std::unsigned_integral T> T factorial(T n)
+auto factorial(std::unsigned_integral auto n)
 {
   Logger      log { std::to_string(n) };
   decltype(n) result { 1 };

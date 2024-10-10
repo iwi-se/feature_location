@@ -25,8 +25,8 @@ class Logger
     std::source_location m_location;
 };
 
-template<std::unsigned_integral T> T factorial(T n)
+auto factorial(std::unsigned_integral auto n) -> decltype(n)
 {
   Logger log { std::to_string(n) };
-  return (n == 0 ? 1 : n * factorial<T>(n - 1));
+  return (n == 0 ? 1 : n * factorial(n - 1));
 }

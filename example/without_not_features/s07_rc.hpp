@@ -1,5 +1,6 @@
 #include <concepts>
 #include <exception>
+#include <stdexcept>
 #include <string>
 
 auto unsigned_checked_product(const std::unsigned_integral auto& a,
@@ -13,7 +14,7 @@ auto unsigned_checked_product(const std::unsigned_integral auto& a,
   return x;
 }
 
-template<std::unsigned_integral T> T factorial(T n)
+auto factorial(std::unsigned_integral auto n) -> decltype(n)
 {
-  return (n == 0 ? 1 : unsigned_checked_product(n, factorial<T>(n - 1)));
+  return (n == 0 ? 1 : unsigned_checked_product(n, factorial(n - 1)));
 }
