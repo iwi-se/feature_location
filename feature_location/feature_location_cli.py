@@ -90,7 +90,7 @@ def process_difference(filesBeforeSeparator, filesAfterSeparator, file_name="fea
 def process_show_ast(files):
     trees = []
     for file in files:
-        trees.append(read_and_preprocess(file))
+        trees.append(read_and_preprocess(file, {"only_named_nodes": False}))
 
     print_trees(trees)
 

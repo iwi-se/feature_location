@@ -56,7 +56,7 @@ class SourcePosition:
 class NodeData:
     def __init__(self, node_type, node_text, source_positions: list[str],
                  tree_positions: list[list[int]], subtree_hash=None,
-                 is_ts_leaf=False, indirect=False, subtree_size=None):
+                 is_ts_leaf=False, indirect=False, subtree_size=None, is_named=False):
         self.type = node_type
         self.text = node_text
         self.source_positions = source_positions
@@ -65,6 +65,7 @@ class NodeData:
         self.indirect = indirect
         self.subtree_hash = subtree_hash
         self.subtree_size = subtree_size
+        self.is_named = is_named
 
 
 def get_root_node(tree):
@@ -86,7 +87,7 @@ def preprocess(treesitter_node, file, position: list[int], options={}):
 
     def traverse_and_build(parent_id, ts_node, position):
         node_data = NodeData(ts_node.type, ts_node.text,
-                             [SourcePosition(file, ts_node.start_point, ts_node.end_point)], [position], hash_ts_node(ts_node), subtree_size=ts_node.descendant_count)
+                             [SourcePosition(file, ts_node.start_point, ts_node.end_point)], [position], hash_ts_node(ts_node), subtree_size=ts_node.descendant_count, is_named=ts_node.is_named)
 
         if ts_node.named_child_count == 0:
             node_data.is_ts_leaf = True
@@ -145,12 +146,12 @@ def remove_overlapping(trees):
 def remove_overlapping_combinations(combinations):
     result = []
     used_root_node_source_positions = []
-    for combination in combinations:
+    for (combination, ratio) in combinations:
         all_root_node_source_positions = [
             position for node in combination for position in node.data.source_positions]
         if positions_do_not_cross(
                 all_root_node_source_positions, used_root_node_source_positions):
-            result.append(combination)
+            result.append((combination, ratio))
             used_root_node_source_positions.append(
                 all_root_node_source_positions)
     return result
@@ -181,10 +182,9 @@ def subtraction(leftSide, treesToSubtract, options={}):
         all_intersections.extend(
             intersect_all_subtrees([leftSide, [treeToSubtract]], options))
 
-    all_intersections.sort(key=lambda x: (x.size(), len(
-        x.get_node(x.root).data.source_positions)), reverse=True)
+    all_intersections.sort(key=lambda x: x[1], reverse=True)
 
-    all_intersections = sort_by_size_to_remove_ratio_tree(all_intersections)
+    all_intersections = [x[0] for x in all_intersections]
 
     intersections_without_overlaps = remove_overlapping(all_intersections)
 
@@ -218,6 +218,7 @@ def compute_combinations(trees, options={}) -> list[list[Tree]]:
     for index, tree in enumerate(trees):
         current_dict = {}
         for node in all_nodes_per_tree[index]:
+            # if node.data.type in ["{", "}", "(", ")", "[", "]", ";", ",", "#include"] or node.data.subtree_size < options.get("minimum_trace_size", minimum_trace_size_default):
             if node.data.subtree_size < options.get("minimum_trace_size", minimum_trace_size_default):
                 continue
             hash_ = node.data.subtree_hash
@@ -242,8 +243,10 @@ def compute_combinations(trees, options={}) -> list[list[Tree]]:
 
 
 def sort_by_size_to_remove_ratio_tree(trees):
-    nodes = [[get_root_node(tree)] for tree in trees]
-    sorted_nodes = sort_by_size_to_remove_ratio(nodes)
+
+    for tree in trees:
+        calculate_decision_ratio(tree, tree, None)
+    sorted_nodes = sort_by_decision_ratio(nodes)
     sorted_trees = []
     for node in sorted_nodes:
         for tree in trees:
@@ -252,12 +255,21 @@ def sort_by_size_to_remove_ratio_tree(trees):
     return sorted_trees
 
 
+def sort_by_size_to_remove_ratio(combinations):
+    combination_with_ratio = []
+    for combination in combinations:
+        ratio = calculate_size_to_remove_ratio(combination, combinations)
+        combination_with_ratio.append((combination, ratio))
+    combination_with_ratio.sort(key=lambda comb: comb[1], reverse=True)
+    return [x[0] for x in combination_with_ratio]
+
 
 def calculate_size_to_remove_ratio(combination, combinations):
     own_size = combination[0].data.subtree_size
     own_positions = [
         position for node in combination for position in node.data.source_positions]
 
+    # TODO: do not include other combination that are completely contained in this one
     other_size_total = 0
     for other_combination in combinations:
         if not other_combination is combination:
@@ -266,16 +278,82 @@ def calculate_size_to_remove_ratio(combination, combinations):
             if not positions_do_not_cross(own_positions, [other_positions]):
                 other_size = other_combination[0].data.subtree_size
                 other_size_total += other_size
-    return other_size_total / own_size
+    size_to_remove = (10 * own_size) / (other_size_total + 1)
+    normalized_size_to_remove = 1 - (size_to_remove / own_size)
+    print(normalized_size_to_remove, size_to_remove, own_size, other_size_total)
+    return normalized_size_to_remove
 
 
-def sort_by_size_to_remove_ratio(combinations):
+def calculate_depth_proximity(trees, combination):
+    depths = []
+    for index, node in enumerate(combination):
+        depths.append(trees[index].depth(node.identifier))
+    span = max(depths) - min(depths)
+    depth_proximity = 1 / (span + 1)
+    return depth_proximity
+
+
+def get_ancestors(tree, node):
+    ancestors = []
+    while tree.parent(node.identifier) is not None:
+        node = tree.parent(node.identifier)
+        ancestors.append(node)
+    return ancestors
+
+
+def calculate_ancestor_similarity(trees, combination):
+    ancestors_per_node = []
+    for index, node in enumerate(combination):
+        ancestors_per_node.append(get_ancestors(trees[index], node))
+    similar_ancestors = 0
+    for ancestor_tuple in zip(*ancestors_per_node):
+        all_ancestors_same = True
+        for ancestor in ancestor_tuple:
+            if ancestor.tag != ancestor_tuple[0].tag:
+                all_ancestors_same = False
+        if all_ancestors_same:
+            similar_ancestors += 1
+        else:
+            break
+    longest_ancestor_chain = max(map(len, ancestors_per_node))
+    # print(similar_ancestors / longest_ancestor_chain, similar_ancestors, longest_ancestor_chain)
+    return similar_ancestors / (longest_ancestor_chain)
+
+
+def calculate_sibling_similarity(trees, combination):
+    sibling_hashes_per_node = []
+    for index, node in enumerate(combination):
+        siblings = trees[index].siblings(node.identifier)
+        sibling_hashes = [sibling.data.subtree_hash for sibling in siblings]
+        sibling_hashes_per_node.append(sibling_hashes)
+    sibling_similarity = 0
+    for sibling_hash in sibling_hashes_per_node[0]:
+        for i in range(1, len(sibling_hashes_per_node)):
+            if sibling_hash in sibling_hashes_per_node[i]:
+                sibling_similarity += 1
+    return sibling_similarity / (max(map(len, sibling_hashes_per_node)) + 1)
+
+
+def calculate_decision_ratio(trees, combination, combinations):
+    #size_to_remove_ratio = calculate_size_to_remove_ratio(
+    #    combination, combinations)
+    depth_proximity = calculate_depth_proximity(trees, combination)
+    ancestor_similarity = calculate_ancestor_similarity(trees, combination)
+    sibling_similarity = calculate_sibling_similarity(trees, combination)
+    decision_ratio = 0.25 * ancestor_similarity + 0.65 * sibling_similarity + 0.1 * depth_proximity
+    rendered = list(map(lambda x: str(list(map(lambda y: y.render(), x.data.source_positions))), combination))
+    print(rendered, "DR:" + str(decision_ratio), "SR:" + str("Currently omitted"), "AS:" + str(ancestor_similarity), "SS:" + str(sibling_similarity), "DP:" + str(depth_proximity))
+    return decision_ratio
+
+
+def sort_by_decision_ratio(trees, combinations):
     combination_with_ratio = []
     for combination in combinations:
-        ratio = calculate_size_to_remove_ratio(combination, combinations)
+        ratio = calculate_decision_ratio(trees, combination, combinations)
         combination_with_ratio.append((combination, ratio))
-    combination_with_ratio.sort(key=lambda comb: (comb[1], -sum(map(lambda x: x.data.source_positions[0].value_start_point(), comb[0]))))
-    return [x[0] for x in combination_with_ratio]
+    combination_with_ratio.sort(key=lambda comb: (
+        comb[1], comb[0][0].data.subtree_size, -sum(map(lambda x: x.data.source_positions[0].value_start_point(), comb[0]))), reverse=True)
+    return combination_with_ratio
 
 
 def intersect_all_subtrees(tree_groups, options={}):
@@ -296,13 +374,13 @@ def intersect_all_subtrees(tree_groups, options={}):
     print("Found " + str(len(equal_combinations)) +
           " subtrees that occur in all trees", flush=True)
 
-    equal_combinations = sort_by_size_to_remove_ratio(equal_combinations)
+    equal_combinations_with_ratio = sort_by_decision_ratio(trees, equal_combinations)
 
-    equal_combinations = remove_overlapping_combinations(equal_combinations)
+    equal_combinations_with_ratio = remove_overlapping_combinations(equal_combinations_with_ratio)
 
     matched_subtrees = []
 
-    for combination in equal_combinations:
+    for (combination, ratio) in equal_combinations_with_ratio:
         first_subtree = Tree(trees[0].subtree(
             combination[0].identifier))
         all_nodes_first = first_subtree.all_nodes()
@@ -316,14 +394,14 @@ def intersect_all_subtrees(tree_groups, options={}):
                 for position in node.data.tree_positions:
                     if position not in node_first.data.tree_positions:
                         node_first.data.tree_positions.append(position)
-        matched_subtrees.append(first_subtree)
+        matched_subtrees.append((first_subtree, ratio))
 
     return matched_subtrees
 
 
 def difference(leftSide, rightSide, options={}):
     leftSideIntersected = intersect_all_subtrees(leftSide, options)
-    return subtraction(leftSideIntersected, rightSide, options)
+    return subtraction([x[0] for x in leftSideIntersected], rightSide, options)
 
 
 def print_tree(tree):
@@ -332,6 +410,8 @@ def print_tree(tree):
             print(4*" " * tree.depth(node_id), end="")
             node = tree.get_node(node_id)
             rendered = node.data.type + " " + \
+                (str(node.data.text) if node.data.is_ts_leaf else "") + \
+                " " + \
                 str(node.data.subtree_hash) + " " + \
                 str(list(map(lambda x: x.render(), node.data.source_positions)))
             print(rendered)
