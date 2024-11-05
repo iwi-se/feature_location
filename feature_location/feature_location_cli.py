@@ -77,14 +77,14 @@ def process_difference(filesBeforeSeparator, filesAfterSeparator, file_name="fea
     treesSubtraction = [read_and_preprocess(
         file, options) for file in filesAfterSeparator]
 
-    results = difference(treesIntersection, treesSubtraction, options)
+    (treesIntersection, source_ranges_subtraction) = difference(treesIntersection, treesSubtraction, options)
 
-    print_trees(results)
-    source_ranges = [result.get_node(
-        result.root).data.source_positions for result in results]
+    print_trees(treesIntersection)
+    source_ranges_intersection = [result.get_node(
+        result.root).data.source_positions for result in treesIntersection]
     with open(file_name, "w") as f:
         f.write(render.render_feature_location(
-            filesBeforeSeparator, source_ranges))
+            filesBeforeSeparator, source_ranges_intersection, filesAfterSeparator, source_ranges_subtraction))
 
 
 def process_show_ast(files):

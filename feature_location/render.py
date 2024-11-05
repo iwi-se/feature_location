@@ -2,7 +2,8 @@ from tree_sitter import Point
 import feature_location as fl
 import html
 
-span = "<span style=\"background: lightgreen;\">"
+green_span = "<span style=\"background: lightgreen;\">"
+red_span = "<span style=\"background: lightcoral;\">"
 end_span = "</span>"
 line_break = "<br>"
 html_doc_start = "<!DOCTYPE html><html><head><title>Feature Location</title></head><body><h1>Feature Location</h1>"
@@ -28,30 +29,36 @@ def render_headline(headline):
     return "<h2>" + html.escape(headline) + "</h1>"
 
 
-def render_feature_location_system(code_file, list_of_trace_ranges):
+def render_char(char):
+    if char == " ":
+        return "&nbsp;"
+    else:
+        return html.escape(char)
+
+
+def render_feature_location_system(code_file, list_of_trace_ranges, list_of_subtraction_ranges=None):
     result = ""
-    currently_in_trace = False
     with open(code_file, "r") as f:
         for line_nr, line in enumerate(f):
             for char_nr, char in enumerate(line):
                 ts_point = Point(line_nr, char_nr)
-                if any(point_in_trace_range(code_file, ts_point, trace_range) for trace_ranges_per_trace in list_of_trace_ranges for trace_range in trace_ranges_per_trace):
-                    if not currently_in_trace:
-                        result += span
-                        currently_in_trace = True
+                if any(point_in_trace_range(code_file, ts_point, trace_range) for trace_range in list_of_subtraction_ranges):
+                    result += red_span
+                    result += render_char(char)
+                    result += end_span
+                elif any(point_in_trace_range(code_file, ts_point, trace_range) for trace_ranges_per_trace in list_of_trace_ranges for trace_range in trace_ranges_per_trace):
+                    result += green_span
+                    result += render_char(char)
+                    result += end_span
                 else:
-                    if currently_in_trace:
-                        result += end_span
-                        currently_in_trace = False
-                if char == " ":
-                    result += "&nbsp;"
-                else:
-                    result += html.escape(char)
+                    result += render_char(char)
             result += line_break
     return render_headline(code_file) + location_window_start + result + location_window_end
 
-def render_feature_location(code_files, list_of_trace_ranges):
+def render_feature_location(code_files_left, list_of_trace_ranges, code_files_right=None, list_of_subtraction_ranges=None):
     result = ""
-    for code_file in code_files:
-        result += render_feature_location_system(code_file, list_of_trace_ranges)
+    for code_file in code_files_left:
+        result += render_feature_location_system(code_file, list_of_trace_ranges, list_of_subtraction_ranges)
+    for code_file in code_files_right:
+        result += render_feature_location_system(code_file, [], list_of_subtraction_ranges)
     return html_doc_start + result + html_doc_end

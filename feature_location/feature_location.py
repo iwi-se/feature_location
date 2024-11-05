@@ -1,3 +1,4 @@
+from copy import deepcopy
 import tree_sitter_cpp as tscpp
 import sys as sys
 from tree_sitter import Language, Parser
@@ -169,7 +170,7 @@ def remove_subtree(tree, node):
     return result
 
 
-def subtraction(leftSide, treesToSubtract, options={}):
+def subtraction(leftSide, leftSideIntersected, treesToSubtract, options={}):
     # Intersect treesToSubtract first
     # intersection_trees_to_subtract = intersect_all_subtrees(
     #     [[tree] for tree in treesToSubtract], options)
@@ -180,32 +181,20 @@ def subtraction(leftSide, treesToSubtract, options={}):
 
     for treeToSubtract in treesToSubtract:
         all_intersections.extend(
-            intersect_all_subtrees([leftSide, [treeToSubtract]], options))
+            intersect_all_subtrees(deepcopy(leftSide) + [[treeToSubtract]], options))
 
     all_intersections.sort(key=lambda x: x[1], reverse=True)
 
     all_intersections = [x[0] for x in all_intersections]
 
-    intersections_without_overlaps = remove_overlapping(all_intersections)
+    intersections_without_overlaps = all_intersections # remove_overlapping(all_intersections)
 
     all_positions_to_subtract = []  # enough to include root node positions
     for intersection in intersections_without_overlaps:
         all_positions_to_subtract.extend(intersection.get_node(
             intersection.root).data.source_positions)
 
-    result = []
-    for tree in leftSide:
-        tree_result = [tree]
-        for node in tree.all_nodes():
-            # if set intersection not empty, remove
-            if set(node.data.source_positions) & set(all_positions_to_subtract):
-                for res_tree in tree_result:
-                    if res_tree.contains(node.identifier):
-                        tree_result.remove(res_tree)
-                        tree_result.extend(remove_subtree(res_tree, node))
-                        break
-        result.extend(tree_result)
-    return result
+    return all_positions_to_subtract
 
 
 def compute_combinations(trees, options={}) -> list[list[Tree]]:
@@ -400,8 +389,10 @@ def intersect_all_subtrees(tree_groups, options={}):
 
 
 def difference(leftSide, rightSide, options={}):
-    leftSideIntersected = intersect_all_subtrees(leftSide, options)
-    return subtraction([x[0] for x in leftSideIntersected], rightSide, options)
+    leftSideIntersectedWithDecisionRatio = intersect_all_subtrees(leftSide, options)
+    leftSideIntersected = [x[0] for x in leftSideIntersectedWithDecisionRatio]
+    positions_to_subtract = subtraction(leftSide, leftSideIntersected, rightSide, options)
+    return (leftSideIntersected, positions_to_subtract)
 
 
 def print_tree(tree):
