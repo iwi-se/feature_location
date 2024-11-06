@@ -4,6 +4,7 @@ import sys as sys
 from tree_sitter import Language, Parser
 from itertools import product
 from treelib import Tree
+from Levenshtein import distance, ratio
 import render
 
 minimum_trace_size_default = 1
@@ -118,7 +119,7 @@ def positions_do_not_cross(positions, other_positions_list):
         for position, other_position in product(positions, other_positions):
             if position.file == other_position.file:
                 result.append(position.relative_position(other_position))
-        if not (result[0] != 0 and all(x == result[0] for x in result)):
+        if not (len(result) == 0) and not (result[0] != 0 and all(x == result[0] for x in result)):
             return False
     return True
 
@@ -179,15 +180,16 @@ def subtraction(leftSide, leftSideIntersected, treesToSubtract, options={}):
     # all_intersections.extend(intersect_all_subtrees(
     #     [leftSide, intersection_trees_to_subtract], options))
 
-    for treeToSubtract in treesToSubtract:
+    for rightSideTree in treesToSubtract:
         all_intersections.extend(
-            intersect_all_subtrees(deepcopy(leftSide) + [[treeToSubtract]], options))
+            intersect_all_subtrees(deepcopy(leftSide) + [[deepcopy(rightSideTree)]], options))
 
     all_intersections.sort(key=lambda x: x[1], reverse=True)
 
     all_intersections = [x[0] for x in all_intersections]
 
-    intersections_without_overlaps = all_intersections # remove_overlapping(all_intersections)
+    remove_overlapping(all_intersections)
+    intersections_without_overlaps = all_intersections
 
     all_positions_to_subtract = []  # enough to include root node positions
     for intersection in intersections_without_overlaps:
@@ -316,22 +318,58 @@ def calculate_sibling_similarity(trees, combination):
         sibling_hashes = [sibling.data.subtree_hash for sibling in siblings]
         sibling_hashes_per_node.append(sibling_hashes)
     sibling_similarity = 0
-    for sibling_hash in sibling_hashes_per_node[0]:
-        for i in range(1, len(sibling_hashes_per_node)):
-            if sibling_hash in sibling_hashes_per_node[i]:
-                sibling_similarity += 1
-    return sibling_similarity / (max(map(len, sibling_hashes_per_node)) + 1)
+    levenshtein_similarities = []
+    for i in range(len(sibling_hashes_per_node) - 1):
+        r = ratio(sibling_hashes_per_node[i], sibling_hashes_per_node[i + 1])
+        levenshtein_similarities.append(r)
+    sibling_similarity = sum(levenshtein_similarities) / \
+        (len(levenshtein_similarities))
+    return sibling_similarity
+
+
+def calculate_environment_similarity(trees, combination):
+    ancestors_per_node = []
+    for index, node in enumerate(combination):
+        ancestors_per_node.append(get_ancestors(trees[index], node))
+
+    direct_sibling_similarity = calculate_sibling_similarity(trees, combination)
+    equal_ancestors = 0
+    ancestor_sibling_similarities = 0
+
+    ancestor_pairings = zip(*ancestors_per_node)
+
+    for ancestor_pairing in ancestor_pairings:
+        if all(ancestor.tag == ancestor_pairing[0].tag for ancestor in ancestor_pairing):
+            equal_ancestors += 1
+            ancestor_sibling_similarity = calculate_sibling_similarity(
+                trees, ancestor_pairing)
+            ancestor_sibling_similarities += ancestor_sibling_similarity
+        else:
+            break
+
+    longest_ancestor_chain = max(map(len, ancestors_per_node))
+    ancestor_similarity = equal_ancestors / longest_ancestor_chain
+    ancestor_sibling_similarity = ancestor_sibling_similarities / (equal_ancestors + 1)
+    environment_similarity = 0.2 * ancestor_similarity + \
+        0.5 * direct_sibling_similarity + 0.3 * ancestor_sibling_similarity
+    return environment_similarity
+
 
 
 def calculate_decision_ratio(trees, combination, combinations):
-    #size_to_remove_ratio = calculate_size_to_remove_ratio(
+    # size_to_remove_ratio = calculate_size_to_remove_ratio(
     #    combination, combinations)
     depth_proximity = calculate_depth_proximity(trees, combination)
-    ancestor_similarity = calculate_ancestor_similarity(trees, combination)
-    sibling_similarity = calculate_sibling_similarity(trees, combination)
-    decision_ratio = 0.25 * ancestor_similarity + 0.65 * sibling_similarity + 0.1 * depth_proximity
-    rendered = list(map(lambda x: str(list(map(lambda y: y.render(), x.data.source_positions))), combination))
-    print(rendered, "DR:" + str(decision_ratio), "SR:" + str("Currently omitted"), "AS:" + str(ancestor_similarity), "SS:" + str(sibling_similarity), "DP:" + str(depth_proximity))
+
+    #ancestor_similarity = calculate_ancestor_similarity(trees, combination)
+    #sibling_similarity = calculate_sibling_similarity(trees, combination)
+
+    environment_similarity = calculate_environment_similarity(trees, combination)
+    decision_ratio = 0.2 * depth_proximity + \
+        0.8 * environment_similarity
+    rendered = list(map(lambda x: str(
+        list(map(lambda y: y.render(), x.data.source_positions))), combination))
+    print(rendered, "DR:" + str(decision_ratio), "ES:" + str(environment_similarity), "DP:" + str(depth_proximity))
     return decision_ratio
 
 
@@ -363,9 +401,11 @@ def intersect_all_subtrees(tree_groups, options={}):
     print("Found " + str(len(equal_combinations)) +
           " subtrees that occur in all trees", flush=True)
 
-    equal_combinations_with_ratio = sort_by_decision_ratio(trees, equal_combinations)
+    equal_combinations_with_ratio = sort_by_decision_ratio(
+        trees, equal_combinations)
 
-    equal_combinations_with_ratio = remove_overlapping_combinations(equal_combinations_with_ratio)
+    equal_combinations_with_ratio = remove_overlapping_combinations(
+        equal_combinations_with_ratio)
 
     matched_subtrees = []
 
@@ -389,9 +429,11 @@ def intersect_all_subtrees(tree_groups, options={}):
 
 
 def difference(leftSide, rightSide, options={}):
-    leftSideIntersectedWithDecisionRatio = intersect_all_subtrees(leftSide, options)
+    leftSideIntersectedWithDecisionRatio = intersect_all_subtrees(
+        deepcopy(leftSide), options)
     leftSideIntersected = [x[0] for x in leftSideIntersectedWithDecisionRatio]
-    positions_to_subtract = subtraction(leftSide, leftSideIntersected, rightSide, options)
+    positions_to_subtract = subtraction(
+        leftSide, leftSideIntersected, rightSide, options)
     return (leftSideIntersected, positions_to_subtract)
 
 
