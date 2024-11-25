@@ -315,16 +315,35 @@ def calculate_sibling_similarity(trees, combination):
     sibling_hashes_per_node = []
     for index, node in enumerate(combination):
         siblings = trees[index].siblings(node.identifier)
-        sibling_hashes = [sibling.data.subtree_hash for sibling in siblings]
+        sibling_hashes = [(sibling.data.subtree_hash, sibling.data.subtree_size, trees[index].leaves(node.identifier), sibling) for sibling in siblings]
         sibling_hashes_per_node.append(sibling_hashes)
     sibling_similarity = 0
-    levenshtein_similarities = []
-    for i in range(len(sibling_hashes_per_node) - 1):
-        r = ratio(sibling_hashes_per_node[i], sibling_hashes_per_node[i + 1])
-        levenshtein_similarities.append(r)
-    sibling_similarity = sum(levenshtein_similarities) / \
-        (len(levenshtein_similarities))
-    return sibling_similarity
+    for sibling_hash in sibling_hashes_per_node[0]:
+        sibling_in_all = True
+        for i in range(1, len(sibling_hashes_per_node)):
+            if sibling_hash not in sibling_hashes_per_node[i]:
+                sibling_in_all = False
+        if sibling_in_all:
+            sibling_similarity += sibling_hash[1]
+        elif sibling_hash[3].tag in [sibling[3].tag for node_siblings in sibling_hashes_per_node[1:] for sibling in node_siblings]:
+            for leave in sibling_hash[2]:
+                leave_in_all = True
+                for i in range(1, len(sibling_hashes_per_node)):
+                    for sibling in sibling_hashes_per_node[i]:
+                        if leave.data.text not in map(lambda x: x.data.text, sibling[2]):
+                            leave_in_all = False
+                if leave_in_all and leave.data.is_named:
+                    sibling_similarity += 1
+                    
+
+    def getParentSubtreeSize(t):
+        tree, node = t
+        parent = tree.parent(node.identifier)
+        if parent is None or parent.data is None:
+            return tree.size()
+        return parent.data.subtree_size
+
+    return sibling_similarity / (max(map(getParentSubtreeSize, zip(trees, combination))))
 
 
 def calculate_environment_similarity(trees, combination):
@@ -348,6 +367,7 @@ def calculate_environment_similarity(trees, combination):
             break
 
     longest_ancestor_chain = max(map(len, ancestors_per_node))
+
     ancestor_similarity = equal_ancestors / longest_ancestor_chain
     ancestor_sibling_similarity = ancestor_sibling_similarities / (equal_ancestors + 1)
     environment_similarity = 0.2 * ancestor_similarity + \
@@ -363,13 +383,16 @@ def calculate_decision_ratio(trees, combination, combinations):
 
     #ancestor_similarity = calculate_ancestor_similarity(trees, combination)
     #sibling_similarity = calculate_sibling_similarity(trees, combination)
+    size = combination[0].data.subtree_size
 
     environment_similarity = calculate_environment_similarity(trees, combination)
     decision_ratio = 0.2 * depth_proximity + \
-        0.8 * environment_similarity
+        0.3 * environment_similarity + 0.5 * min((size / 100 ), 1)
+
     rendered = list(map(lambda x: str(
         list(map(lambda y: y.render(), x.data.source_positions))), combination))
     print(rendered, "DR:" + str(decision_ratio), "ES:" + str(environment_similarity), "DP:" + str(depth_proximity))
+
     return decision_ratio
 
 
