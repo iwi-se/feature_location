@@ -1,4 +1,5 @@
 from copy import deepcopy
+import tree_sitter_java as tsjava
 import tree_sitter_cpp as tscpp
 import sys as sys
 from tree_sitter import Language, Parser
@@ -7,11 +8,11 @@ from treelib import Tree
 import render
 
 # Default configuration options
-minimum_trace_size_default = 1
+minimum_trace_size_default = 10
 only_named_nodes_default = True
 
-CPP_LANGUAGE = Language(tscpp.language())
-parser = Parser(CPP_LANGUAGE)
+LANGUAGE = Language(tsjava.language())
+parser = Parser(LANGUAGE)
 
 
 class SourcePosition:

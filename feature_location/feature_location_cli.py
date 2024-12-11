@@ -2,17 +2,16 @@
 @file feature_location_cli.py
 @brief A command-line interface for feature location operations.
 
-This script supports operations like intersection, difference, and AST rendering of Java source files. 
-It can take directories (recursively searching for .java files) and files as inputs, and combines them 
-into temporary files for processing.
+@note The intersection and show_ast functionalities remain similar to the original implementation. 
+      The difference functionality has been adjusted to handle files individually based on matching names.
 """
 
 import re
-from feature_location import read_and_preprocess, intersect_all_subtrees, difference, print_trees
-import render
 import sys
 import yaml
 import os
+from feature_location import read_and_preprocess, intersect_all_subtrees, difference, print_trees
+import render
 
 def map_system_to_file(system, config):
     """
@@ -30,7 +29,7 @@ def map_system_to_file(system, config):
 def map_systems_to_files(systems, config):
     """
     @brief Maps a list of systems to their corresponding files.
-    
+
     @param systems A list of system names.
     @param config Configuration object with "name-file-mappings".
     @return A list of filenames corresponding to the given systems.
@@ -77,31 +76,12 @@ def gather_java_files(paths):
                 java_files.append(p)
     return java_files
 
-def combine_files_into_temp(java_files, temp_filename):
-    """
-    @brief Combine multiple .java files into one temporary file.
-
-    This simulates the idea of concatenating all files into one large .java file.
-    Each file is preceded by a comment line indicating its original path.
-
-    @param java_files A list of .java filenames.
-    @param temp_filename The name of the temporary file to create.
-    @return The path to the created temporary file.
-    """
-    with open(temp_filename, "w", encoding='utf-8', errors='replace') as outfile:
-        for jf in java_files:
-            outfile.write("// Contents from: {}\n".format(jf))
-            with open(jf, "r", encoding='utf-8', errors='replace') as infile:
-                outfile.write(infile.read())
-                outfile.write("\n\n")
-    return temp_filename
-
 def process_file(file):
     """
     @brief Processes a YAML configuration file specifying an action and expressions.
 
-    If the action is "difference", this function maps systems to files, gathers their .java files, 
-    combines them, and processes the difference.
+    If the action is "difference", this function maps systems to files, gathers their .java files,
+    and processes the difference similarly to how the CLI difference would work.
 
     @param file The path to the YAML config file.
     """
@@ -115,15 +95,15 @@ def process_file(file):
             left_side = map_systems_to_files(expr["left-side"], config)
             right_side = map_systems_to_files(expr["right-side"], config)
 
+            # Gather java files for left and right
             left_java_files = gather_java_files(left_side)
             right_java_files = gather_java_files(right_side)
 
-            temp_left = combine_files_into_temp(left_java_files, "temp_left_{}.java".format(expr["labels"][0]))
-            temp_right = combine_files_into_temp(right_java_files, "temp_right_{}.java".format(expr["labels"][0]))
-
-            process_difference([temp_left], [temp_right],
-                               "feature_location_" + str(expr["labels"][0]) + ".html",
-                               config.get("options", {}))
+            # Instead of combining into temp files, we now process them individually
+            # for matching filenames.
+            process_difference_individual(left_java_files, right_java_files, 
+                                          "feature_location_" + str(expr["labels"][0]) + ".html", 
+                                          config.get("options", {}))
     else:
         print("Unknown action")
 
@@ -149,6 +129,7 @@ def process_intersection(files):
         print("No .java files found for intersection.")
         return
 
+    # Combine into one temporary file as per original logic
     temp_file = combine_files_into_temp(all_java_files, "temp_intersection.java")
 
     trees = []
@@ -186,12 +167,62 @@ def read_difference_args():
 
     return filesBeforeSeparator, filesAfterSeparator
 
+def process_difference_individual(before_java, after_java, file_name="feature_location.html", options={}):
+    """
+    @brief Process difference on a file-by-file basis without combining them.
+
+    Given lists of Java files from the "before" side and the "after" side, 
+    this function finds files with the same name and computes differences 
+    between them individually.
+
+    @param before_java A list of .java files from the 'before' side.
+    @param after_java A list of .java files from the 'after' side.
+    @param file_name The output filename for the HTML feature location result.
+    @param options Additional options passed to the difference operation.
+    """
+    # Organize files by their base filename
+    before_map = {}
+    for f in before_java:
+        name = os.path.basename(f)
+        if name not in before_map:
+            before_map[name] = []
+        before_map[name].append(f)
+
+    after_map = {}
+    for f in after_java:
+        name = os.path.basename(f)
+        if name not in after_map:
+            after_map[name] = []
+        after_map[name].append(f)
+
+    # For each file in before_map, we try to find it in after_map
+    # If found, we run the difference. If not, print a message.
+    for filename, before_files in before_map.items():
+        if filename in after_map:
+            # We'll consider all 'before_files' and 'after_files' that match this name.
+            after_files = after_map[filename]
+
+            # Note: If multiple files have the same name in multiple directories, 
+            # we handle them all. 
+            treesBefore = [read_and_preprocess(bf, options) for bf in before_files]
+            treesAfter = [read_and_preprocess(af, options) for af in after_files]
+
+            # difference() expects parameters as (list_of_lists, list_of_trees)
+            # We'll treat treesBefore as one group and treesAfter as another.
+            # intersection set: [treesBefore], subtraction set: treesAfter
+            (resultTrees, source_ranges_subtraction) = difference([treesBefore], treesAfter, options)
+
+            print_trees(resultTrees)
+            source_ranges_intersection = [r.get_node(r.root).data.source_positions for r in resultTrees]
+            with open(file_name.replace(".html", f"_{filename}.html"), "w") as f:
+                f.write(render.render_feature_location(before_files, source_ranges_intersection, 
+                                                       after_files, source_ranges_subtraction))
+        else:
+            print(f"Can't find {filename} in after set.")
+
 def process_difference(filesBeforeSeparator, filesAfterSeparator, file_name="feature_location.html", options={}):
     """
-    @brief Processes the difference between two sets of files/directories.
-
-    Gathers all .java files from the 'before' set and the 'after' set, 
-    combines them into temporary files, and computes the difference.
+    @brief Processes the difference between two sets of files/directories on a file-by-file basis.
 
     @param filesBeforeSeparator A list of files/directories before the separator.
     @param filesAfterSeparator A list of files/directories after the separator.
@@ -208,26 +239,14 @@ def process_difference(filesBeforeSeparator, filesAfterSeparator, file_name="fea
         print("No .java files found in after-separator arguments.")
         return
 
-    temp_before = combine_files_into_temp(before_java, "temp_before.java")
-    temp_after = combine_files_into_temp(after_java, "temp_after.java")
-
-    treesIntersection = [[read_and_preprocess(temp_before, options)]]
-    treesSubtraction = [read_and_preprocess(temp_after, options)]
-
-    (treesIntersection, source_ranges_subtraction) = difference(treesIntersection, treesSubtraction, options)
-
-    print_trees(treesIntersection)
-    source_ranges_intersection = [result.get_node(
-        result.root).data.source_positions for result in treesIntersection]
-    with open(file_name, "w") as f:
-        f.write(render.render_feature_location(
-            [temp_before], source_ranges_intersection, [temp_after], source_ranges_subtraction))
+    # Process difference individually for each matching file
+    process_difference_individual(before_java, after_java, file_name, options)
 
 def process_show_ast(files):
     """
     @brief Shows the AST of the given files/directories.
 
-    Gathers all .java files, combines them, and prints their AST.
+    Gathers all .java files, combines them into a temporary file, and prints their AST.
 
     @param files A list of files/directories.
     """
@@ -240,6 +259,25 @@ def process_show_ast(files):
     trees = []
     trees.append(read_and_preprocess(temp_file, {"only_named_nodes": False}))
     print_trees(trees)
+
+def combine_files_into_temp(java_files, temp_filename):
+    """
+    @brief Combine multiple .java files into one temporary file.
+
+    This function is used by intersection and show_ast operations, 
+    but not by the modified difference operation.
+
+    @param java_files A list of .java filenames.
+    @param temp_filename The name of the temporary file to create.
+    @return The path to the created temporary file.
+    """
+    with open(temp_filename, "w", encoding='utf-8', errors='replace') as outfile:
+        for jf in java_files:
+            outfile.write("// Contents from: {}\n".format(jf))
+            with open(jf, "r", encoding='utf-8', errors='replace') as infile:
+                outfile.write(infile.read())
+                outfile.write("\n\n")
+    return temp_filename
 
 def parse_difference_expression(expression: str):
     """
@@ -303,9 +341,9 @@ if __name__ == "__main__":
     """
     @brief The main entry point of the script.
 
-    Expects commands such as:
+    Supported commands:
     - "intersection" followed by files/dirs
-    - "difference" followed by files/dirs, then '--', then more files/dirs
+    - "difference" followed by files/dirs, then '--', then more files/dirs (modified to handle files individually)
     - "show_ast" followed by files/dirs
     - "file" followed by a YAML config file
     - "generate_yaml" followed by an isolation result file
