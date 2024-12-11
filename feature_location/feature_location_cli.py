@@ -1,15 +1,26 @@
+"""
+@file feature_location_cli.py
+@brief A command-line interface for feature location operations.
+
+This script supports operations like intersection, difference, and AST rendering of Java source files. 
+It can take directories (recursively searching for .java files) and files as inputs, and combines them 
+into temporary files for processing.
+"""
+
 import re
 from feature_location import read_and_preprocess, intersect_all_subtrees, difference, print_trees
 import render
 import sys
 import yaml
+import os
 
 def map_system_to_file(system, config):
     """
-    @brief Maps a system name to a filename using provided configuration.
-    @param system The name of the system.
-    @param config A dictionary containing name-file mappings.
-    @return The corresponding filename or None if not found.
+    @brief Maps a system name to a filename based on a given configuration.
+
+    @param system The name of the system to map.
+    @param config A dictionary-like configuration object that includes "name-file-mappings".
+    @return The mapped filename or None if not found.
     """
     for mapping in config["name-file-mappings"]:
         if mapping["name"] == system:
@@ -18,18 +29,23 @@ def map_system_to_file(system, config):
 
 def map_systems_to_files(systems, config):
     """
-    @brief Maps multiple system names to filenames.
+    @brief Maps a list of systems to their corresponding files.
+    
     @param systems A list of system names.
-    @param config A dictionary with name-file mappings.
+    @param config Configuration object with "name-file-mappings".
     @return A list of filenames corresponding to the given systems.
     """
     return [map_system_to_file(system, config) for system in systems]
 
 def find_expressions_to_run(config):
     """
-    @brief Finds which expressions should be run based on the 'run' list in the config.
-    @param config A dictionary containing 'run' and 'expressions' keys.
-    @return A list of expressions to run.
+    @brief Finds and returns a list of expressions to run based on the config.
+
+    The config contains a "run" list and an "expressions" list. This function finds 
+    all expressions whose labels match the items in "run".
+
+    @param config A configuration dictionary containing "run" and "expressions".
+    @return A list of expressions (dicts) that should be run.
     """
     expressions_to_run = []
     for label_to_run in config["run"]:
@@ -39,10 +55,55 @@ def find_expressions_to_run(config):
                     expressions_to_run.append(expr)
     return expressions_to_run
 
+def gather_java_files(paths):
+    """
+    @brief Given a list of file or directory paths, returns all .java files found.
+
+    If a path is a directory, it searches recursively. If it's a file and ends with .java, 
+    it includes it directly. Mixing directories and files is allowed.
+
+    @param paths A list of file or directory paths.
+    @return A list of .java file paths found.
+    """
+    java_files = []
+    for p in paths:
+        if os.path.isdir(p):
+            for root, dirs, files in os.walk(p):
+                for file in files:
+                    if file.endswith(".java"):
+                        java_files.append(os.path.join(root, file))
+        else:
+            if p.endswith(".java"):
+                java_files.append(p)
+    return java_files
+
+def combine_files_into_temp(java_files, temp_filename):
+    """
+    @brief Combine multiple .java files into one temporary file.
+
+    This simulates the idea of concatenating all files into one large .java file.
+    Each file is preceded by a comment line indicating its original path.
+
+    @param java_files A list of .java filenames.
+    @param temp_filename The name of the temporary file to create.
+    @return The path to the created temporary file.
+    """
+    with open(temp_filename, "w", encoding='utf-8', errors='replace') as outfile:
+        for jf in java_files:
+            outfile.write("// Contents from: {}\n".format(jf))
+            with open(jf, "r", encoding='utf-8', errors='replace') as infile:
+                outfile.write(infile.read())
+                outfile.write("\n\n")
+    return temp_filename
+
 def process_file(file):
     """
-    @brief Processes a configuration file, running specified actions (like difference).
-    @param file The configuration YAML file.
+    @brief Processes a YAML configuration file specifying an action and expressions.
+
+    If the action is "difference", this function maps systems to files, gathers their .java files, 
+    combines them, and processes the difference.
+
+    @param file The path to the YAML config file.
     """
     config = {}
     with open(file, "r") as f:
@@ -53,40 +114,63 @@ def process_file(file):
         for expr in exprs:
             left_side = map_systems_to_files(expr["left-side"], config)
             right_side = map_systems_to_files(expr["right-side"], config)
-            process_difference(left_side, right_side, "feature_location_" + str(expr["labels"][0]) + ".html", config["options"])
+
+            left_java_files = gather_java_files(left_side)
+            right_java_files = gather_java_files(right_side)
+
+            temp_left = combine_files_into_temp(left_java_files, "temp_left_{}.java".format(expr["labels"][0]))
+            temp_right = combine_files_into_temp(right_java_files, "temp_right_{}.java".format(expr["labels"][0]))
+
+            process_difference([temp_left], [temp_right],
+                               "feature_location_" + str(expr["labels"][0]) + ".html",
+                               config.get("options", {}))
     else:
         print("Unknown action")
 
 def read_args():
     """
-    @brief Reads arguments after the first command in sys.argv.
-    @return A list of arguments provided.
+    @brief Reads arguments after the first two arguments from sys.argv.
+
+    @return A list of arguments starting from sys.argv[2].
     """
     return sys.argv[2:]
 
 def process_intersection(files):
     """
-    @brief Processes intersection of given files and prints the results.
-    @param files A list of filenames.
+    @brief Processes the intersection of the ASTs from given files/directories.
+
+    Gathers .java files from the specified paths, combines them into a single 
+    temporary file, and then finds the intersection of their feature locations.
+
+    @param files A list of files or directories.
     """
+    all_java_files = gather_java_files(files)
+    if not all_java_files:
+        print("No .java files found for intersection.")
+        return
+
+    temp_file = combine_files_into_temp(all_java_files, "temp_intersection.java")
+
     trees = []
-    for file in files:
-        trees.append([read_and_preprocess(file)])
+    trees.append([read_and_preprocess(temp_file)])
 
     print("Starting intersection", flush=True)
 
     result = intersect_all_subtrees(trees)
     print_trees(result)
 
-    source_ranges = [result.get_node(
-        result.root).data.source_positions for result in result]
+    source_ranges = [res.get_node(res.root).data.source_positions for res in result]
     with open("feature_location.html", "w") as f:
-        f.write(render.render_feature_location(sys.argv[2:], source_ranges))
+        f.write(render.render_feature_location([temp_file], source_ranges))
 
 def read_difference_args():
     """
-    @brief Reads arguments for the 'difference' command, separating them by '--'.
-    @return A tuple (filesBeforeSeparator, filesAfterSeparator).
+    @brief Parses command-line arguments for the difference action.
+
+    Everything before the separator "--" is considered 'before', and everything 
+    after is considered 'after'.
+
+    @return A tuple (filesBeforeSeparator, filesAfterSeparator) both lists of strings.
     """
     filesBeforeSeparator = []
     filesAfterSeparator = []
@@ -104,16 +188,31 @@ def read_difference_args():
 
 def process_difference(filesBeforeSeparator, filesAfterSeparator, file_name="feature_location.html", options={}):
     """
-    @brief Processes the difference between sets of files.
-    @param filesBeforeSeparator Files on the left side of the difference.
-    @param filesAfterSeparator Files on the right side of the difference.
-    @param file_name Output HTML file name.
-    @param options Dictionary of analysis options.
+    @brief Processes the difference between two sets of files/directories.
+
+    Gathers all .java files from the 'before' set and the 'after' set, 
+    combines them into temporary files, and computes the difference.
+
+    @param filesBeforeSeparator A list of files/directories before the separator.
+    @param filesAfterSeparator A list of files/directories after the separator.
+    @param file_name The output filename for the HTML feature location result.
+    @param options Additional options passed to the difference operation.
     """
-    treesIntersection = [[read_and_preprocess(
-        file, options)] for file in filesBeforeSeparator]
-    treesSubtraction = [read_and_preprocess(
-        file, options) for file in filesAfterSeparator]
+    before_java = gather_java_files(filesBeforeSeparator)
+    if not before_java:
+        print("No .java files found in before-separator arguments.")
+        return
+
+    after_java = gather_java_files(filesAfterSeparator)
+    if not after_java:
+        print("No .java files found in after-separator arguments.")
+        return
+
+    temp_before = combine_files_into_temp(before_java, "temp_before.java")
+    temp_after = combine_files_into_temp(after_java, "temp_after.java")
+
+    treesIntersection = [[read_and_preprocess(temp_before, options)]]
+    treesSubtraction = [read_and_preprocess(temp_after, options)]
 
     (treesIntersection, source_ranges_subtraction) = difference(treesIntersection, treesSubtraction, options)
 
@@ -122,44 +221,57 @@ def process_difference(filesBeforeSeparator, filesAfterSeparator, file_name="fea
         result.root).data.source_positions for result in treesIntersection]
     with open(file_name, "w") as f:
         f.write(render.render_feature_location(
-            filesBeforeSeparator, source_ranges_intersection, filesAfterSeparator, source_ranges_subtraction))
+            [temp_before], source_ranges_intersection, [temp_after], source_ranges_subtraction))
 
 def process_show_ast(files):
     """
-    @brief Processes and prints the AST of given files.
-    @param files A list of filenames.
-    """
-    trees = []
-    for file in files:
-        trees.append(read_and_preprocess(file, {"only_named_nodes": False}))
+    @brief Shows the AST of the given files/directories.
 
+    Gathers all .java files, combines them, and prints their AST.
+
+    @param files A list of files/directories.
+    """
+    all_java = gather_java_files(files)
+    if not all_java:
+        print("No .java files found.")
+        return
+    temp_file = combine_files_into_temp(all_java, "temp_show_ast.java")
+
+    trees = []
+    trees.append(read_and_preprocess(temp_file, {"only_named_nodes": False}))
     print_trees(trees)
 
 def parse_difference_expression(expression: str):
     """
-    @brief Parses a difference expression like 'X \\ Y' where X and Y contain numbers.
+    @brief Parses a difference expression string of the form "X...Y \\ A...B".
+
+    Extracts integer lists from the left and right parts of the expression.
+
     @param expression A string containing a difference expression.
-    @return Two lists (left_numbers, right_numbers) extracted from the expression.
+    @return A tuple (left_numbers, right_numbers) both lists of integers.
     """
     left_part, right_part = expression.split(' \\ ')
     left_numbers = re.findall(r'\d+', left_part)
     right_numbers = re.findall(r'\d+', right_part)
-
     left_numbers = list(map(int, left_numbers))
     right_numbers = list(map(int, right_numbers))
-
     return left_numbers, right_numbers
 
 def generate_yaml_from_isolation_result(file):
     """
-    @brief Generates a YAML file from isolation results.
-    @param file The input file containing isolation results.
+    @brief Generates a YAML file from an isolation result file.
+
+    Reads an isolation result file, extracts features and minimum differences, 
+    and writes a YAML file containing differences as expressions.
+
+    @param file The path to the isolation result file.
     """
     data = []
     with open(file, "r") as f:
         is_after_isolation_headline = False
         for line in f:
-            if is_after_isolation_headline and not "FEATURE ID" in line:
+            if is_after_isolation_headline and "FEATURE ID" not in line:
+                print(line)
                 cols = line.split("\t")
                 data.append({
                     "feature_id": cols[0],
@@ -176,6 +288,7 @@ def generate_yaml_from_isolation_result(file):
         for i, min_difference in enumerate(feature["min_differences"]):
             if min_difference.strip() == "":
                 continue
+            print(min_difference)
             left_numbers, right_numbers = parse_difference_expression(min_difference)
             yaml_data.append({
                 "left-side": left_numbers,
@@ -186,21 +299,36 @@ def generate_yaml_from_isolation_result(file):
     with open("isolation_results.yaml", "w") as f:
         yaml.dump(yaml_data, f)
 
-
 if __name__ == "__main__":
     """
-    @brief Entry point for the CLI tool. Handles commands like intersection, difference, show_ast, etc.
+    @brief The main entry point of the script.
+
+    Expects commands such as:
+    - "intersection" followed by files/dirs
+    - "difference" followed by files/dirs, then '--', then more files/dirs
+    - "show_ast" followed by files/dirs
+    - "file" followed by a YAML config file
+    - "generate_yaml" followed by an isolation result file
     """
+    if len(sys.argv) < 2:
+        print("No arguments provided.")
+        sys.exit(1)
+
     if sys.argv[1] == "intersection":
         process_intersection(read_args())
+
     elif sys.argv[1] == "difference":
         filesBeforeSeparator, filesAfterSeparator = read_difference_args()
         process_difference(filesBeforeSeparator, filesAfterSeparator)
+
     elif sys.argv[1] == "show_ast":
         process_show_ast(read_args())
+
     elif sys.argv[1] == "file":
         process_file(sys.argv[2])
+
     elif sys.argv[1] == "generate_yaml":
         generate_yaml_from_isolation_result(sys.argv[2])
+
     else:
         print("Unknown command")
