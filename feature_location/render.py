@@ -64,7 +64,7 @@ def render_feature_location_system(code_file, list_of_trace_ranges, list_of_subt
     if list_of_subtraction_ranges is None:
         list_of_subtraction_ranges = []
     result = ""
-    with open(code_file, "r") as f:
+    with open(code_file, "r", encoding='utf-8',errors='replace') as f:
         for line_nr, line in enumerate(f):
             for char_nr, char in enumerate(line):
                 ts_point = Point(line_nr, char_nr)
