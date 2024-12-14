@@ -1,12 +1,10 @@
 """
-@file feature_isolation.py
-@brief Provides functionality for feature isolation through AST analysis and intersection.
+@file feature_location.py
+@brief Provides functionality for feature location through AST analysis and intersection.
 
 This module parses source files, builds ASTs using Tree-sitter, and provides functions to 
 compute intersections of common subtrees, differences between sets of ASTs, and render 
 source code highlighting.
-
-@note This file was originally named feature_location.py and has been renamed for clarity.
 """
 
 from copy import deepcopy
