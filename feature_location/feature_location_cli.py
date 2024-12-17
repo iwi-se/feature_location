@@ -1,5 +1,5 @@
 """
-@file feature_isolation_cli.py
+@file feature_location_cli.py
 @brief A command-line interface for feature isolation operations.
 
 This CLI allows users to:
@@ -7,8 +7,6 @@ This CLI allows users to:
 - Compute differences (highlighting changes).
 - Show AST structures.
 - Process configurations from YAML files.
-
-@note This file was originally feature_location_cli.py and has been renamed accordingly.
 """
 
 import re
