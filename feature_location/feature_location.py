@@ -14,7 +14,6 @@ import sys
 from functools import lru_cache
 from tree_sitter import Language, Parser
 from itertools import product
-from treelib import Tree
 import render
 
 # Default configuration options
@@ -118,13 +117,153 @@ class NodeData:
         self.is_named = is_named
 
 
-def get_root_node(tree):
+class Node:
     """
-    @brief Retrieves the root node of a given Tree.
-    @param tree A treelib.Tree object.
-    @return The root node object of the tree.
+    @class Node
+    @brief A simple node structure for the AST tree.
     """
-    return tree.get_node(tree.root)
+    def __init__(self, identifier, tag, data, parent_id=None):
+        self.identifier = identifier
+        self.tag = tag
+        self.data = data
+        self.parent_id = parent_id
+        self.children = []
+
+
+class Tree:
+    """
+    @class Tree
+    @brief A custom tree structure to replace treelib for our AST representation.
+    """
+    def __init__(self):
+        self.nodes = {}
+        self._root = None
+        self._id_counter = 0
+
+    @property
+    def root(self):
+        return self._root
+
+    def _generate_id(self):
+        self._id_counter += 1
+        return f"node_{self._id_counter}"
+
+    def create_node(self, tag, identifier=None, parent=None, data=None):
+        if identifier is None:
+            identifier = self._generate_id()
+        node = Node(identifier, tag, data, parent_id=parent)
+        self.nodes[identifier] = node
+        if parent is not None:
+            self.nodes[parent].children.append(identifier)
+        else:
+            if self._root is None:
+                self._root = identifier
+            else:
+                # If a root already exists, this node becomes another root-level node.
+                # For our use case, this should be acceptable or handled.
+                # But we assume we only set root once.
+                pass
+        return node
+
+    def get_node(self, node_id):
+        return self.nodes.get(node_id)
+
+    def parent(self, node_id):
+        node = self.get_node(node_id)
+        if node and node.parent_id is not None:
+            return self.get_node(node.parent_id)
+        return None
+
+    def children(self, node_id):
+        node = self.get_node(node_id)
+        if node:
+            return [self.get_node(child_id) for child_id in node.children]
+        return []
+
+    def siblings(self, node_id):
+        node = self.get_node(node_id)
+        if node and node.parent_id is not None:
+            parent_node = self.get_node(node.parent_id)
+            return [self.get_node(cid) for cid in parent_node.children if cid != node_id]
+        return []
+
+    def all_nodes(self):
+        return list(self.nodes.values())
+
+    def size(self):
+        return len(self.nodes)
+
+    def depth(self, node_id):
+        depth = 0
+        current = self.get_node(node_id)
+        while current and current.parent_id is not None:
+            current = self.get_node(current.parent_id)
+            depth += 1
+        return depth
+
+    def expand_tree(self, mode=None, sorting=False):
+        # Simple DFS order
+        result = []
+        def dfs(node_id):
+            result.append(node_id)
+            for child_id in self.get_node(node_id).children:
+                dfs(child_id)
+        if self.root is not None:
+            dfs(self.root)
+        return result
+
+    def filter_nodes(self, predicate):
+        return [n for n in self.all_nodes() if predicate(n)]
+
+    def leaves(self, node_id=None):
+        if node_id is None:
+            node_id = self.root
+        result = []
+        def dfs(nid):
+            node = self.get_node(nid)
+            if node and len(node.children) == 0:
+                result.append(node)
+            else:
+                for cid in node.children:
+                    dfs(cid)
+        dfs(node_id)
+        return result
+
+    def subtree(self, node_id):
+        new_tree = Tree()
+        # We'll copy all descendants of node_id to new_tree
+        # node_id's node becomes the root of new_tree
+        def copy_node(nid, parent=None):
+            orig_node = self.get_node(nid)
+            new_node = new_tree.create_node(orig_node.tag, None, parent, deepcopy(orig_node.data))
+            # copy children
+            for cid in orig_node.children:
+                copy_node(cid, new_node.identifier)
+            return new_node
+        root_node = copy_node(node_id, None)
+        new_tree._root = root_node.identifier
+        return new_tree
+
+    def paste(self, parent_id, another_tree, deep=False):
+        # Pastes another_tree's children under parent_id node.
+        # Shift all nodes of another_tree into this tree and attach the root of another_tree as a child of parent_id.
+        # Another_tree root will become a direct child of parent_id.
+
+        # Map from old id to new id
+        id_map = {}
+        def copy_node(nid, parent):
+            orig_node = another_tree.get_node(nid)
+            new_node = self.create_node(orig_node.tag, None, parent, deepcopy(orig_node.data))
+            id_map[nid] = new_node.identifier
+            for cid in orig_node.children:
+                copy_node(cid, new_node.identifier)
+
+        if another_tree.root is not None:
+            copy_node(another_tree.root, parent_id)
+
+    def __repr__(self):
+        return f"<Tree nodes={len(self.nodes)}>"
+
 
 
 @lru_cache(maxsize=None)
@@ -146,14 +285,23 @@ def hash_ts_node(ts_node):
         return hash((hash_self, children_hash))
 
 
+def get_root_node(tree):
+    """
+    @brief Retrieves the root node of a given Tree.
+    @param tree A Tree object.
+    @return The root node object of the tree.
+    """
+    return tree.get_node(tree.root)
+
+
 def preprocess(treesitter_node, file, position, options={}):
     """
-    @brief Converts a Tree-sitter node into a treelib.Tree structure with NodeData.
+    @brief Converts a Tree-sitter node into our custom Tree structure with NodeData.
     @param treesitter_node The root Tree-sitter node.
     @param file The filename associated with this node.
     @param position A list representing the tree position, e.g. [0] for root.
     @param options Dictionary of options including 'only_named_nodes'.
-    @return A treelib.Tree.
+    @return A Tree.
     """
     tree = Tree()
 
@@ -184,10 +332,10 @@ def preprocess(treesitter_node, file, position, options={}):
 
 def read_and_preprocess(filename, options={}):
     """
-    @brief Reads a file, parses it with Tree-sitter, and preprocesses it into a treelib.Tree.
+    @brief Reads a file, parses it with Tree-sitter, and preprocesses it into a Tree.
     @param filename The source file to parse.
     @param options Dictionary of parsing options.
-    @return A treelib.Tree representing the AST of the file.
+    @return A Tree representing the AST of the file.
     """
     with open(filename, "rb") as f:
         content = f.read()
@@ -197,11 +345,11 @@ def read_and_preprocess(filename, options={}):
 
 def read_and_preprocess_code(code_string, filename="in_memory.java", options={}):
     """
-    @brief Parses code from an in-memory string and preprocesses it into a treelib.Tree.
+    @brief Parses code from an in-memory string and preprocesses it into a Tree.
     @param code_string The source code as a string.
     @param filename A filename to associate with the code for source positioning (default "in_memory.java").
     @param options Dictionary of parsing options.
-    @return A treelib.Tree representing the AST of the code.
+    @return A Tree representing the AST of the code.
     """
     content = code_string.encode('utf-8', 'replace')
     tree = parser.parse(content)
@@ -250,7 +398,7 @@ def positions_do_not_cross(positions, other_positions_list):
 def remove_overlapping(trees):
     """
     @brief Removes overlapping trees from a list of trees.
-    @param trees A list of treelib.Trees.
+    @param trees A list of Trees.
     @return A filtered list without overlaps.
     """
     result = []
@@ -292,13 +440,14 @@ def remove_overlapping_combinations(combinations):
 def remove_subtree(tree, node):
     """
     @brief Removes a subtree from the given tree starting from a given node upward.
-    @param tree A treelib.Tree.
+    @param tree A Tree.
     @param node A node in the tree.
     @return A list of sibling subtrees and any removed ancestors.
     """
     result = []
-    sibling_nodes = tree.siblings(node.identifier)
-    sibling_trees = [tree.subtree(sibling_node.identifier) for sibling_node in sibling_nodes]
+    # Siblings
+    siblings = tree.siblings(node.identifier)
+    sibling_trees = [tree.subtree(sib.identifier) for sib in siblings]
     result.extend(sibling_trees)
     parent = tree.parent(node.identifier)
     if parent is not None:
@@ -309,9 +458,9 @@ def remove_subtree(tree, node):
 def subtraction(leftSide, leftSideIntersected, treesToSubtract, options={}):
     """
     @brief Computes which positions to subtract from leftSide.
-    @param leftSide List of lists of treelib.Trees for the left side sets.
-    @param leftSideIntersected List of treelib.Trees representing intersections.
-    @param treesToSubtract A list of treelib.Trees.
+    @param leftSide List of lists of Trees for the left side sets.
+    @param leftSideIntersected List of Trees representing intersections.
+    @param treesToSubtract A list of Trees.
     @param options Dictionary of analysis options.
     @return A list of SourcePosition objects to subtract.
     """
@@ -337,7 +486,7 @@ def subtraction(leftSide, leftSideIntersected, treesToSubtract, options={}):
 def compute_combinations(trees, options={}):
     """
     @brief Computes combinations of matching subtrees that appear in all given trees.
-    @param trees A list of treelib.Trees.
+    @param trees A list of Trees.
     @param options Dictionary of options.
     @return A list of subtree combinations.
     """
@@ -401,7 +550,7 @@ def sort_by_size_to_remove_ratio(combinations):
 def calculate_depth_proximity(trees, combination):
     """
     @brief Calculates how close in depth the nodes of a combination are across trees.
-    @param trees A list of treelib.Trees.
+    @param trees A list of Trees.
     @param combination A list of nodes (one from each tree).
     @return A depth proximity factor (float).
     """
@@ -413,7 +562,7 @@ def calculate_depth_proximity(trees, combination):
 def get_ancestors(tree, node):
     """
     @brief Retrieves all ancestors of a given node.
-    @param tree A treelib.Tree.
+    @param tree A Tree.
     @param node A node in the tree.
     @return A list of ancestor nodes.
     """
@@ -428,34 +577,35 @@ def get_ancestors(tree, node):
 def calculate_environment_similarity(trees, combination):
     """
     @brief Calculates an environmental similarity measure including ancestor and sibling similarities.
-    @param trees A list of treelib.Trees.
+    @param trees A list of Trees.
     @param combination A list of nodes (one from each tree).
     @return A float representing environment similarity.
     """
     def calculate_sibling_similarity(trees, combination):
         sibling_hashes_per_node = []
         for index, node in enumerate(combination):
-            siblings = trees[index].siblings(node.identifier)
-            node_sibling_hashes = [(sibling.data.subtree_hash, sibling.data.subtree_size, 
-                                    trees[index].leaves(sibling.identifier), sibling) for sibling in siblings]
+            sibs = trees[index].siblings(node.identifier)
+            node_sibling_hashes = [(sib.data.subtree_hash, sib.data.subtree_size, trees[index].leaves(sib.identifier), sib) for sib in sibs]
             sibling_hashes_per_node.append(node_sibling_hashes)
 
         sibling_similarity = 0
+        if not sibling_hashes_per_node:
+            return 0
         first_list = sibling_hashes_per_node[0]
 
         def getParentSubtreeSize(t):
             tr, nd = t
-            parent = tr.parent(nd.identifier)
-            if parent is None or parent.data is None:
+            p = tr.parent(nd.identifier)
+            if p is None or p.data is None:
                 return tr.size()
-            return parent.data.subtree_size
+            return p.data.subtree_size
 
         for sibling_hash in first_list:
-            # Check direct match in all lists
-            if all(sibling_hash in lst for lst in sibling_hashes_per_node[1:]):
+            # direct hash match
+            if all(any(sibling_hash[0] == s[0] for s in lst) for lst in sibling_hashes_per_node[1:]):
                 sibling_similarity += sibling_hash[1]
             else:
-                # Partial leaf match scenario
+                # partial leaf text match scenario
                 s_tag = sibling_hash[3].tag
                 leaves_text = [l.data.text for l in sibling_hash[2]]
                 named_leaves_text = {t for t in leaves_text}
@@ -466,7 +616,6 @@ def calculate_environment_similarity(trees, combination):
                     if not matching_sib:
                         leave_in_all = False
                         break
-                    # Check leaf texts
                     text_found_all = False
                     for candidate_sib in matching_sib:
                         candidate_leaves_text = {l.data.text for l in candidate_sib[2] if l.data.is_named}
@@ -479,25 +628,36 @@ def calculate_environment_similarity(trees, combination):
                 if leave_in_all:
                     sibling_similarity += 1
 
-        return sibling_similarity / (max(map(getParentSubtreeSize, zip(trees, combination))))
+        parent_sizes = []
+        for i, n in enumerate(combination):
+            p = trees[i].parent(n.identifier)
+            if p and p.data:
+                parent_sizes.append(p.data.subtree_size)
+            else:
+                parent_sizes.append(trees[i].size())
+
+        denom = max(parent_sizes) if parent_sizes else 1
+        return sibling_similarity / denom
 
     ancestors_per_node = [get_ancestors(trees[index], node) for index, node in enumerate(combination)]
     direct_sibling_similarity = calculate_sibling_similarity(trees, combination)
     equal_ancestors = 0
     ancestor_sibling_similarities = 0
 
-    for ancestor_pairing in zip(*ancestors_per_node):
+    min_len = min([len(a) for a in ancestors_per_node]) if ancestors_per_node else 0
+    for i in range(min_len):
+        ancestor_pairing = [ancestors[i] for ancestors in ancestors_per_node]
         first_tag = ancestor_pairing[0].tag
         if all(ancestor.tag == first_tag for ancestor in ancestor_pairing):
             equal_ancestors += 1
-            ancestor_sibling_similarity = calculate_sibling_similarity(trees, ancestor_pairing)
-            ancestor_sibling_similarities += ancestor_sibling_similarity
+            ancestor_sibling_similarity_local = calculate_sibling_similarity(trees, ancestor_pairing)
+            ancestor_sibling_similarities += ancestor_sibling_similarity_local
         else:
             break
 
     longest_ancestor_chain = max(map(len, ancestors_per_node)) if ancestors_per_node else 1
     ancestor_similarity = equal_ancestors / longest_ancestor_chain if longest_ancestor_chain else 0
-    ancestor_sibling_similarity = ancestor_sibling_similarities / (equal_ancestors + 1)
+    ancestor_sibling_similarity = ancestor_sibling_similarities / (equal_ancestors + 1) if (equal_ancestors + 1) != 0 else 0
     environment_similarity = 0.2 * ancestor_similarity + 0.5 * direct_sibling_similarity + 0.3 * ancestor_sibling_similarity
     return environment_similarity
 
@@ -505,7 +665,7 @@ def calculate_environment_similarity(trees, combination):
 def calculate_decision_ratio(trees, combination, combinations):
     """
     @brief Calculates a decision ratio factoring in depth proximity, environment similarity, and subtree size.
-    @param trees A list of treelib.Trees.
+    @param trees A list of Trees.
     @param combination A combination of nodes.
     @param combinations All combinations.
     @return A float representing the decision ratio.
@@ -520,7 +680,7 @@ def calculate_decision_ratio(trees, combination, combinations):
 def sort_by_decision_ratio(trees, combinations):
     """
     @brief Sorts combinations by their computed decision ratio.
-    @param trees A list of treelib.Trees.
+    @param trees A list of Trees.
     @param combinations A list of node combinations.
     @return A list of tuples (combination, ratio) sorted by the decision ratio.
     """
@@ -537,7 +697,7 @@ def sort_by_decision_ratio(trees, combinations):
 def intersect_all_subtrees(tree_groups, options={}):
     """
     @brief Finds all common subtrees among groups of trees.
-    @param tree_groups A list of lists of treelib.Trees.
+    @param tree_groups A list of lists of Trees.
     @param options Dictionary of options.
     @return A list of tuples (subtree, ratio).
     """
@@ -547,8 +707,8 @@ def intersect_all_subtrees(tree_groups, options={}):
     for group in tree_groups:
         common_tree = Tree()
         common_root = common_tree.create_node("common_root")
-        for tree in group:
-            common_tree.paste(common_root.identifier, tree, False)
+        for t in group:
+            common_tree.paste(common_root.identifier, t, False)
         trees.append(common_tree)
 
     equal_combinations = compute_combinations(trees, options)
@@ -557,11 +717,12 @@ def intersect_all_subtrees(tree_groups, options={}):
 
     matched_subtrees = []
     for (combination, ratio) in equal_combinations_with_ratio:
-        first_subtree = Tree(trees[0].subtree(combination[0].identifier))
+        first_subtree = trees[0].subtree(combination[0].identifier)
         all_nodes_first = first_subtree.all_nodes()
         for index in range(1, len(combination)):
             subtree = trees[index].subtree(combination[index].identifier)
             all_nodes = subtree.all_nodes()
+            # Zip could break if different structure, we assume same structure due to hash match.
             for node_first, node in zip(all_nodes_first, all_nodes):
                 spf = node_first.data.source_positions
                 sps = node.data.source_positions
@@ -582,8 +743,8 @@ def intersect_all_subtrees(tree_groups, options={}):
 def difference(leftSide, rightSide, options={}):
     """
     @brief Computes the difference between sets of trees by subtracting rightSide from leftSide.
-    @param leftSide A list of lists of treelib.Trees.
-    @param rightSide A list of treelib.Trees to subtract.
+    @param leftSide A list of lists of Trees.
+    @param rightSide A list of Trees to subtract.
     @param options Dictionary of analysis options.
     @return A tuple (leftSideIntersected, positions_to_subtract).
     """
@@ -596,12 +757,13 @@ def difference(leftSide, rightSide, options={}):
 def print_tree(tree):
     """
     @brief Prints a tree to stdout.
-    @param tree A treelib.Tree.
+    @param tree A Tree.
     """
     if tree.size() > 0:
-        for node_id in tree.expand_tree(mode=Tree.DEPTH, sorting=False):
-            print(4*" " * tree.depth(node_id), end="")
+        for node_id in tree.expand_tree():
             node = tree.get_node(node_id)
+            depth = tree.depth(node_id)
+            print("    " * depth, end="")
             rendered = node.data.type + " " + \
                 (str(node.data.text) if node.data.is_ts_leaf else "") + " " + \
                 str(node.data.subtree_hash) + " " + \
@@ -613,7 +775,7 @@ def print_tree(tree):
 def print_trees(trees):
     """
     @brief Prints multiple trees, each separated by a line.
-    @param trees A list of treelib.Trees.
+    @param trees A list of Trees.
     """
     print("\n")
     for tree in trees:
