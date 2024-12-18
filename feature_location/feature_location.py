@@ -10,7 +10,7 @@ source code highlighting.
 from copy import deepcopy
 import tree_sitter_java as tsjava
 import tree_sitter_cpp as tscpp
-import sys as sys
+import sys
 from functools import lru_cache
 from tree_sitter import Language, Parser
 from itertools import product
@@ -23,8 +23,6 @@ only_named_nodes_default = True
 
 LANGUAGE = Language(tsjava.language())
 parser = Parser(LANGUAGE)
-
-_subtree_hash_cache = {}
 
 class SourcePosition:
     """
@@ -195,6 +193,19 @@ def read_and_preprocess(filename, options={}):
         content = f.read()
         tree = parser.parse(content)
         return preprocess(tree.root_node, filename, [0], options)
+
+
+def read_and_preprocess_code(code_string, filename="in_memory.java", options={}):
+    """
+    @brief Parses code from an in-memory string and preprocesses it into a treelib.Tree.
+    @param code_string The source code as a string.
+    @param filename A filename to associate with the code for source positioning (default "in_memory.java").
+    @param options Dictionary of parsing options.
+    @return A treelib.Tree representing the AST of the code.
+    """
+    content = code_string.encode('utf-8', 'replace')
+    tree = parser.parse(content)
+    return preprocess(tree.root_node, filename, [0], options)
 
 
 def positions_do_not_cross(positions, other_positions_list):
@@ -479,7 +490,6 @@ def calculate_environment_similarity(trees, combination):
         first_tag = ancestor_pairing[0].tag
         if all(ancestor.tag == first_tag for ancestor in ancestor_pairing):
             equal_ancestors += 1
-            # Reuse sibling similarity function on the ancestor nodes themselves
             ancestor_sibling_similarity = calculate_sibling_similarity(trees, ancestor_pairing)
             ancestor_sibling_similarities += ancestor_sibling_similarity
         else:
@@ -497,7 +507,7 @@ def calculate_decision_ratio(trees, combination, combinations):
     @brief Calculates a decision ratio factoring in depth proximity, environment similarity, and subtree size.
     @param trees A list of treelib.Trees.
     @param combination A combination of nodes.
-    @param combinations All combinations (unused here).
+    @param combinations All combinations.
     @return A float representing the decision ratio.
     """
     depth_proximity = calculate_depth_proximity(trees, combination)
@@ -593,8 +603,7 @@ def print_tree(tree):
             print(4*" " * tree.depth(node_id), end="")
             node = tree.get_node(node_id)
             rendered = node.data.type + " " + \
-                (str(node.data.text) if node.data.is_ts_leaf else "") + \
-                " " + \
+                (str(node.data.text) if node.data.is_ts_leaf else "") + " " + \
                 str(node.data.subtree_hash) + " " + \
                 str([x.render() for x in node.data.source_positions])
             print(rendered)

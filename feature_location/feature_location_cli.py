@@ -13,7 +13,7 @@ import re
 import sys
 import yaml
 import os
-from feature_location import read_and_preprocess, intersect_all_subtrees, difference, print_trees
+from feature_location import read_and_preprocess, intersect_all_subtrees, difference, print_trees, read_and_preprocess_code
 import render
 
 def map_system_to_file(system, config, name_file_map):
@@ -98,6 +98,20 @@ def read_args():
     """
     return sys.argv[2:]
 
+def combine_files_into_code(java_files):
+    """
+    @brief Combine multiple .java files into a single in-memory code string.
+    @param java_files A list of .java filenames.
+    @return A single string containing combined code from all files.
+    """
+    combined_lines = []
+    for jf in java_files:
+        combined_lines.append("// Contents from: {}\n".format(jf))
+        with open(jf, "r", encoding='utf-8', errors='replace') as infile:
+            combined_lines.append(infile.read())
+            combined_lines.append("\n\n")
+    return "".join(combined_lines)
+
 def process_intersection(files):
     """
     @brief Processes the intersection of ASTs from given files/directories.
@@ -108,18 +122,22 @@ def process_intersection(files):
         print("No .java files found for intersection.")
         return
 
-    temp_file = combine_files_into_temp(all_java_files, "temp_intersection.java")
-
-    trees = []
-    trees.append([read_and_preprocess(temp_file)])
+    combined_code = combine_files_into_code(all_java_files)
+    # Here we assume read_and_preprocess_code can process code strings directly
+    # If not available, adapt feature_location accordingly.
+    tree = read_and_preprocess_code(combined_code)
+    # intersect_all_subtrees expects a list of lists of trees (if multiple sets are used)
+    # Here we have just one set of trees from the combined code.
+    trees = [[tree]]
 
     result = intersect_all_subtrees(trees)
     print_trees(result)
 
     os.makedirs("results", exist_ok=True)
     source_ranges = [res.get_node(res.root).data.source_positions for res in result]
+    # We no longer have a temp file, but we can give a placeholder name
     with open(os.path.join("results", "feature_location.html"), "w") as f:
-        f.write(render.render_feature_location([temp_file], source_ranges))
+        f.write(render.render_feature_location(["combined_memory.java"], source_ranges))
 
 def read_difference_args():
     """
@@ -146,7 +164,7 @@ def read_difference_args():
 
 def process_difference_individual(before_java, after_java, file_name="feature_location.html", options={}):
     """
-    @brief Process difference on a file-by-file basis without combining them.
+    @brief Process difference on a file-by-file basis without combining them into a temp file.
     @param before_java A list of .java files from the 'before' side.
     @param after_java A list of .java files from the 'after' side.
     @param file_name The output filename for the HTML feature location result.
@@ -213,31 +231,16 @@ def process_show_ast(files):
     if not all_java:
         print("No .java files found.")
         return
-    temp_file = combine_files_into_temp(all_java, "temp_show_ast.java")
 
-    trees = []
-    trees.append(read_and_preprocess(temp_file, {"only_named_nodes": False}))
+    combined_code = combine_files_into_code(all_java)
+    # use the code directly
+    trees = [read_and_preprocess_code(combined_code, {"only_named_nodes": False})]
     print_trees(trees)
 
     os.makedirs("results", exist_ok=True)
     source_ranges = [t.get_node(t.root).data.source_positions for t in trees]
     with open(os.path.join("results", "feature_location.html"), "w") as f:
-        f.write(render.render_feature_location([temp_file], source_ranges))
-
-def combine_files_into_temp(java_files, temp_filename):
-    """
-    @brief Combine multiple .java files into one temporary file.
-    @param java_files A list of .java filenames.
-    @param temp_filename The name of the temporary file.
-    @return The path to the created temporary file.
-    """
-    with open(temp_filename, "w", encoding='utf-8', errors='replace') as outfile:
-        for jf in java_files:
-            outfile.write("// Contents from: {}\n".format(jf))
-            with open(jf, "r", encoding='utf-8', errors='replace') as infile:
-                outfile.write(infile.read())
-                outfile.write("\n\n")
-    return temp_filename
+        f.write(render.render_feature_location(["combined_memory.java"], source_ranges))
 
 def parse_difference_expression(expression: str):
     """
