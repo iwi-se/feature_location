@@ -171,6 +171,24 @@ def process_difference_individual(before_java, after_java, file_name="feature_lo
     @param options Additional options passed to the difference operation.
     """
     os.makedirs("results", exist_ok=True)
+    if len(before_java) == 2 and len(after_java) == 2 and all(os.path.isfile(f) for f in before_java+after_java):
+        for i in range(2):
+            b_file = before_java[i]
+            a_file = after_java[i]
+
+            treesBefore = [read_and_preprocess(b_file, options)]
+            treesAfter = [read_and_preprocess(a_file, options)]
+
+            (resultTrees, source_ranges_subtraction) = difference([treesBefore], treesAfter, options)
+            print_trees(resultTrees)
+            source_ranges_intersection = [r.get_node(r.root).data.source_positions for r in resultTrees]
+
+            base_name = os.path.splitext(os.path.basename(b_file))[0] + "_vs_" + os.path.splitext(os.path.basename(a_file))[0]
+            out_filename = os.path.join("results", base_name + ".html")
+            with open(out_filename, "w") as f:
+                f.write(render.render_feature_location([b_file], source_ranges_intersection,
+                                                       [a_file], source_ranges_subtraction))
+        return
 
     before_map = {}
     for f in before_java:
@@ -219,8 +237,31 @@ def process_difference(filesBeforeSeparator, filesAfterSeparator, file_name="fea
         print("No .java files found in after-separator arguments.")
         return
 
+    before_trees = [read_and_preprocess(bf, options) for bf in before_java]
+    after_trees = [read_and_preprocess(af, options) for af in after_java]
+
+    before_result = intersect_all_subtrees([[t] for t in before_trees]) 
+    before_intersection = [item[0] for item in before_result]
+
+    after_result = intersect_all_subtrees([[t] for t in after_trees])
+    after_intersection = [item[0] for item in after_result]
+    (resultTrees, source_ranges_subtraction) = difference([before_intersection], after_intersection, options)
+
+    print_trees(resultTrees)
     os.makedirs("results", exist_ok=True)
-    process_difference_individual(before_java, after_java, file_name, options)
+
+    source_ranges_intersection = [r.get_node(r.root).data.source_positions for r in resultTrees]
+
+    combined_before_name = [os.path.basename(f) for f in before_java]
+    combined_after_name = [os.path.basename(f) for f in after_java]
+
+    with open(os.path.join("results", file_name), "w") as f:
+        f.write(render.render_feature_location(
+            combined_before_name,
+            source_ranges_intersection,
+            combined_after_name,
+            source_ranges_subtraction
+        ))
 
 def process_show_ast(files):
     """
@@ -250,8 +291,7 @@ def parse_difference_expression(expression: str):
     """
     left_part, right_part = expression.split(' \\ ')
     left_numbers = list(map(int, re.findall(r'\d+', left_part)))
-    right_numbers = list(map(int, re.findall(r'\d+', right_part)))
-    return left_numbers, right_numbers
+    right_numbers = list(map(int, re.findall(r'\d+', right_part))) return left_numbers, right_numbers
 
 def generate_yaml_from_isolation_result(file):
     """
