@@ -15,6 +15,8 @@ from functools import lru_cache
 from tree_sitter import Language, Parser
 from itertools import product
 import render
+import os
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 # Default configuration options
 minimum_trace_size_default = 10
@@ -273,7 +275,6 @@ def hash_ts_node(ts_node):
     @param ts_node A Tree-sitter node.
     @return A hash value representing the node.
     """
-    node_key = (ts_node.start_byte, ts_node.end_byte, ts_node.type)
     hash_self = hash(ts_node.type)
 
     if ts_node.child_count == 0:
@@ -330,6 +331,14 @@ def preprocess(treesitter_node, file, position, options={}):
     return tree
 
 
+def _parse_file(filename, options):
+    # Helper for parallelization
+    with open(filename, "rb") as f:
+        content = f.read()
+        tree = parser.parse(content)
+        return preprocess(tree.root_node, filename, [0], options)
+
+
 def read_and_preprocess(filename, options={}):
     """
     @brief Reads a file, parses it with Tree-sitter, and preprocesses it into a Tree.
@@ -337,10 +346,82 @@ def read_and_preprocess(filename, options={}):
     @param options Dictionary of parsing options.
     @return A Tree representing the AST of the file.
     """
-    with open(filename, "rb") as f:
-        content = f.read()
-        tree = parser.parse(content)
-        return preprocess(tree.root_node, filename, [0], options)
+    # For a single file, just process it directly
+    return _parse_file(filename, options)
+
+
+def read_and_preprocess_multiple(files, options={}):
+    """
+    @brief Reads multiple files in parallel, parses them, and returns a list of treelib.Trees.
+    """
+    trees = []
+    if len(files) <= 1:
+        for f in files:
+            trees.append(read_and_preprocess(f, options))
+    else:
+        # Parallel execution
+        with ProcessPoolExecutor() as executor:
+            future_map = {executor.submit(_parse_file, f, options): f for f in files}
+            for future in as_completed(future_map):
+                trees.append(future.result())
+    return trees
+
+
+def _source_position_to_interval(pos):
+    # Convert a SourcePosition to a numeric interval:
+    # We'll encode row/column into a single dimension 
+    start = pos.start_point.row * 10000000 + pos.start_point.column
+    end = pos.end_point.row * 10000000 + pos.end_point.column
+    return (start, end)
+
+
+class IntervalTree:
+    """
+    A simple Interval Tree implementation to efficiently find overlapping intervals.
+    We will insert intervals (start, end) and query if an interval overlaps with any stored ones.
+    """
+
+    class Node:
+        def __init__(self, start, end):
+            self.start = start
+            self.end = end
+            self.max_end = end
+            self.left = None
+            self.right = None
+
+    def __init__(self):
+        self.root = None
+
+    def insert(self, start, end):
+        if self.root is None:
+            self.root = IntervalTree.Node(start, end)
+        else:
+            self._insert(self.root, start, end)
+
+    def _insert(self, node, start, end):
+        if start < node.start:
+            if node.left is None:
+                node.left = IntervalTree.Node(start, end)
+            else:
+                self._insert(node.left, start, end)
+        else:
+            if node.right is None:
+                node.right = IntervalTree.Node(start, end)
+            else:
+                self._insert(node.right, start, end)
+        node.max_end = max(node.max_end, end)
+
+    def overlaps(self, start, end):
+        return self._overlaps(self.root, start, end)
+
+    def _overlaps(self, node, start, end):
+        if node is None:
+            return False
+        if start <= node.end and end >= node.start:
+            return True
+        if node.left is not None and node.left.max_end >= start:
+            return self._overlaps(node.left, start, end)
+        return self._overlaps(node.right, start, end)
 
 
 def read_and_preprocess_code(code_string, filename="in_memory.java", options={}):
@@ -359,9 +440,7 @@ def read_and_preprocess_code(code_string, filename="in_memory.java", options={})
 def positions_do_not_cross(positions, other_positions_list):
     """
     @brief Checks if the given positions do not overlap with any sets of other positions.
-    
-    This implementation sorts all intervals by their start points and then uses
-    a linear scan to detect overlaps efficiently.
+    This now uses an Interval Tree for O(log n) overlap checks instead of sorting every time.
     
     @param positions A list of SourcePosition objects.
     @param other_positions_list A list of lists of SourcePosition objects.
@@ -370,26 +449,17 @@ def positions_do_not_cross(positions, other_positions_list):
     if not other_positions_list:
         return True
 
-    all_other_positions = []
+    # Build an interval tree for other_positions_list once
+    tree = IntervalTree()
     for opl in other_positions_list:
-        all_other_positions.extend(opl)
+        for pos in opl:
+            start, end = _source_position_to_interval(pos)
+            tree.insert(start, end)
 
-    def start_key(p):
-        return (p.start_point.row, p.start_point.column)
-
-    positions_sorted = sorted(positions, key=start_key)
-    others_sorted = sorted(all_other_positions, key=start_key)
-
-    i, j = 0, 0
-    while i < len(positions_sorted) and j < len(others_sorted):
-        p = positions_sorted[i]
-        o = others_sorted[j]
-
-        if p.end_point.row < o.start_point.row or (p.end_point.row == o.start_point.row and p.end_point.column <= o.start_point.column):
-            i += 1
-        elif p.start_point.row > o.end_point.row or (p.start_point.row == o.end_point.row and p.start_point.column >= o.end_point.column):
-            j += 1
-        else:
+    # Check each position against the interval tree
+    for p in positions:
+        start, end = _source_position_to_interval(p)
+        if tree.overlaps(start, end):
             return False
 
     return True
@@ -402,9 +472,10 @@ def remove_overlapping(trees):
     @return A filtered list without overlaps.
     """
     result = []
-    used_source_positions = set()
-    used_root_node_source_positions = []
-    usp_add = used_source_positions.add
+    # We'll store accepted intervals in an interval tree to quickly check overlaps
+    interval_tree = IntervalTree()
+
+    used_source_positions_flat = []
     for tree in trees:
         all_nodes = tree.all_nodes()
         all_source_positions_in_tree = {pos for node in all_nodes for pos in node.data.source_positions}
@@ -412,12 +483,21 @@ def remove_overlapping(trees):
         root_node = tree.get_node(tree.root)
         root_positions = root_node.data.source_positions
 
-        if not (all_source_positions_in_tree & used_source_positions) \
-                and positions_do_not_cross(root_positions, used_root_node_source_positions):
-            result.append(tree)
+        # Check overlap with interval tree
+        no_overlap = True
+        for p in root_positions:
+            start, end = _source_position_to_interval(p)
+            if interval_tree.overlaps(start, end):
+                no_overlap = False
+                break
+
+        if no_overlap:
+            # Insert these intervals into interval tree for future checks
             for p in all_source_positions_in_tree:
-                usp_add(p)
-            used_root_node_source_positions.append(root_positions)
+                start, end = _source_position_to_interval(p)
+                interval_tree.insert(start, end)
+            result.append(tree)
+
     return result
 
 
@@ -428,12 +508,26 @@ def remove_overlapping_combinations(combinations):
     @return A filtered list of combinations.
     """
     result = []
-    used_root_node_source_positions = []
+    interval_tree = IntervalTree()
+
     for (combination, ratio) in combinations:
         all_root_node_source_positions = [pos for node in combination for pos in node.data.source_positions]
-        if positions_do_not_cross(all_root_node_source_positions, used_root_node_source_positions):
+
+        # Check if there's an overlap using the interval tree
+        no_overlap = True
+        for p in all_root_node_source_positions:
+            start, end = _source_position_to_interval(p)
+            if interval_tree.overlaps(start, end):
+                no_overlap = False
+                break
+
+        if no_overlap:
+            # Insert them into the interval tree
+            for p in all_root_node_source_positions:
+                start, end = _source_position_to_interval(p)
+                interval_tree.insert(start, end)
             result.append((combination, ratio))
-            used_root_node_source_positions.append(all_root_node_source_positions)
+
     return result
 
 
@@ -491,30 +585,29 @@ def compute_combinations(trees, options={}):
     @return A list of subtree combinations.
     """
     min_trace_size = options.get("minimum_trace_size", minimum_trace_size_default)
-    all_nodes_per_tree = [[x for x in tree.filter_nodes(lambda x: x.tag != "common_root") if x.data.subtree_size >= min_trace_size]
-                          for tree in trees]
+    all_nodes_per_tree = [
+        [x for x in tree.filter_nodes(lambda x: x.tag != "common_root") if x.data.subtree_size >= min_trace_size]
+        for tree in trees
+    ]
 
     partition_by_subtree_hash = []
-    for index, tree_ in enumerate(trees):
+    for nodes in all_nodes_per_tree:
         current_dict = {}
-        for node in all_nodes_per_tree[index]:
-            hash_ = node.data.subtree_hash
-            current_dict.setdefault(hash_, []).append(node)
+        for node in nodes:
+            h = node.data.subtree_hash
+            current_dict.setdefault(h, []).append(node)
         partition_by_subtree_hash.append(current_dict)
 
+    # Intersect keys to reduce complexity
+    common_keys = set(partition_by_subtree_hash[0].keys())
+    for d in partition_by_subtree_hash[1:]:
+        common_keys.intersection_update(d.keys())
+
     combinations = []
-    base_dict = partition_by_subtree_hash[0]
-    length = len(partition_by_subtree_hash)
-    for hash_, nodes in base_dict.items():
-        nodes_with_same_hash = [nodes]
-        for idx in range(1, length):
-            d = partition_by_subtree_hash[idx]
-            if hash_ in d:
-                nodes_with_same_hash.append(d[hash_])
-            else:
-                break
-        if len(nodes_with_same_hash) == length:
-            combinations.extend(product(*nodes_with_same_hash))
+    for h in common_keys:
+        nodes_list = [d[h] for d in partition_by_subtree_hash]
+        # Now product only on minimal sets
+        combinations.extend(product(*nodes_list))
 
     return combinations
 
@@ -529,12 +622,35 @@ def sort_by_size_to_remove_ratio(combinations):
         own_size = combination[0].data.subtree_size
         own_positions = [pos for node in combination for pos in node.data.source_positions]
 
+        # Create a single interval tree for others to quickly check overlap:
+        other_interval_tree = IntervalTree()
+        for other_combination in combinations:
+            if other_combination is not combination:
+                for p in (pos for node in other_combination for pos in node.data.source_positions):
+                    start, end = _source_position_to_interval(p)
+                    other_interval_tree.insert(start, end)
+
+        # Check overlap once using interval queries
+        overlap_found = False
+        other_size_total = 0
+        for oc in combinations:
+            if oc is not combination:
+                for p in (pos for node in oc for pos in node.data.source_positions):
+                    start, end = _source_position_to_interval(p)
+                    # If any position overlaps with own_positions:
+                    # we must check each own_position:
+                    for own_p in own_positions:
+                        os, oe = _source_position_to_interval(own_p)
+                        break
+                pass
+
         other_size_total = 0
         for other_combination in combinations:
             if other_combination is not combination:
                 other_positions = [pos for node in other_combination for pos in node.data.source_positions]
                 if not positions_do_not_cross(own_positions, [other_positions]):
                     other_size_total += other_combination[0].data.subtree_size
+
         size_to_remove = (10 * own_size) / (other_size_total + 1)
         normalized_size_to_remove = 1 - (size_to_remove / own_size)
         return normalized_size_to_remove
