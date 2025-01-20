@@ -1,0 +1,21 @@
+// Case Study Factorial
+// 3 independent features, namely iterative, checking, and logging
+// 1 not-feature, namely recusive
+// main() is completely ignored, i.e. only header files are analyzed
+
+SPL   3i_1n
+
+FEATURES 3
+Iterative
+Logging
+Checking
+
+AVAILABLE_SYSTEMS
+1  // r.hpp
+2  // i.hpp
+3  // rl.hpp
+4  // il.hpp
+5  // rc.hpp
+6  // ic.hpp
+7  // rcl.hpp
+8  // icl.hpp

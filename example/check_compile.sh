@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Directory containing the headers to check (change this if needed)
-HEADER_DIR=$1
+FILE_DIR=$1
 
 # Find all header files (*.hpp) in the directory
-for header in "$HEADER_DIR"/*.hpp; do
-    echo "Checking $header..."
+for file in "$FILE_DIR"/*.cpp; do
+    echo "Checking $file..."
     
     # Compile each header file using g++ with the -include option
-    g++ -std=c++20 -c -include "$header" -x c++ /dev/null
+    g++ -std=c++20 $file -o /dev/null
     
     # Check the exit code of the g++ command
     if [ $? -eq 0 ]; then

@@ -1,0 +1,33 @@
+// Case Study Factorial
+// 4 independent features, namely iterative, recursive, checking, and logging
+// main() is completely ignored, i.e. only header files are analyzed
+
+SPL   4i
+
+FEATURES 4
+Iterative
+Recursive
+Logging
+Checking
+
+EXPLICIT_DEPENDENCIES
+ROOT REQUIRES_ONE Iterative Recursive END
+END
+
+AVAILABLE_SYSTEMS
+// 1  // impossible because of constraint
+2  // i.hpp
+3  // r.hpp
+// 4  // impossible because of constraint
+// 5  // impossible because of constraint
+6  // il.hpp
+7  // rl.hpp
+// 8  // impossible because of constraint
+// 9  // impossible because of constraint
+10 // ic.hpp
+11 // rc.hpp
+// 12  // impossible because of constraint
+// 13  // impossible because of constraint
+14 // icl.hpp
+15 // rcl.hpp
+// 16  // impossible because of constraint

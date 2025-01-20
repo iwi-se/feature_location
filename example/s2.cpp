@@ -1,6 +1,5 @@
-#include "s11_ic.hpp"
+#include "ic.hpp"
 #include <iostream>
-
 using namespace std;
 
 int main()

@@ -1,6 +1,5 @@
-#include "s1_r.hpp"
+#include "rl.hpp"
 #include <iostream>
-
 using namespace std;
 
 int main()
