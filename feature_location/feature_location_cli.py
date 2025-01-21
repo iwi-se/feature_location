@@ -200,7 +200,7 @@ def process_difference_individual(before_java, after_java, file_name="feature_lo
         name = os.path.basename(f)
         after_map.setdefault(name, []).append(f)
 
-    for filename, before_files in before_map.items():
+    for i, (filename, before_files) in enumerate(before_map.items()):
         if filename in after_map:
             after_files = after_map[filename]
 
@@ -208,7 +208,6 @@ def process_difference_individual(before_java, after_java, file_name="feature_lo
             treesAfter = [read_and_preprocess(af, options) for af in after_files]
 
             (resultTrees, source_ranges_subtraction) = difference([treesBefore], treesAfter, options)
-            print_trees(resultTrees)
             source_ranges_intersection = [r.get_node(r.root).data.source_positions for r in resultTrees]
 
             base_name, _ = os.path.splitext(filename)
@@ -218,6 +217,8 @@ def process_difference_individual(before_java, after_java, file_name="feature_lo
                                                        after_files, source_ranges_subtraction))
         else:
             print(f"Can't find {filename} in after set.")
+        
+        print(f"Processed {i} of {len(before_map)} files: {filename}")
 
 def process_difference(filesBeforeSeparator, filesAfterSeparator, file_name="feature_location.html", options={}):
     """
@@ -291,7 +292,8 @@ def parse_difference_expression(expression: str):
     """
     left_part, right_part = expression.split(' \\ ')
     left_numbers = list(map(int, re.findall(r'\d+', left_part)))
-    right_numbers = list(map(int, re.findall(r'\d+', right_part))) return left_numbers, right_numbers
+    right_numbers = list(map(int, re.findall(r'\d+', right_part))) 
+    return left_numbers, right_numbers
 
 def generate_yaml_from_isolation_result(file):
     """

@@ -45,7 +45,7 @@ class SourcePosition:
         @brief Renders a human-readable string representation of the source position.
         @return A string showing filename and line/column ranges.
         """
-        return (self.file + ":" +
+        return (str(self.file) + ":" +
                 str(self.start_point.row + 1) + "/" + str(self.start_point.column + 1) +
                 "-" + str(self.end_point.row + 1) + "/" + str(self.end_point.column + 1))
 
@@ -223,7 +223,7 @@ class Tree:
         result = []
         def dfs(nid):
             node = self.get_node(nid)
-            if node and len(node.children) == 0:
+            if node and node.data.is_ts_leaf:
                 result.append(node)
             else:
                 for cid in node.children:
