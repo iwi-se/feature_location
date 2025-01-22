@@ -1,28 +1,36 @@
 action: difference
 name-file-mappings:
   - name: S1
-    file: example/with_not_features/s1_r.hpp
+    file: example/r.hpp
   - name: S2
-    file: example/with_not_features/s2_rl.hpp
+    file: example/rl.hpp
   - name: S3
-    file: example/with_not_features/s3_rc.hpp
+    file: example/rc.hpp
   - name: S4
-    file: example/with_not_features/s4_rcl.hpp
+    file: example/rcl.hpp
   - name: S5
-    file: example/with_not_features/s5_i.hpp
+    file: example/i.hpp
   - name: S6
-    file: example/with_not_features/s6_il.hpp
+    file: example/il.hpp
   - name: S7
-    file: example/with_not_features/s7_ic.hpp
+    file: example/ic.hpp
   - name: S8
-    file: example/with_not_features/s8_icl.hpp
+    file: example/icl.hpp
 options:
   minimum_trace_size: 1
-  only_named_nodes: true
+  only_named_nodes: false
+  language: cpp
 expressions:
+  - left-side: [S2, S8]
+    right-side: [S3, S5]
+    labels:
+      - logging_1
+      - logging
+      - F
   - left-side: [S2, S8]
     right-side: [S1, S7]
     labels:
+      - logging_2
       - logging
       - F
   - left-side: [S3, S8]
@@ -30,10 +38,20 @@ expressions:
     labels:
       - checked
       - F
-  - left-side: [S2, S3, S4, S6, S7, S8]
+  - left-side: [S5, S6]
+    right-side: [S1, S4]
+    labels:
+      - iterative
+      - F
+  - left-side: [S7]
+    right-side: [S3, S5]
+    labels:
+      - checked_and_iterative
+      - F
+  - left-side: [S2, S7]
     right-side: [S1, S5]
     labels:
       - logging_or_checked
       - O
 run:
-  - F
+  - checked
