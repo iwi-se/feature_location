@@ -16,6 +16,7 @@ import os
 from feature_location import read_and_preprocess, intersect_all_subtrees, difference, print_trees, read_and_preprocess_code
 import render
 
+
 def map_system_to_file(system, config, name_file_map):
     """
     @brief Maps a system name to a filename based on a given configuration.
@@ -25,6 +26,7 @@ def map_system_to_file(system, config, name_file_map):
     @return The mapped filename or None if not found.
     """
     return name_file_map.get(system, None)
+
 
 def map_systems_to_files(systems, config, name_file_map):
     """
@@ -36,6 +38,7 @@ def map_systems_to_files(systems, config, name_file_map):
     """
     return [map_system_to_file(system, config, name_file_map) for system in systems]
 
+
 def find_expressions_to_run(config):
     """
     @brief Finds and returns a list of expressions to run based on config "run" and "expressions".
@@ -44,27 +47,35 @@ def find_expressions_to_run(config):
     """
     labels_to_run = set(config["run"])
     expressions = config["expressions"]
-    result = [expr for expr in expressions if any(lbl in labels_to_run for lbl in expr["labels"])]
+    result = [expr for expr in expressions if any(
+        lbl in labels_to_run for lbl in expr["labels"])]
     return result
 
-def gather_java_files(paths):
+
+def gather_files(paths, options):
     """
     @brief Given a list of file or directory paths, returns all .java files found.
     @param paths A list of file or directory paths.
     @return A list of .java file paths.
     """
-    java_files = []
-    append = java_files.append
+    language = options.get("language", "cpp")
+    language_extensions = {
+        "cpp": ["hpp", "h", "hxx", "h++", "hh", "h++", "cpp", "cxx", "c++", "cc", "c++", "cxx"],
+        "java": ["java"],
+    }
+    files = []
+    append = files.append
     for p in paths:
         if os.path.isdir(p):
             for root, dirs, files in os.walk(p):
                 for file in files:
-                    if file.endswith(".java"):
+                    if file.endswith(tuple(language_extensions[language])):
                         append(os.path.join(root, file))
         else:
-            if p.endswith(".java"):
+            if p.endswith(tuple(language_extensions[language])):
                 append(p)
-    return java_files
+    return files
+
 
 def process_file(file):
     """
@@ -74,22 +85,55 @@ def process_file(file):
     with open(file, "r") as f:
         config = yaml.safe_load(f)
 
-    name_file_map = {m["name"]: m["file"] for m in config["name-file-mappings"]}
+    options = config.get("options", {})
+
+    name_file_map = {m["name"]: m["file"]
+                     for m in config["name-file-mappings"]}
 
     if config["action"] == "difference":
         exprs = find_expressions_to_run(config)
         for expr in exprs:
-            left_side = map_systems_to_files(expr["left-side"], config, name_file_map)
-            right_side = map_systems_to_files(expr["right-side"], config, name_file_map)
+            left_side = map_systems_to_files(
+                expr["left-side"], config, name_file_map)
+            right_side = map_systems_to_files(
+                expr["right-side"], config, name_file_map)
 
-            left_java_files = gather_java_files(left_side)
-            right_java_files = gather_java_files(right_side)
+            left_files = [gather_files([left_side_file], options)
+                          for left_side_file in left_side]
+            right_files = [gather_files([right_side_file], options)
+                           for right_side_file in right_side]
 
             os.makedirs("results", exist_ok=True)
-            output_file = os.path.join("results", "feature_location_" + str(expr["labels"][0]) + ".html")
-            process_difference_individual(left_java_files, right_java_files, file_name=output_file, options=config.get("options", {}))
+
+            if all(len(files) == 1 for files in left_files + right_files):
+                single_file_systems_left = [system[0] for system in left_files]
+                single_file_systems_right = [system[0]
+                                             for system in right_files]
+                trees_before = [[read_and_preprocess(
+                    file, options)] for file in single_file_systems_left]
+                trees_after = [[read_and_preprocess(
+                    file, options)] for file in single_file_systems_right]
+
+                (resultTrees, source_ranges_subtraction) = difference(
+                    trees_before, trees_after, options)
+                source_ranges_intersection = [r.get_node(
+                    r.root).data.source_positions for r in resultTrees]
+
+                out_filename = os.path.join("results", "result.html")
+                with open(out_filename, "w") as f:
+                    f.write(render.render_feature_location(
+                        single_file_systems_left, source_ranges_intersection,
+                        single_file_systems_right, source_ranges_subtraction))
+            else:
+                output_file = os.path.join(
+                    "results", "feature_location_" + str(expr["labels"][0]) + ".html")
+
+                for i in range(len(left_files)):
+                    process_difference_individual(
+                        left_files[i], right_files[i], file_name=output_file, options=config.get("options", {}))
     else:
         print("Unknown action")
+
 
 def read_args():
     """
@@ -97,6 +141,7 @@ def read_args():
     @return A list of arguments starting from sys.argv[2].
     """
     return sys.argv[2:]
+
 
 def combine_files_into_code(java_files):
     """
@@ -112,17 +157,18 @@ def combine_files_into_code(java_files):
             combined_lines.append("\n\n")
     return "".join(combined_lines)
 
+
 def process_intersection(files):
     """
     @brief Processes the intersection of ASTs from given files/directories.
     @param files A list of files or directories.
     """
-    all_java_files = gather_java_files(files)
-    if not all_java_files:
+    all_files = gather_files(files)
+    if not all_files:
         print("No .java files found for intersection.")
         return
 
-    combined_code = combine_files_into_code(all_java_files)
+    combined_code = combine_files_into_code(all_files)
     # Here we assume read_and_preprocess_code can process code strings directly
     # If not available, adapt feature_location accordingly.
     tree = read_and_preprocess_code(combined_code)
@@ -134,10 +180,13 @@ def process_intersection(files):
     print_trees(result)
 
     os.makedirs("results", exist_ok=True)
-    source_ranges = [res.get_node(res.root).data.source_positions for res in result]
+    source_ranges = [res.get_node(
+        res.root).data.source_positions for res in result]
     # We no longer have a temp file, but we can give a placeholder name
     with open(os.path.join("results", "feature_location.html"), "w") as f:
-        f.write(render.render_feature_location(["combined_memory.java"], source_ranges))
+        f.write(render.render_feature_location(
+            ["combined_memory.java"], source_ranges))
+
 
 def read_difference_args():
     """
@@ -162,6 +211,7 @@ def read_difference_args():
 
     return filesBeforeSeparator, filesAfterSeparator
 
+
 def process_difference_individual(before_java, after_java, file_name="feature_location.html", options={}):
     """
     @brief Process difference on a file-by-file basis without combining them into a temp file.
@@ -176,14 +226,17 @@ def process_difference_individual(before_java, after_java, file_name="feature_lo
             b_file = before_java[i]
             a_file = after_java[i]
 
-            treesBefore = [read_and_preprocess(b_file, options)]
-            treesAfter = [read_and_preprocess(a_file, options)]
+            treeBefore = [read_and_preprocess(b_file, options)]
+            treeAfter = [read_and_preprocess(a_file, options)]
 
-            (resultTrees, source_ranges_subtraction) = difference([treesBefore], treesAfter, options)
+            (resultTrees, source_ranges_subtraction) = difference(
+                [treeBefore], treeAfter, options)
             print_trees(resultTrees)
-            source_ranges_intersection = [r.get_node(r.root).data.source_positions for r in resultTrees]
+            source_ranges_intersection = [r.get_node(
+                r.root).data.source_positions for r in resultTrees]
 
-            base_name = os.path.splitext(os.path.basename(b_file))[0] + "_vs_" + os.path.splitext(os.path.basename(a_file))[0]
+            base_name = os.path.splitext(os.path.basename(b_file))[
+                0] + "_vs_" + os.path.splitext(os.path.basename(a_file))[0]
             out_filename = os.path.join("results", base_name + ".html")
             with open(out_filename, "w") as f:
                 f.write(render.render_feature_location([b_file], source_ranges_intersection,
@@ -204,11 +257,15 @@ def process_difference_individual(before_java, after_java, file_name="feature_lo
         if filename in after_map:
             after_files = after_map[filename]
 
-            treesBefore = [read_and_preprocess(bf, options) for bf in before_files]
-            treesAfter = [read_and_preprocess(af, options) for af in after_files]
+            treeBefore = [read_and_preprocess(
+                bf, options) for bf in before_files]
+            treeAfter = [read_and_preprocess(af, options)
+                         for af in after_files]
 
-            (resultTrees, source_ranges_subtraction) = difference([treesBefore], treesAfter, options)
-            source_ranges_intersection = [r.get_node(r.root).data.source_positions for r in resultTrees]
+            (resultTrees, source_ranges_subtraction) = difference(
+                [treeBefore], treeAfter, options)
+            source_ranges_intersection = [r.get_node(
+                r.root).data.source_positions for r in resultTrees]
 
             base_name, _ = os.path.splitext(filename)
             out_filename = os.path.join("results", base_name + ".html")
@@ -217,8 +274,9 @@ def process_difference_individual(before_java, after_java, file_name="feature_lo
                                                        after_files, source_ranges_subtraction))
         else:
             print(f"Can't find {filename} in after set.")
-        
+
         print(f"Processed {i} of {len(before_map)} files: {filename}")
+
 
 def process_difference(filesBeforeSeparator, filesAfterSeparator, file_name="feature_location.html", options={}):
     """
@@ -228,12 +286,12 @@ def process_difference(filesBeforeSeparator, filesAfterSeparator, file_name="fea
     @param file_name The output filename for the HTML feature location result.
     @param options Additional options passed to the difference operation.
     """
-    before_java = gather_java_files(filesBeforeSeparator)
+    before_java = gather_files(filesBeforeSeparator)
     if not before_java:
         print("No .java files found in before-separator arguments.")
         return
 
-    after_java = gather_java_files(filesAfterSeparator)
+    after_java = gather_files(filesAfterSeparator)
     if not after_java:
         print("No .java files found in after-separator arguments.")
         return
@@ -241,17 +299,19 @@ def process_difference(filesBeforeSeparator, filesAfterSeparator, file_name="fea
     before_trees = [read_and_preprocess(bf, options) for bf in before_java]
     after_trees = [read_and_preprocess(af, options) for af in after_java]
 
-    before_result = intersect_all_subtrees([[t] for t in before_trees]) 
+    before_result = intersect_all_subtrees([[t] for t in before_trees])
     before_intersection = [item[0] for item in before_result]
 
     after_result = intersect_all_subtrees([[t] for t in after_trees])
     after_intersection = [item[0] for item in after_result]
-    (resultTrees, source_ranges_subtraction) = difference([before_intersection], after_intersection, options)
+    (resultTrees, source_ranges_subtraction) = difference(
+        [before_intersection], after_intersection, options)
 
     print_trees(resultTrees)
     os.makedirs("results", exist_ok=True)
 
-    source_ranges_intersection = [r.get_node(r.root).data.source_positions for r in resultTrees]
+    source_ranges_intersection = [r.get_node(
+        r.root).data.source_positions for r in resultTrees]
 
     combined_before_name = [os.path.basename(f) for f in before_java]
     combined_after_name = [os.path.basename(f) for f in after_java]
@@ -264,25 +324,29 @@ def process_difference(filesBeforeSeparator, filesAfterSeparator, file_name="fea
             source_ranges_subtraction
         ))
 
+
 def process_show_ast(files):
     """
     @brief Shows the AST of the given files/directories.
     @param files A list of files/directories.
     """
-    all_java = gather_java_files(files)
+    all_java = gather_files(files)
     if not all_java:
         print("No .java files found.")
         return
 
     combined_code = combine_files_into_code(all_java)
     # use the code directly
-    trees = [read_and_preprocess_code(combined_code, {"only_named_nodes": False})]
+    trees = [read_and_preprocess_code(
+        combined_code, {"only_named_nodes": False})]
     print_trees(trees)
 
     os.makedirs("results", exist_ok=True)
     source_ranges = [t.get_node(t.root).data.source_positions for t in trees]
     with open(os.path.join("results", "feature_location.html"), "w") as f:
-        f.write(render.render_feature_location(["combined_memory.java"], source_ranges))
+        f.write(render.render_feature_location(
+            ["combined_memory.java"], source_ranges))
+
 
 def parse_difference_expression(expression: str):
     """
@@ -292,8 +356,9 @@ def parse_difference_expression(expression: str):
     """
     left_part, right_part = expression.split(' \\ ')
     left_numbers = list(map(int, re.findall(r'\d+', left_part)))
-    right_numbers = list(map(int, re.findall(r'\d+', right_part))) 
+    right_numbers = list(map(int, re.findall(r'\d+', right_part)))
     return left_numbers, right_numbers
+
 
 def generate_yaml_from_isolation_result(file):
     """
@@ -330,7 +395,8 @@ def generate_yaml_from_isolation_result(file):
             min_diff_str = min_difference.strip()
             if min_diff_str == "":
                 continue
-            left_numbers, right_numbers = parse_difference_expression(min_diff_str)
+            left_numbers, right_numbers = parse_difference_expression(
+                min_diff_str)
             yd_append({
                 "left-side": left_numbers,
                 "right-side": right_numbers,
@@ -339,6 +405,7 @@ def generate_yaml_from_isolation_result(file):
 
     with open("isolation_results.yaml", "w") as f:
         yaml.dump(yaml_data, f)
+
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

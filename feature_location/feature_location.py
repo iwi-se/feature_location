@@ -10,20 +10,15 @@ source code highlighting.
 from copy import deepcopy
 import tree_sitter_java as tsjava
 import tree_sitter_cpp as tscpp
-import sys
 from functools import lru_cache
 from tree_sitter import Language, Parser
 from itertools import product
-import render
-import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 # Default configuration options
 minimum_trace_size_default = 10
 only_named_nodes_default = True
-
-LANGUAGE = Language(tsjava.language())
-parser = Parser(LANGUAGE)
+language_default = "cpp"
 
 class SourcePosition:
     """
@@ -331,11 +326,22 @@ def preprocess(treesitter_node, file, position, options={}):
     return tree
 
 
+def get_parser(language = language_default):
+    if language == "java":
+        LANGUAGE = Language(tsjava.language())
+        return Parser(LANGUAGE)
+    if language == "cpp":
+        LANGUAGE = Language(tscpp.language())
+        return Parser(LANGUAGE)
+    else:
+        raise ValueError(f"Unsupported language: {language}")
+
+
 def _parse_file(filename, options):
     # Helper for parallelization
     with open(filename, "rb") as f:
         content = f.read()
-        tree = parser.parse(content)
+        tree = get_parser(options.get("language", language_default)).parse(content)
         return preprocess(tree.root_node, filename, [0], options)
 
 
@@ -433,7 +439,7 @@ def read_and_preprocess_code(code_string, filename="in_memory.java", options={})
     @return A Tree representing the AST of the code.
     """
     content = code_string.encode('utf-8', 'replace')
-    tree = parser.parse(content)
+    tree = get_parser(options.get("language", language_default)).parse(content)
     return preprocess(tree.root_node, filename, [0], options)
 
 
@@ -560,7 +566,7 @@ def subtraction(leftSide, leftSideIntersected, treesToSubtract, options={}):
     """
     all_intersections = []
     for rightSideTree in treesToSubtract:
-        intersections = intersect_all_subtrees(deepcopy(leftSide) + [[deepcopy(rightSideTree)]], options)
+        intersections = intersect_all_subtrees(deepcopy(leftSide) + [deepcopy(rightSideTree)], options)
         all_intersections.extend(intersections)
 
     all_intersections.sort(key=lambda x: x[1], reverse=True)
