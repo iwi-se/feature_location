@@ -119,7 +119,7 @@ def process_file(file):
                 source_ranges_intersection = [r.get_node(
                     r.root).data.source_positions for r in resultTrees]
 
-                out_filename = os.path.join("results", "result.html")
+                out_filename = os.path.join("results", "feature_location_" + str(expr["labels"][0]) + ".html")
                 with open(out_filename, "w") as f:
                     f.write(render.render_feature_location(
                         single_file_systems_left, source_ranges_intersection,
