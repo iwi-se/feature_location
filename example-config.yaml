@@ -1,21 +1,21 @@
 action: difference
-name-file-mappings:
+name-path-mappings:
   - name: S1
-    file: example/r.hpp
+    paths: [example/r.hpp]
   - name: S2
-    file: example/rl.hpp
+    paths: [example/rl.hpp]
   - name: S3
-    file: example/rc.hpp
+    paths: [example/rc.hpp]
   - name: S4
-    file: example/rcl.hpp
+    paths: [example/rcl.hpp]
   - name: S5
-    file: example/i.hpp
+    paths: [example/i.hpp]
   - name: S6
-    file: example/il.hpp
+    paths: [example/il.hpp]
   - name: S7
-    file: example/ic.hpp
+    paths: [example/ic.hpp]
   - name: S8
-    file: example/icl.hpp
+    paths: [example/icl.hpp]
 options:
   minimum_trace_size: 1
   only_named_nodes: false
