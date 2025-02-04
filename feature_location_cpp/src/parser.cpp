@@ -10,22 +10,32 @@
 
 const TSLanguage *tree_sitter_cpp();
 
+std::string get_node_text(const TSNode &ts_node, const std::filesystem::path& file) {
+    // Get the byte range for this node
+    uint32_t start_byte = ts_node_start_byte(ts_node);
+    uint32_t end_byte = ts_node_end_byte(ts_node);
+
+    // Read the file into a string
+    std::ifstream file_stream(file, std::ios::binary);
+    std::string file_contents((std::istreambuf_iterator<char>(file_stream)), std::istreambuf_iterator<char>());
+
+    // Extract the text for this node based on its byte range
+    return file_contents.substr(start_byte, end_byte - start_byte);
+}
+
 std::shared_ptr<Node> convert_ts_node_to_node(TSNode ts_node, const std::filesystem::path& file) {
     // Extract node data
     const char *type = ts_node_type(ts_node);
-    const char *text = ts_node_type(ts_node);
     bool is_named = ts_node_is_named(ts_node);
-    uint32_t subtree_size = ts_node_child_count(ts_node);
-    std::string subtree_hash = std::to_string(ts_node_start_byte(ts_node)) + "-" + std::to_string(ts_node_end_byte(ts_node));
 
     // Create SourcePosition
-    std::vector<SourcePosition> source_positions = {
-        SourcePosition(file, {ts_node_start_point(ts_node).row, ts_node_start_point(ts_node).column},
-                        {ts_node_end_point(ts_node).row, ts_node_end_point(ts_node).column})
-    };
+    SourcePosition source_position = SourcePosition(file, {ts_node_start_point(ts_node).row, ts_node_start_point(ts_node).column},
+                        {ts_node_end_point(ts_node).row, ts_node_end_point(ts_node).column});
+
+    std::string text = get_node_text(ts_node, file);
 
     // Create the Node
-    auto node = std::make_shared<Node>(type, text, type, is_named, subtree_size, subtree_hash, source_positions);
+    auto node = std::make_shared<Node>(type, text, type, is_named, source_position);
 
     // Recursively add children
     uint32_t child_count = ts_node_child_count(ts_node);

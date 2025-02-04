@@ -11,22 +11,43 @@ class SourcePosition
 public:
     SourcePosition(const std::filesystem::path &file, const std::pair<int, int> &start_position, const std::pair<int, int> &end_position) : file(file), start_position(start_position), end_position(end_position) {}
 
+    std::filesystem::path get_file() const;
+    std::pair<int, int> get_start_position() const;
+    std::pair<int, int> get_end_position() const;
+    bool operator<(const SourcePosition &other) const;
+
 private:
     std::filesystem::path file;
     std::pair<int, int> start_position;
     std::pair<int, int> end_position;
 };
 
-class Node
+class Node : public std::enable_shared_from_this<Node>
 {
 public:
     Node(const std::string &tag, const std::string &ts_text,
          const std::string &ts_type, const bool &ts_is_named,
-         const int &ts_subtree_size, const std::string &subtree_hash,
-         const std::vector<SourcePosition> &source_positions);
+         const SourcePosition &source_position);
+
+    std::string get_tag();
+    std::string get_ts_text();
     void add_child(const std::shared_ptr<Node> &child);
     void render(const int &whitespace);
+    bool is_leaf();
+    std::vector<std::shared_ptr<Node>> get_pointer_to_every_node();
+    std::string get_subtree_hash();
+    int get_connected_leaf_count();
+    bool is_descendant(const std::shared_ptr<Node> &node);
+    SourcePosition get_source_position();
 
+    enum class RelativePosition
+    {
+        before,
+        after,
+        overlapping,
+    };
+
+    RelativePosition get_relative_position(const std::shared_ptr<Node> &other);
 private:
     std::shared_ptr<Node> parent;
     std::vector<std::shared_ptr<Node>> children;
@@ -34,9 +55,9 @@ private:
     std::string ts_text;
     std::string ts_type;
     bool ts_is_named;
-    int ts_subtree_size;
-    std::string subtree_hash;
-    std::vector<SourcePosition> source_positions;
+    int connected_leaf_count {};
+    std::string subtree_hash {};
+    SourcePosition source_position;
 
     void set_parent(const std::shared_ptr<Node> &parent);
 };

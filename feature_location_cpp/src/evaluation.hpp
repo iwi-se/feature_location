@@ -10,7 +10,7 @@ void runExpression(ExpressionSystemName expression, Configuration config);
 
 ExpressionAllFiles getExpressionFiles(ExpressionSystemName expression, Configuration config);
 
-std::vector<SingleFileExpression> buildFileBasedSubexpressions(ExpressionAllFiles expression, Configuration config);
+std::vector<SingleFileExpression> buildFileBasedSubExpressions(ExpressionAllFiles expression, Configuration config);
 
 //SingleFileExpressionResult evaluateExpression(SingleFileExpression expression, Configuration config);
 

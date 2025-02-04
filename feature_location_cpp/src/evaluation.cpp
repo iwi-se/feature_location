@@ -3,19 +3,28 @@
 #include "parser.hpp"
 #include "tree.hpp"
 #include <memory>
+#include "set_operations.hpp"
+#include "render.hpp"
 
 void evaluateExpression(SingleFileExpression expression, Configuration config)
 {
-    std::filesystem::path full_path = config.base_path / expression.left_side[0];
-    std::shared_ptr<Node> root = parse_file(full_path);
-    root->render(0);
+    std::vector<std::shared_ptr<Node>> left_side_trees{};
+    for (const auto &left_side_system : expression.left_side)
+    {
+        std::filesystem::path full_path = config.base_path / left_side_system;
+        std::shared_ptr<Node> root = parse_file(full_path);
+        left_side_trees.push_back(root);
+    }
 
+    auto intersection_source_positions{intersection(left_side_trees[0], left_side_trees[1])};
+
+    render_file(expression.left_side[0], intersection_source_positions.first, config);
 }
 
 void runExpression(ExpressionSystemName expression, Configuration config)
 {
     ExpressionAllFiles expressionFiles = getExpressionFiles(expression, config);
-    std::vector<SingleFileExpression> subexpressions = buildFileBasedSubexpressions(expressionFiles, config);
+    std::vector<SingleFileExpression> subexpressions = buildFileBasedSubExpressions(expressionFiles, config);
     for (const auto &subexpression : subexpressions)
     {
         evaluateExpression(subexpression, config);
@@ -86,12 +95,12 @@ ExpressionAllFiles getExpressionFiles(ExpressionSystemName expression, Configura
     return expressionAllFiles;
 }
 
-std::vector<SingleFileExpression> buildFileBasedSubexpressions(ExpressionAllFiles expression, Configuration config)
+std::vector<SingleFileExpression> buildFileBasedSubExpressions(ExpressionAllFiles expression, Configuration config)
 {
     std::vector<SingleFileExpression> subexpressions{};
     if (hasOnlySingleFileSystems(expression))
     {
-        SingleFileExpression singleFileExpression {};
+        SingleFileExpression singleFileExpression{};
         for (const auto &left_side_system : expression.left_side)
         {
             singleFileExpression.left_side.push_back(left_side_system[0]);
