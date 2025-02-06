@@ -3,7 +3,10 @@
 
 #include "tree.hpp"
 #include "configuration.hpp"
+#include "set_operations.hpp"
 
-void render_file(std::filesystem::path file, std::vector<SourcePosition> source_positions, Configuration config);
+std::string render_difference(DifferenceResult difference, Configuration config);
+
+std::string render_file(std::filesystem::path file, Configuration config, std::vector<SourcePosition> green_positions, std::vector<SourcePosition> red_positions = {});
 
 #endif

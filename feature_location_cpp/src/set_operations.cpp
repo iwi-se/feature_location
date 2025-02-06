@@ -29,7 +29,7 @@ void sort_by_decision_ratio(std::vector<std::pair<std::shared_ptr<Node>, std::sh
     {
         // double depth_proximity = calculate_depth_proximity(pair.first, pair.second);
         // double environment_similarity = calculate_environment_similarity(pair.first, pair.second);
-        int size = pair.first->get_connected_leaf_count(); // Assuming get_subtree_size() is a method in Node
+        int size = pair.first->get_connected_leaf_weight(); // Assuming get_subtree_size() is a method in Node
 
         // double decision_ratio = 0.2 * depth_proximity + 0.3 * environment_similarity + 0.5 * std::min((size / 100.0), 1.0);
 
@@ -46,7 +46,10 @@ void sort_by_decision_ratio(std::vector<std::pair<std::shared_ptr<Node>, std::sh
     pairs.clear();
     for (const auto &tuple : pairs_with_ratio)
     {
-        pairs.push_back(std::get<0>(tuple));
+        if (std::get<1>(tuple) > 2.0)
+        {
+            pairs.push_back(std::get<0>(tuple));
+        }
     }
 }
 
@@ -110,4 +113,27 @@ std::pair<std::vector<SourcePosition>, std::vector<SourcePosition>> intersection
     }
 
     return result;
+}
+
+DifferenceResult difference(const std::shared_ptr<Node> &leftFile1,
+                            const std::shared_ptr<Node> &leftFile2,
+                            const std::shared_ptr<Node> &rightFile1,
+                            const std::shared_ptr<Node> &rightFile2)
+{
+    auto left_side_intersection = intersection(leftFile1, leftFile2);
+
+    auto lf1_rf1_intersection = intersection(leftFile1, rightFile1);
+    auto lf1_rf2_intersection = intersection(leftFile1, rightFile2);
+
+    auto lf2_rf1_intersection = intersection(leftFile2, rightFile1);
+    auto lf2_rf2_intersection = intersection(leftFile2, rightFile2);
+
+    std::vector<SourcePosition> file1_positions_to_remove;
+    file1_positions_to_remove.insert(file1_positions_to_remove.end(), lf1_rf1_intersection.first.begin(), lf1_rf1_intersection.first.end());
+    file1_positions_to_remove.insert(file1_positions_to_remove.end(), lf1_rf2_intersection.first.begin(), lf1_rf2_intersection.first.end());
+    std::vector<SourcePosition> file2_positions_to_remove;
+    file2_positions_to_remove.insert(file2_positions_to_remove.end(), lf2_rf1_intersection.first.begin(), lf2_rf1_intersection.first.end());
+    file2_positions_to_remove.insert(file2_positions_to_remove.end(), lf2_rf2_intersection.first.begin(), lf2_rf2_intersection.first.end());
+
+    return DifferenceResult{left_side_intersection.first, file1_positions_to_remove, left_side_intersection.second, file2_positions_to_remove};
 }

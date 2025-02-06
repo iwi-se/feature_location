@@ -5,6 +5,7 @@
 #include <memory>
 #include "set_operations.hpp"
 #include "render.hpp"
+#include <fstream>
 
 void evaluateExpression(SingleFileExpression expression, Configuration config)
 {
@@ -15,10 +16,20 @@ void evaluateExpression(SingleFileExpression expression, Configuration config)
         std::shared_ptr<Node> root = parse_file(full_path);
         left_side_trees.push_back(root);
     }
+    std::vector<std::shared_ptr<Node>> right_side_trees{};
+    for (const auto &right_side_system : expression.right_side)
+    {
+        std::filesystem::path full_path = config.base_path / right_side_system;
+        std::shared_ptr<Node> root = parse_file(full_path);
+        right_side_trees.push_back(root);
+    }
 
-    auto intersection_source_positions{intersection(left_side_trees[0], left_side_trees[1])};
+    auto difference_result{difference(left_side_trees[0], left_side_trees[1], right_side_trees[0], right_side_trees[1])};
 
-    render_file(expression.left_side[0], intersection_source_positions.first, config);
+    std::string html_result = render_difference(difference_result, config);
+    std::ofstream output_file("difference.html");
+    output_file << html_result;
+    output_file.close();
 }
 
 void runExpression(ExpressionSystemName expression, Configuration config)
@@ -114,8 +125,15 @@ std::vector<SingleFileExpression> buildFileBasedSubExpressions(ExpressionAllFile
     }
     else
     {
-        std::cout << "Multi file systems not supported yet!" << std::endl;
-        config.getExpressionsToEvaluate();
+        for (size_t i = 0; i < expression.left_side.size(); i++)
+        {
+            auto left_side_system = expression.left_side[i];
+            auto right_side_system = expression.right_side[i];
+            for (const auto &left_side_file : left_side_system)
+            {
+                
+            }
+        }
     }
     return subexpressions;
 }

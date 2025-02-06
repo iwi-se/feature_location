@@ -13,8 +13,14 @@ public:
 
     std::filesystem::path get_file() const;
     std::pair<int, int> get_start_position() const;
+    int get_start_line() const;
+    int get_start_column() const;
     std::pair<int, int> get_end_position() const;
+    int get_end_line() const;
+    int get_end_column() const;
     bool operator<(const SourcePosition &other) const;
+    bool operator==(const SourcePosition &other) const;
+    std::string render() const;
 
 private:
     std::filesystem::path file;
@@ -36,7 +42,7 @@ public:
     bool is_leaf();
     std::vector<std::shared_ptr<Node>> get_pointer_to_every_node();
     std::string get_subtree_hash();
-    int get_connected_leaf_count();
+    int get_connected_leaf_weight();
     bool is_descendant(const std::shared_ptr<Node> &node);
     SourcePosition get_source_position();
 
@@ -55,7 +61,7 @@ private:
     std::string ts_text;
     std::string ts_type;
     bool ts_is_named;
-    int connected_leaf_count {};
+    int connected_leaf_weight {};
     std::string subtree_hash {};
     SourcePosition source_position;
 

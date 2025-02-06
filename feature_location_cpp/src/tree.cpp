@@ -13,14 +13,44 @@ std::pair<int, int> SourcePosition::get_start_position() const
     return start_position;
 }
 
+int SourcePosition::get_start_line() const
+{
+    return start_position.first;
+}
+
+int SourcePosition::get_start_column() const
+{
+    return start_position.second;
+}
+
 std::pair<int, int> SourcePosition::get_end_position() const
 {
     return end_position;
 }
 
+int SourcePosition::get_end_line() const
+{
+    return end_position.first;
+}
+
+int SourcePosition::get_end_column() const
+{
+    return end_position.second;
+}
+
 bool SourcePosition::operator<(const SourcePosition &other) const
 {
     return start_position < other.start_position;
+}
+
+bool SourcePosition::operator==(const SourcePosition &other) const
+{
+    return start_position == other.start_position && end_position == other.end_position && file == other.file;
+}
+
+std::string SourcePosition::render() const
+{
+    return file.string() + "/" + std::to_string(start_position.first) + ":" + std::to_string(start_position.second) + "-" + std::to_string(end_position.first) + ":" + std::to_string(end_position.second);
 }
 
 Node::Node(const std::string &tag, const std::string &ts_text,
@@ -39,36 +69,40 @@ std::string Node::get_ts_text()
     return ts_text;
 }
 
-int Node::get_connected_leaf_count()
+int Node::get_connected_leaf_weight()
 {
-    if (connected_leaf_count == 0)
+    if (connected_leaf_weight == 0)
     {
         if (is_leaf())
         {
-            if (ts_is_named)
+            if (tag == "identifier")
             {
-                connected_leaf_count = 2;
+                connected_leaf_weight = 3;
+            }
+            else if (ts_is_named)
+            {
+                connected_leaf_weight = 2;
             }
             else
             {
-                connected_leaf_count = 1;
+                connected_leaf_weight = 1;
             }
         }
         else
         {
             for (auto child : children)
             {
-                connected_leaf_count += child->get_connected_leaf_count();
+                connected_leaf_weight += child->get_connected_leaf_weight();
             }
         }
     }
-    return connected_leaf_count;
+    return connected_leaf_weight;
 }
 
 void Node::add_child(const std::shared_ptr<Node> &child)
 {
     children.push_back(child);
-    child->set_parent(std::make_shared<Node>(*this));
+    child->set_parent(shared_from_this());
 }
 
 void Node::set_parent(const std::shared_ptr<Node> &parent)
@@ -103,7 +137,7 @@ std::vector<std::shared_ptr<Node>> Node::get_pointer_to_every_node()
 {
     std::vector<std::shared_ptr<Node>> nodes;
     std::stack<std::shared_ptr<Node>> stack;
-    stack.push(std::make_shared<Node>(*this));
+    stack.push(shared_from_this());
 
     while (!stack.empty())
     {
