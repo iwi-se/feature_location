@@ -6,6 +6,16 @@
 #include <iostream>
 #include <filesystem>
 
+struct BasePlusRelativePath
+{
+    std::filesystem::path base;
+    std::filesystem::path relative;
+    std::filesystem::path fullPath() const
+    {
+        return base / relative;
+    }
+};
+
 template <typename T>
 class Expression
 {
@@ -73,7 +83,7 @@ public:
 };
 
 using ExpressionSystemName = Expression<std::string>;                 // S1, S2, S3, ...
-using ExpressionAllFiles = Expression<std::vector<std::filesystem::path>>;      // contains only files
+using ExpressionAllFiles = Expression<std::vector<BasePlusRelativePath>>;      // contains only files
 using SingleFileExpression = Expression<std::filesystem::path>;                 // Each element is a single file
 
 #endif // EXPRESSION_HPP

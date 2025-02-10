@@ -6,7 +6,7 @@
 #include "src/tree.hpp"
 int main()
 {
-    Configuration config("../../example-config.yaml");
+    Configuration config("../../local_argouml-config.yaml");
     std::vector<ExpressionSystemName> expressions = config.getExpressionsToEvaluate();
     config.render();
     for (const auto &expression : expressions)

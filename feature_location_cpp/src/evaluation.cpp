@@ -27,7 +27,8 @@ void evaluateExpression(SingleFileExpression expression, Configuration config)
     auto difference_result{difference(left_side_trees[0], left_side_trees[1], right_side_trees[0], right_side_trees[1])};
 
     std::string html_result = render_difference(difference_result, config);
-    std::ofstream output_file("difference.html");
+    std::string output_file_name = "difference_" + expression.left_side[0].stem().string() + ".html";
+    std::ofstream output_file(output_file_name);
     output_file << html_result;
     output_file.close();
 }
@@ -62,17 +63,17 @@ bool hasOnlySingleFileSystems(ExpressionAllFiles expression)
     return length_is_one;
 }
 
-std::vector<std::filesystem::path> getFilesForSystem(std::string systemName, Configuration config)
+std::vector<BasePlusRelativePath> getFilesForSystem(std::string systemName, Configuration config)
 {
     std::vector<std::string> paths = config.getPathsForSystem(systemName);
-    std::vector<std::filesystem::path> allFiles{};
+    std::vector<BasePlusRelativePath> allFiles{};
     for (const auto &path : paths)
     {
         std::filesystem::path p(path);
         if (p.has_extension())
         {
             std::cout << "We are currently not checking file types!!" << std::endl;
-            allFiles.push_back(p);
+            allFiles.push_back(BasePlusRelativePath{p, ""});
         }
         else
         {
@@ -81,7 +82,8 @@ std::vector<std::filesystem::path> getFilesForSystem(std::string systemName, Con
                 if (entry.is_regular_file())
                 {
                     std::cout << "We are currently not checking file types!!" << std::endl;
-                    allFiles.push_back(entry.path());
+                    std::filesystem::path relative_path = std::filesystem::relative(entry.path(), p);
+                    allFiles.push_back(BasePlusRelativePath{p, relative_path});
                 }
             }
         }
@@ -94,12 +96,12 @@ ExpressionAllFiles getExpressionFiles(ExpressionSystemName expression, Configura
     ExpressionAllFiles expressionAllFiles{};
     for (const auto &systemName : expression.left_side)
     {
-        std::vector<std::filesystem::path> files = getFilesForSystem(systemName, config);
+        std::vector<BasePlusRelativePath> files = getFilesForSystem(systemName, config);
         expressionAllFiles.left_side.push_back(files);
     }
     for (const auto &systemName : expression.right_side)
     {
-        std::vector<std::filesystem::path> files = getFilesForSystem(systemName, config);
+        std::vector<BasePlusRelativePath> files = getFilesForSystem(systemName, config);
         expressionAllFiles.right_side.push_back(files);
     }
     expressionAllFiles.labels = expression.labels;
@@ -114,26 +116,55 @@ std::vector<SingleFileExpression> buildFileBasedSubExpressions(ExpressionAllFile
         SingleFileExpression singleFileExpression{};
         for (const auto &left_side_system : expression.left_side)
         {
-            singleFileExpression.left_side.push_back(left_side_system[0]);
+            singleFileExpression.left_side.push_back(left_side_system[0].fullPath());
         }
         for (const auto &right_side_system : expression.right_side)
         {
-            singleFileExpression.right_side.push_back(right_side_system[0]);
+            singleFileExpression.right_side.push_back(right_side_system[0].fullPath());
         }
         singleFileExpression.labels = expression.labels;
         subexpressions.push_back(singleFileExpression);
     }
     else
     {
-        for (size_t i = 0; i < expression.left_side.size(); i++)
+        std::vector<BasePlusRelativePath> first_left_side_system = expression.left_side[0];
+        for (const auto &file : first_left_side_system)
         {
-            auto left_side_system = expression.left_side[i];
-            auto right_side_system = expression.right_side[i];
-            for (const auto &left_side_file : left_side_system)
+            SingleFileExpression singleFileExpression{};
+            singleFileExpression.left_side.push_back(file.fullPath());
+            for (size_t i = 1; i < expression.left_side.size(); i++)
             {
-                
+                const std::vector<BasePlusRelativePath> other_left_side_system {expression.left_side[i]};
+                for (const auto &other_file : other_left_side_system)
+                {
+                    if (file.relative == other_file.relative)
+                    {
+                        singleFileExpression.left_side.push_back(other_file.fullPath());
+                        singleFileExpression.labels = expression.labels;
+                        break;
+                    }
+                }
+            }
+            for (const auto &right_side_system : expression.right_side)
+            {
+                for (const auto &file : right_side_system)
+                {
+                    if (file.relative == file.relative)
+                    {
+                        singleFileExpression.right_side.push_back(file.fullPath());
+                        singleFileExpression.labels = expression.labels;
+                        std::cout << "File in right system" << std::endl;
+                        break;
+                    }
+                }
+            }
+
+            if (singleFileExpression.left_side.size() == 2 && singleFileExpression.right_side.size() == 2)
+            {
+                subexpressions.push_back(singleFileExpression);
             }
         }
     }
+    std::cout << "Subexpressions: " << subexpressions.size() << std::endl;
     return subexpressions;
 }
