@@ -11,6 +11,9 @@
 
 using namespace std;
 
+constexpr char sep { '\t' };
+constexpr char blank { ' ' };
+
 using size_t = string::size_type;
 
 struct occurence_t
@@ -48,17 +51,21 @@ struct all_strings_t
    void add(extended_strings_t& copy_m_strings,string s,
             size_t id_parent1,size_t pos1,
             size_t id_parent2,size_t pos2);
-   void find_substrings(extended_strings_t& copy_m_strings,
+   bool find_substrings(extended_strings_t& copy_m_strings,
                         const extended_string_t& first,
                         const extended_string_t& second);
-   void process(size_t from,size_t to);
+   bool process(size_t from,size_t to);
+   void export_csv(ofstream& out) const;
+   void export_dot(ofstream& out) const;
 };
 
 bool all_strings_t::add(string s)
 {
-   if (ranges::find_if(m_strings,
-                       [s](extended_string_t xs)
-                         { return xs.m_string == s; } ) != m_strings.end())
+   if (s.length() == 0 || 
+       ranges::find_if(m_strings,[s](extended_string_t xs)
+                         { return xs.m_string == s; } ) !=
+          m_strings.end()
+      )
    return false;
    extended_string_t xs { m_strings.size(),{ },s };
    xs.m_occurences.insert({ m_strings.size(),0 });
@@ -91,10 +98,12 @@ void all_strings_t::add(extended_strings_t& copy_m_strings,string s,
    }
 }
 
-void all_strings_t::find_substrings(extended_strings_t& copy_m_strings,
+bool all_strings_t::find_substrings(extended_strings_t& copy_m_strings,
                                     const extended_string_t& first,
                                     const extended_string_t& second)
 {
+//   cout << "[" << first.m_string << "]\t[" << second.m_string << "]" << endl;
+   bool stop { true };
    if (first.m_string.size() > second.m_string.size())
       throw invalid_argument ("first.m_string.length() > second.m_string.length()"
                               " in all_strings_t::find_substrings("
@@ -115,13 +124,16 @@ void all_strings_t::find_substrings(extended_strings_t& copy_m_strings,
          {
             auto substring { second.m_string.substr(col,diagonal) };
             add(copy_m_strings,substring,first.m_id_self,row,second.m_id_self,col);
+            stop = false;
          }
       }
    }
+   return stop;
 }
 
-void all_strings_t::process(size_t from,size_t to)
+bool all_strings_t::process(size_t from,size_t to)
 {
+   bool stop { true };
    if (from > to || from >= m_strings.size())
       throw range_error("Illegal range ["s + to_string(from) +
                         ".."s + to_string(to) +
@@ -137,31 +149,68 @@ void all_strings_t::process(size_t from,size_t to)
            swap(id1,id2);
          auto& first { m_strings.at(id1) };
          auto& second { m_strings.at(id2) };
-         find_substrings(copy_m_strings,first,second);
+         if (find_substrings(copy_m_strings,first,second))
+            stop = false;
       }
    }
    m_strings = copy_m_strings;
+   return stop;
+}
+
+void all_strings_t::export_csv(ofstream& out) const
+{
+   out << "ID" << sep << "SIZE" << sep << "S" << sep << "#OCC" << sep << "OCC" << endl;
+   for (const auto& e : m_strings)
+   {
+      out << e.m_id_self << sep << e.m_string.size() << sep 
+          << e.m_string << sep << e.m_occurences.size();
+      for (auto& o : e.m_occurences)
+      {
+         out << sep << o.m_id_parent << sep << o.m_position;
+      }
+      out << endl;
+   }
+}
+
+void all_strings_t::export_dot(ofstream& out) const
+{
+   out << "digraph substrings\n{" << endl;
+   for (const auto& e : m_strings)
+   {
+      out << sep << e.m_id_self << " [ label = \"" << e.m_string << "\" ]\n";
+      for (auto& o : e.m_occurences)
+      {
+        if (e.m_id_self != o.m_id_parent)
+        {
+           out << sep << o.m_id_parent <<  " -> { " << e.m_id_self << " }\n";
+        }
+      }
+   }
+   out << '}' << endl;
 }
 
 int main(int argc,char* args[])
 {
-   if (argc != 2)
-      throw invalid_argument("argc != 2 in main()");
+   if (argc != 3)
+      throw invalid_argument("argc != 3 in main()");
    ifstream input { args[1] };
    if (!input)
       throw invalid_argument("File \""s + args[1] + " not found!"s);
+   ofstream csv { string { args[2] } + ".csv" };
+   if (!csv)
+      throw invalid_argument("File \""s + args[2] + ".csv cannot be opened!"s);
+   ofstream dot { string { args[2] } + ".viz" };
+   if (!dot)
+      throw invalid_argument("File \""s + args[2] + ".viz cannot be opened!"s);
    all_strings_t all_strings;
-/*   while (input)
+   while (input)
    {
       string s;
       getline(input,s);
       if (input)
          all_strings.add(s);
-   }*/
-   all_strings.add("XABYABCV");
-   all_strings.add("ABXABYABCZ");
-   all_strings.process(0,all_strings.m_strings.size() - 1);
-   cout << "===" << endl;
-   for (auto xs : all_strings.m_strings)
-      cout << xs.m_string << endl;
+   }
+   while (all_strings.process(0,all_strings.m_strings.size() - 1));
+   all_strings.export_csv(csv);
+   all_strings.export_dot(dot);
 }
