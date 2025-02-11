@@ -102,7 +102,6 @@ bool all_strings_t::find_substrings(extended_strings_t& copy_m_strings,
                                     const extended_string_t& first,
                                     const extended_string_t& second)
 {
-//   cout << "[" << first.m_string << "]\t[" << second.m_string << "]" << endl;
    bool stop { true };
    if (first.m_string.size() > second.m_string.size())
       throw invalid_argument ("first.m_string.length() > second.m_string.length()"
@@ -123,10 +122,6 @@ bool all_strings_t::find_substrings(extended_strings_t& copy_m_strings,
          if (diagonal)
          {
             auto substring { second.m_string.substr(col,diagonal) };
-            /*cout << substring 
-                     << " id1 " << first.m_id_self << " pos " << row << " " << first.m_string
-                     << " id2 " << second.m_id_self << " pos " << col  << " " << second.m_string
-                     << endl; */
             add(copy_m_strings,substring,first.m_id_self,row,second.m_id_self,col);
             stop = false;
          }
