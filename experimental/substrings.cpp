@@ -22,7 +22,7 @@ struct occurence_t
 };
 
 template <>
-struct less<occurence_t>
+struct std::less<occurence_t>
 {
    bool operator()(const occurence_t& lhs,const occurence_t& rhs) const
    {
@@ -123,6 +123,10 @@ bool all_strings_t::find_substrings(extended_strings_t& copy_m_strings,
          if (diagonal)
          {
             auto substring { second.m_string.substr(col,diagonal) };
+            /*cout << substring 
+                     << " id1 " << first.m_id_self << " pos " << row << " " << first.m_string
+                     << " id2 " << second.m_id_self << " pos " << col  << " " << second.m_string
+                     << endl; */
             add(copy_m_strings,substring,first.m_id_self,row,second.m_id_self,col);
             stop = false;
          }
@@ -141,7 +145,8 @@ bool all_strings_t::process(size_t from,size_t to)
    auto copy_m_strings { m_strings };
    for (auto i { from };i < to;++i)
    {
-      for (auto j { i + 1};j <= to;++j)
+//      for (auto j { i + 1};j <= to;++j)
+      for (auto j { i };j <= to;++j)
       {
          auto id1 { i },
               id2 { j };
