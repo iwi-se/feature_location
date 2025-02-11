@@ -6,3 +6,5 @@ __pycache__/
 *.local
 local_*
 /.example-config.yaml.swp
+/experimental/a.out
+/experimental/.s2s.cpp.swp
