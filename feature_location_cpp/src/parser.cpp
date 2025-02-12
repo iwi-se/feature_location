@@ -8,7 +8,7 @@
 #include "tree_sitter/tree-sitter-cpp.h"
 #include "tree.hpp"
 
-const TSLanguage *tree_sitter_cpp();
+const TSLanguage *tree_sitter_java();
 
 std::string get_node_text(const TSNode &ts_node, const std::filesystem::path& file) {
     // Get the byte range for this node

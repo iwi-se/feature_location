@@ -35,16 +35,16 @@ public:
          const std::string &ts_type, const bool &ts_is_named,
          const SourcePosition &source_position);
 
-    std::string get_tag();
-    std::string get_ts_text();
+    std::string get_tag() const;
+    std::string get_ts_text() const;
     void add_child(const std::shared_ptr<Node> &child);
-    void render(const int &whitespace);
-    bool is_leaf();
+    void render(const int &whitespace) const;
+    bool is_leaf() const;
     std::vector<std::shared_ptr<Node>> get_pointer_to_every_node();
     std::string get_subtree_hash();
     int get_connected_leaf_weight();
     bool is_descendant(const std::shared_ptr<Node> &node);
-    SourcePosition get_source_position();
+    const SourcePosition get_source_position() const;
 
     enum class RelativePosition
     {

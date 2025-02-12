@@ -58,24 +58,19 @@ void mark_character_color(std::vector<std::vector<CharacterWithColor>> &characte
         std::vector<CharacterWithColor> &currentLine{character_lines[currentLineIndex]};
         for (std::size_t currentColumnIndex = 0; currentColumnIndex < currentLine.size(); currentColumnIndex++)
         {
-            std::cout << currentLine[currentColumnIndex].character << " " << currentLineIndex << ":" << currentColumnIndex;
             SourcePosition current_source_position{source_positions[current_source_position_index]};
             if (get_relative_position(current_source_position, currentLineIndex, currentColumnIndex) == RelativePosition::AFTER)
             {
-                std::cout << "end highlight";
                 if (current_source_position_index < source_positions.size() - 1)
                 {
                     current_source_position_index++;
                     current_source_position = source_positions[current_source_position_index];
-                    std::cout << "\ncurrent_source_position: " << current_source_position.render() << std::endl;
                 }
             }
             if (get_relative_position(current_source_position, currentLineIndex, currentColumnIndex) == RelativePosition::INSIDE)
             {
-                std::cout << "highlight";
                 currentLine[currentColumnIndex].color = color;
             }
-            std::cout << std::endl;
         }
     }
 }
@@ -101,34 +96,46 @@ void escape_html(std::vector<std::vector<CharacterWithColor>> &character_lines)
 std::string render_character_lines(std::vector<std::vector<CharacterWithColor>> &character_lines)
 {
     std::string result{};
+    CharacterColor current_color{CharacterColor::TRANSPARENT};
     for (auto &line : character_lines)
     {
         for (auto &character : line)
         {
-            if (character.color == CharacterColor::GREEN)
+            if (character.color != current_color)
             {
-                result += "<span style=\"background-color:rgb(121, 233, 155);\">";
-            }
-            else if (character.color == CharacterColor::RED)
-            {
-                result += "<span style=\"background-color:rgb(233, 121, 155);\">";
+                if (current_color != CharacterColor::TRANSPARENT)
+                {
+                    result += "</span>";
+                }
+                current_color = character.color;
+                if (current_color == CharacterColor::GREEN)
+                {
+                    result += "<span style=\"background-color:rgb(121, 233, 155);\">";
+                }
+                else if (current_color == CharacterColor::RED)
+                {
+                    result += "<span style=\"background-color:rgb(233, 121, 155);\">";
+                }
             }
             result += character.character;
-            if (character.color != CharacterColor::TRANSPARENT)
-            {
-                result += "</span>";
-            }
         }
         result += "<br>";
     }
+    result += "</span>";
     return result;
 }
 
 std::string render_difference(DifferenceResult difference, Configuration config)
 {
     std::string result{"<html><body>"};
-    result += render_file(difference.file1_intersection[0].get_file(), config, difference.file1_intersection, difference.file1_subtraction);
-    result += render_file(difference.file2_intersection[0].get_file(), config, difference.file2_intersection, difference.file2_subtraction);
+    if (difference.file1_intersection.size() > 0)
+    {
+        result += render_file(difference.file1_intersection[0].get_file(), config, difference.file1_intersection, difference.file1_subtraction);
+    }
+    if (difference.file2_intersection.size() > 0)
+    {
+        result += render_file(difference.file2_intersection[0].get_file(), config, difference.file2_intersection, difference.file2_subtraction);
+    }
     result += "</body></html>";
     return result;
 }
@@ -147,7 +154,6 @@ std::string render_file(std::filesystem::path file, Configuration config, std::v
     std::string line;
     while (std::getline(input_file, line))
     {
-        std::cout << "Line: " << line << std::endl;
         lines.push_back(line);
     }
     input_file.close();

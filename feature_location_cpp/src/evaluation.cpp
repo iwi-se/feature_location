@@ -23,7 +23,6 @@ void evaluateExpression(SingleFileExpression expression, Configuration config)
         std::shared_ptr<Node> root = parse_file(full_path);
         right_side_trees.push_back(root);
     }
-
     auto difference_result{difference(left_side_trees[0], left_side_trees[1], right_side_trees[0], right_side_trees[1])};
 
     std::string html_result = render_difference(difference_result, config);
@@ -73,7 +72,7 @@ std::vector<BasePlusRelativePath> getFilesForSystem(std::string systemName, Conf
         if (p.has_extension())
         {
             std::cout << "We are currently not checking file types!!" << std::endl;
-            allFiles.push_back(BasePlusRelativePath{p, ""});
+            allFiles.push_back(BasePlusRelativePath{p});
         }
         else
         {
@@ -134,7 +133,7 @@ std::vector<SingleFileExpression> buildFileBasedSubExpressions(ExpressionAllFile
             singleFileExpression.left_side.push_back(file.fullPath());
             for (size_t i = 1; i < expression.left_side.size(); i++)
             {
-                const std::vector<BasePlusRelativePath> other_left_side_system {expression.left_side[i]};
+                const std::vector<BasePlusRelativePath> other_left_side_system{expression.left_side[i]};
                 for (const auto &other_file : other_left_side_system)
                 {
                     if (file.relative == other_file.relative)
@@ -147,13 +146,12 @@ std::vector<SingleFileExpression> buildFileBasedSubExpressions(ExpressionAllFile
             }
             for (const auto &right_side_system : expression.right_side)
             {
-                for (const auto &file : right_side_system)
+                for (const auto &right_side_file : right_side_system)
                 {
-                    if (file.relative == file.relative)
+                    if (file.relative == right_side_file.relative)
                     {
-                        singleFileExpression.right_side.push_back(file.fullPath());
+                        singleFileExpression.right_side.push_back(right_side_file.fullPath());
                         singleFileExpression.labels = expression.labels;
-                        std::cout << "File in right system" << std::endl;
                         break;
                     }
                 }
@@ -166,5 +164,17 @@ std::vector<SingleFileExpression> buildFileBasedSubExpressions(ExpressionAllFile
         }
     }
     std::cout << "Subexpressions: " << subexpressions.size() << std::endl;
+    for (const auto &subexpression : subexpressions)
+    {
+        std::cout << "Subexpression: " << std::endl;
+        for (const auto &left_side : subexpression.left_side)
+        {
+            std::cout << "Left Side: " << left_side << std::endl;
+        }
+        for (const auto &right_side : subexpression.right_side)
+        {
+            std::cout << "Right Side: " << right_side << std::endl;
+        }
+    }
     return subexpressions;
 }

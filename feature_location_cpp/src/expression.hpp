@@ -8,11 +8,11 @@
 
 struct BasePlusRelativePath
 {
-    std::filesystem::path base;
-    std::filesystem::path relative;
+    std::filesystem::path base {};
+    std::filesystem::path relative {};
     std::filesystem::path fullPath() const
     {
-        return base / relative;
+        return relative == "" ? base : base / relative;
     }
 };
 

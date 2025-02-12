@@ -59,12 +59,12 @@ Node::Node(const std::string &tag, const std::string &ts_text,
     : tag(tag), ts_text(ts_text), ts_type(ts_type), ts_is_named(ts_is_named),
       source_position(source_position) {}
 
-std::string Node::get_tag()
+std::string Node::get_tag() const
 {
     return tag;
 }
 
-std::string Node::get_ts_text()
+std::string Node::get_ts_text() const
 {
     return ts_text;
 }
@@ -110,7 +110,7 @@ void Node::set_parent(const std::shared_ptr<Node> &parent)
     this->parent = parent;
 }
 
-void Node::render(const int &whitespace)
+void Node::render(const int &whitespace) const
 {
     for (int i = 0; i < whitespace; i++)
     {
@@ -128,7 +128,7 @@ void Node::render(const int &whitespace)
     }
 }
 
-bool Node::is_leaf()
+bool Node::is_leaf() const
 {
     return children.empty();
 }
@@ -227,7 +227,7 @@ Node::RelativePosition Node::get_relative_position(const std::shared_ptr<Node> &
     }
 }
 
-SourcePosition Node::get_source_position()
+const SourcePosition Node::get_source_position() const
 {
     return source_position;
 }
