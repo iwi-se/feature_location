@@ -173,27 +173,23 @@ std::string Node::get_subtree_hash()
 
 bool Node::is_descendant(const std::shared_ptr<Node> &node)
 {
-    // Check if node is in the subtree of current node
-    std::stack<std::shared_ptr<Node>> stack;
-    stack.push(shared_from_this());
-
-    while (!stack.empty())
+    auto current = node;
+    while (current->parent != nullptr)
     {
-        auto current = stack.top();
-        stack.pop();
-
-        if (current == node)
+        if ((current->parent).get() == this)
         {
             return true;
         }
-
-        for (auto it = current->children.rbegin(); it != current->children.rend(); ++it)
-        {
-            stack.push(*it);
+        else {
+            current = current->parent;
         }
     }
-
     return false;
+}
+
+std::vector<std::shared_ptr<Node>> Node::get_children()
+{
+    return children;
 }
 
 Node::RelativePosition Node::get_relative_position(const std::shared_ptr<Node> &other)

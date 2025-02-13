@@ -45,6 +45,7 @@ public:
     int get_connected_leaf_weight();
     bool is_descendant(const std::shared_ptr<Node> &node);
     const SourcePosition get_source_position() const;
+    std::vector<std::shared_ptr<Node>> get_children();
 
     enum class RelativePosition
     {
@@ -55,8 +56,8 @@ public:
 
     RelativePosition get_relative_position(const std::shared_ptr<Node> &other);
 private:
-    std::shared_ptr<Node> parent;
-    std::vector<std::shared_ptr<Node>> children;
+    std::shared_ptr<Node> parent {nullptr};
+    std::vector<std::shared_ptr<Node>> children {};
     std::string tag;
     std::string ts_text;
     std::string ts_type;

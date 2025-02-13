@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <utility>
 #include <memory>
+#include <stack>
 
 // Assuming Node and Tree classes are defined elsewhere with necessary methods
 
@@ -85,18 +86,39 @@ std::pair<std::vector<SourcePosition>, std::vector<SourcePosition>> intersection
     const std::shared_ptr<Node> &file1,
     const std::shared_ptr<Node> &file2)
 {
-    std::vector<std::shared_ptr<Node>> nodes1 = file1->get_pointer_to_every_node();
-    std::vector<std::shared_ptr<Node>> nodes2 = file2->get_pointer_to_every_node();
-
     std::vector<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>> pairs;
 
-    for (const auto &node1 : nodes1)
+    std::stack<std::shared_ptr<Node>> stack1{{file1}};
+    while (!stack1.empty())
     {
-        for (const auto &node2 : nodes2)
+        auto node1 = stack1.top();
+        stack1.pop();
+
+        std::stack<std::shared_ptr<Node>> stack2{{file2}};
+        bool match_found = false;
+        while (!stack2.empty())
         {
+            auto node2 = stack2.top();
+            stack2.pop();
+
             if (node1->get_subtree_hash() == node2->get_subtree_hash())
             {
                 pairs.push_back(std::make_pair(node1, node2));
+                match_found = true;
+            }
+            else if (node1->get_connected_leaf_weight() < node2->get_connected_leaf_weight())
+            {
+                for (const auto &child : node2->get_children())
+                {
+                    stack2.push(child);
+                }
+            }
+        }
+        if (!match_found)
+        {
+            for (const auto &child : node1->get_children())
+            {
+                stack1.push(child);
             }
         }
     }
