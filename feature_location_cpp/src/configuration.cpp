@@ -20,6 +20,7 @@ Configuration::Configuration(const std::string &filename)
     options.minimum_trace_size = config["options"]["minimum_trace_size"].as<int>();
     options.only_named_nodes = config["options"]["only_named_nodes"].as<bool>();
     options.language = config["options"]["language"].as<std::string>();
+    options.debug = config["options"]["debug"].as<bool>();
 
     for (const auto &expression : config["expressions"])
     {

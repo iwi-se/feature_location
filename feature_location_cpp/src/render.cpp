@@ -59,13 +59,11 @@ void mark_character_color(std::vector<std::vector<CharacterWithColor>> &characte
         for (std::size_t currentColumnIndex = 0; currentColumnIndex < currentLine.size(); currentColumnIndex++)
         {
             SourcePosition current_source_position{source_positions[current_source_position_index]};
-            if (get_relative_position(current_source_position, currentLineIndex, currentColumnIndex) == RelativePosition::AFTER)
+            while (get_relative_position(current_source_position, currentLineIndex, currentColumnIndex) == RelativePosition::AFTER
+                && current_source_position_index < source_positions.size() - 1)
             {
-                if (current_source_position_index < source_positions.size() - 1)
-                {
-                    current_source_position_index++;
-                    current_source_position = source_positions[current_source_position_index];
-                }
+                current_source_position_index++;
+                current_source_position = source_positions[current_source_position_index];
             }
             if (get_relative_position(current_source_position, currentLineIndex, currentColumnIndex) == RelativePosition::INSIDE)
             {
@@ -140,9 +138,47 @@ std::string render_difference(DifferenceResult difference, Configuration config)
     return result;
 }
 
+void debug_print_marked_characters(std::vector<std::vector<CharacterWithColor>> &character_lines)
+{
+    for (auto &line : character_lines)
+    {
+        for (auto &character : line)
+        {
+            if (character.color == CharacterColor::GREEN)
+            {
+                std::cout << character.character << "[green]";
+            }
+            else if (character.color == CharacterColor::RED)
+            {
+                std::cout << character.character << "[red]";
+            }
+            else
+            {
+                std::cout << character.character;
+            }
+        }
+        std::cout << std::endl;
+    }
+}
+
 std::string render_file(std::filesystem::path file, Configuration config, std::vector<SourcePosition> green_positions, std::vector<SourcePosition> red_positions)
 {
     std::cout << "Rendering file: " << file << std::endl;
+
+    if (config.options.debug)
+    {
+        std::cout << "Green positions: " << std::endl;
+        for (auto &position : green_positions)
+        {
+            std::cout << position.get_start_line() << ":" << position.get_start_column() << " - " << position.get_end_line() << ":" << position.get_end_column() << std::endl;
+        }
+        std::cout << "Red positions: " << std::endl;
+        for (auto &position : red_positions)
+        {
+            std::cout << position.get_start_line() << ":" << position.get_start_column() << " - " << position.get_end_line() << ":" << position.get_end_column() << std::endl;
+        }
+    }
+
     std::ifstream input_file(file);
     if (!input_file.is_open())
     {
@@ -173,8 +209,15 @@ std::string render_file(std::filesystem::path file, Configuration config, std::v
         }
         character_lines.push_back(characters);
     }
+
     mark_character_color(character_lines, green_positions, CharacterColor::GREEN);
     mark_character_color(character_lines, red_positions, CharacterColor::RED);
+
+    if (config.options.debug)
+    {
+        debug_print_marked_characters(character_lines);
+    }
+
     escape_html(character_lines);
     result += render_character_lines(character_lines);
     result += "</pre>";

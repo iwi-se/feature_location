@@ -17,6 +17,7 @@ public:
     int minimum_trace_size;
     bool only_named_nodes;
     std::string language;
+    bool debug {};
 };
 
 class Configuration
@@ -28,11 +29,11 @@ public:
     std::vector<ExpressionSystemName> getExpressionsToEvaluate();
     std::vector<std::string> getPathsForSystem(std::string systemName);
     std::filesystem::path base_path;
+    Options options;
 
 private:
     std::string action;
     NamePathMappings name_path_mappings;
-    Options options;
     std::vector<ExpressionSystemName> expressions;
     std::vector<std::string> run;
 };
