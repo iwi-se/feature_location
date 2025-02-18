@@ -14,7 +14,7 @@ using NamePathMappings =
 class Options
 {
 public:
-    int minimum_trace_size;
+    int minimum_trace_weight;
     bool only_named_nodes;
     std::string language;
     bool debug {};

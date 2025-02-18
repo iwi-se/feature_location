@@ -22,7 +22,7 @@ double calculate_environment_similarity(const std::shared_ptr<Node> &node1, cons
     return 0.0;
 }
 
-void sort_by_decision_ratio(std::vector<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>> &pairs)
+void sort_by_decision_ratio(std::vector<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>> &pairs, const Configuration &config)
 {
     std::vector<std::tuple<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>, double>> pairs_with_ratio;
 
@@ -47,7 +47,7 @@ void sort_by_decision_ratio(std::vector<std::pair<std::shared_ptr<Node>, std::sh
     pairs.clear();
     for (const auto &tuple : pairs_with_ratio)
     {
-        if (std::get<1>(tuple) > 2.0)
+        if (std::get<1>(tuple) > config.options.minimum_trace_weight)
         {
             pairs.push_back(std::get<0>(tuple));
         }
@@ -84,7 +84,8 @@ void remove_overlapping_pairs(std::vector<std::pair<std::shared_ptr<Node>, std::
 
 std::pair<std::vector<SourcePosition>, std::vector<SourcePosition>> intersection(
     const std::shared_ptr<Node> &file1,
-    const std::shared_ptr<Node> &file2)
+    const std::shared_ptr<Node> &file2,
+    const Configuration &config)
 {
     std::vector<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>> pairs;
 
@@ -110,7 +111,10 @@ std::pair<std::vector<SourcePosition>, std::vector<SourcePosition>> intersection
             {
                 for (const auto &child : node2->get_children())
                 {
-                    stack2.push(child);
+                    if (child->get_connected_leaf_weight() >= config.options.minimum_trace_weight)
+                    {
+                        stack2.push(child);
+                    }
                 }
             }
         }
@@ -123,7 +127,7 @@ std::pair<std::vector<SourcePosition>, std::vector<SourcePosition>> intersection
         }
     }
 
-    sort_by_decision_ratio(pairs);
+    sort_by_decision_ratio(pairs, config);
     remove_overlapping_pairs(pairs);
 
     std::pair<std::vector<SourcePosition>, std::vector<SourcePosition>> result;
@@ -140,15 +144,16 @@ std::pair<std::vector<SourcePosition>, std::vector<SourcePosition>> intersection
 DifferenceResult difference(const std::shared_ptr<Node> &leftFile1,
                             const std::shared_ptr<Node> &leftFile2,
                             const std::shared_ptr<Node> &rightFile1,
-                            const std::shared_ptr<Node> &rightFile2)
+                            const std::shared_ptr<Node> &rightFile2,
+                            const Configuration &config)
 {
-    auto left_side_intersection = intersection(leftFile1, leftFile2);
+    auto left_side_intersection = intersection(leftFile1, leftFile2, config);
 
-    auto lf1_rf1_intersection = intersection(leftFile1, rightFile1);
-    auto lf1_rf2_intersection = intersection(leftFile1, rightFile2);
+    auto lf1_rf1_intersection = intersection(leftFile1, rightFile1, config);
+    auto lf1_rf2_intersection = intersection(leftFile1, rightFile2, config);
 
-    auto lf2_rf1_intersection = intersection(leftFile2, rightFile1);
-    auto lf2_rf2_intersection = intersection(leftFile2, rightFile2);
+    auto lf2_rf1_intersection = intersection(leftFile2, rightFile1, config);
+    auto lf2_rf2_intersection = intersection(leftFile2, rightFile2, config);
 
     std::vector<SourcePosition> file1_positions_to_remove;
     file1_positions_to_remove.insert(file1_positions_to_remove.end(), lf1_rf1_intersection.first.begin(), lf1_rf1_intersection.first.end());

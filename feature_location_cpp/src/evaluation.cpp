@@ -23,7 +23,7 @@ void evaluateExpression(SingleFileExpression expression, Configuration config)
         std::shared_ptr<Node> root = parse_file(full_path);
         right_side_trees.push_back(root);
     }
-    auto difference_result{difference(left_side_trees[0], left_side_trees[1], right_side_trees[0], right_side_trees[1])};
+    auto difference_result{difference(left_side_trees[0], left_side_trees[1], right_side_trees[0], right_side_trees[1], config)};
 
     std::string html_result = render_difference(difference_result, config);
     std::string output_file_name = "difference_" + expression.left_side[0].stem().string() + ".html";

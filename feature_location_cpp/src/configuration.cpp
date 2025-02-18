@@ -17,7 +17,7 @@ Configuration::Configuration(const std::string &filename)
         }
     }
 
-    options.minimum_trace_size = config["options"]["minimum_trace_size"].as<int>();
+    options.minimum_trace_weight = config["options"]["minimum_trace_weight"].as<int>();
     options.only_named_nodes = config["options"]["only_named_nodes"].as<bool>();
     options.language = config["options"]["language"].as<std::string>();
     options.debug = config["options"]["debug"].as<bool>();
@@ -49,7 +49,7 @@ void Configuration::render()
         }
     }
     std::cout << "Options: " << std::endl;
-    std::cout << "  Minimum Trace Size: " << options.minimum_trace_size << std::endl;
+    std::cout << "  Minimum Trace Weight: " << options.minimum_trace_weight << std::endl;
     std::cout << "  Only Named Nodes: " << options.only_named_nodes << std::endl;
     std::cout << "  Language: " << options.language << std::endl;
     std::cout << "Expressions: " << std::endl;
