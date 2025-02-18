@@ -2,19 +2,22 @@
 
 ## Install dependencies
 
-```bash
-conan profile detect --force
-conan install . --output-folder=build --build=missing
+You need to install:
 
-# With debug information
-conan install . --output-folder=build --build=missing --profile=debug # Debug profile must be created. Just copy the default profile and change Release to Debug.
-```
+- yaml-cpp (probably from source)
+- nlohmann_json (probably from source or homebrew)
+- tree-sitter (probably from source or homebrew)
+- tree-sitter-cpp (probably from source or homebrew)
+- tree-sitter-java (probably from source or homebrew)
 
 ## Build
 
 ```bash
-mkdir build
-cd build
-cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
-cmake --build .
+make
+```
+
+## Run
+
+```bash
+./obj/feature_location
 ```

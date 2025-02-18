@@ -5,6 +5,7 @@
 #include <utility>
 #include <memory>
 #include <stack>
+#include "node_types.hpp"
 
 // Assuming Node and Tree classes are defined elsewhere with necessary methods
 
@@ -102,7 +103,8 @@ std::pair<std::vector<SourcePosition>, std::vector<SourcePosition>> intersection
             auto node2 = stack2.top();
             stack2.pop();
 
-            if (node1->get_subtree_hash() == node2->get_subtree_hash())
+            if (node1->get_subtree_hash() == node2->get_subtree_hash() && 
+                is_included_node_type(config.options.only_specific_nodes.node_types_file, node2->get_tag(), config))
             {
                 pairs.push_back(std::make_pair(node1, node2));
                 match_found = true;

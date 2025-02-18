@@ -14,10 +14,18 @@ using NamePathMappings =
 class Options
 {
 public:
+    struct OnlySpecificNodes
+    {
+        std::filesystem::path node_types_file;
+        std::vector<std::string> node_types;
+    };
+
     int minimum_trace_weight;
     bool only_named_nodes;
     std::string language;
     bool debug {};
+    OnlySpecificNodes only_specific_nodes;
+
 };
 
 class Configuration

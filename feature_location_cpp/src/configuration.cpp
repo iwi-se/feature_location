@@ -22,6 +22,12 @@ Configuration::Configuration(const std::string &filename)
     options.language = config["options"]["language"].as<std::string>();
     options.debug = config["options"]["debug"].as<bool>();
 
+    if (config["options"]["only_specific_nodes"])
+    {
+        options.only_specific_nodes.node_types_file = config["options"]["only_specific_nodes"]["node_types_file"].as<std::string>();
+        options.only_specific_nodes.node_types = config["options"]["only_specific_nodes"]["node_types"].as<std::vector<std::string>>();
+    }
+
     for (const auto &expression : config["expressions"])
     {
         ExpressionSystemName expr;

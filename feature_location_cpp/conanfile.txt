@@ -1,8 +1,0 @@
-[requires]
-yaml-cpp/0.8.0
-tree-sitter/0.24.3
-tree-sitter-cpp/0.23.4
-
-[generators]
-CMakeDeps
-CMakeToolchain

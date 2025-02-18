@@ -5,10 +5,10 @@
 #include <memory>
 #include <filesystem>
 #include "tree_sitter/api.h"
-#include "tree_sitter/tree-sitter-cpp.h"
+#include "tree_sitter/tree-sitter-java.h"
 #include "tree.hpp"
 
-const TSLanguage *tree_sitter_java();
+const TSLanguage *tree_sitter_java(void);
 
 std::string get_node_text(const TSNode &ts_node, const std::string& file_contents) {
     // Get the byte range for this node
@@ -48,7 +48,7 @@ std::shared_ptr<Node> convert_ts_node_to_node(TSNode ts_node, const std::filesys
 std::shared_ptr<Node> parse_file(const std::filesystem::path& filename) {
     // Initialize the parser
     TSParser *parser = ts_parser_new();
-    ts_parser_set_language(parser, tree_sitter_cpp());
+    ts_parser_set_language(parser, tree_sitter_java());
 
     // Read the file
     std::ifstream file(filename);
