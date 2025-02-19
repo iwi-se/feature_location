@@ -4,19 +4,23 @@
 #include "src/expression.hpp"
 #include "src/evaluation.hpp"
 #include "src/tree.hpp"
-int main()
+
+int main(int argc, char *argv[])
 {
-    Configuration config("../../local_argouml-config.yaml");
+    if (argc != 2) {
+        std::cerr << "Usage: " << argv[0] << " <config.yaml>" << std::endl;
+        return 1;
+    }
+    std::string config_file = argv[1];
+    Configuration config(config_file);
     std::vector<ExpressionSystemName> expressions = config.getExpressionsToEvaluate();
-    config.render();
+    if (config.options.debug) {
+        config.render();
+    }
+
     for (const auto &expression : expressions)
     {
         runExpression(expression, config);
     }
-    // for (const auto &expression : expressions)
-    // {
-    //     EvaluationResult result = evaluateExpression(expression, config);
-    //     renderResult(result);
-    // }
     return 0;
 }

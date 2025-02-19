@@ -4,11 +4,14 @@
 #include <vector>
 #include <memory>
 #include <filesystem>
+#include <algorithm>
 #include "tree_sitter/api.h"
 #include "tree_sitter/tree-sitter-java.h"
+#include "tree_sitter/tree-sitter-cpp.h"
 #include "tree.hpp"
 
 const TSLanguage *tree_sitter_java(void);
+const TSLanguage *tree_sitter_cpp(void);
 
 std::string get_node_text(const TSNode &ts_node, const std::string& file_contents) {
     // Get the byte range for this node
@@ -44,11 +47,19 @@ std::shared_ptr<Node> convert_ts_node_to_node(TSNode ts_node, const std::filesys
     return node;
 }
 
+
 // Assuming you have a function to initialize the parser with the correct language
-std::shared_ptr<Node> parse_file(const std::filesystem::path& filename) {
+std::shared_ptr<Node> parse_file(const std::filesystem::path& filename, const std::string& language) {
     // Initialize the parser
     TSParser *parser = ts_parser_new();
-    ts_parser_set_language(parser, tree_sitter_java());
+    if (language == "java") {
+        ts_parser_set_language(parser, tree_sitter_java());
+    } else if (language == "cpp") {
+        ts_parser_set_language(parser, tree_sitter_cpp());
+    } else {
+        throw std::runtime_error("Unsupported language: " + language);
+        return nullptr;
+    }
 
     // Read the file
     std::ifstream file(filename);

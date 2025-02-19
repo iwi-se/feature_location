@@ -17,9 +17,19 @@ name-path-mappings:
   - name: S8
     paths: [example/icl.hpp]
 options:
-  minimum_trace_size: 1
-  only_named_nodes: false
+  minimum_trace_weight: 2
+  only_named_nodes: true
   language: cpp
+  debug: false
+  only_specific_nodes:
+    node_types_file: "../../node_types_cpp.json"
+    node_types: [
+      "statement",
+      "expression",
+      #"declaration",
+      #"type_specifier",
+      #"function_definition",
+    ]
 expressions:
   - left-side: [S2, S8]
     right-side: [S3, S5]

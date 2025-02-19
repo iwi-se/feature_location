@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 #include <map>
-
+#include <optional>
 #include "expression.hpp"
 
 using NamePathMappings =
@@ -24,9 +24,12 @@ public:
     bool only_named_nodes;
     std::string language;
     bool debug {};
-    OnlySpecificNodes only_specific_nodes;
+    std::optional<OnlySpecificNodes> only_specific_nodes;
 
 };
+
+const std::vector<std::string> cpp_file_extensions = {".cpp", ".h", ".hpp"};
+const std::vector<std::string> java_file_extensions = {".java"};
 
 class Configuration
 {
@@ -38,6 +41,7 @@ public:
     std::vector<std::string> getPathsForSystem(std::string systemName);
     std::filesystem::path base_path;
     Options options;
+    bool file_extension_matches_language(const std::filesystem::path &path);
 
 private:
     std::string action;

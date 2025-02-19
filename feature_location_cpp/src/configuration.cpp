@@ -24,8 +24,10 @@ Configuration::Configuration(const std::string &filename)
 
     if (config["options"]["only_specific_nodes"])
     {
-        options.only_specific_nodes.node_types_file = config["options"]["only_specific_nodes"]["node_types_file"].as<std::string>();
-        options.only_specific_nodes.node_types = config["options"]["only_specific_nodes"]["node_types"].as<std::vector<std::string>>();
+        Options::OnlySpecificNodes only_specific_nodes;
+        only_specific_nodes.node_types_file = config["options"]["only_specific_nodes"]["node_types_file"].as<std::string>();
+        only_specific_nodes.node_types = config["options"]["only_specific_nodes"]["node_types"].as<std::vector<std::string>>();
+        options.only_specific_nodes = std::optional<Options::OnlySpecificNodes>(only_specific_nodes);
     }
 
     for (const auto &expression : config["expressions"])
@@ -93,4 +95,14 @@ std::vector<ExpressionSystemName> Configuration::getExpressionsToEvaluate()
 std::vector<std::string> Configuration::getPathsForSystem(std::string systemName)
 {
     return name_path_mappings[systemName];
+}
+
+bool Configuration::file_extension_matches_language(const std::filesystem::path &path)
+{
+    if (options.language == "cpp") {
+        return std::find(cpp_file_extensions.begin(), cpp_file_extensions.end(), path.extension().string()) != cpp_file_extensions.end();
+    } else if (options.language == "java") {
+        return std::find(java_file_extensions.begin(), java_file_extensions.end(), path.extension().string()) != java_file_extensions.end();
+    }
+    return false;
 }

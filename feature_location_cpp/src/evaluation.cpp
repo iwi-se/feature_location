@@ -13,7 +13,7 @@ void evaluateExpression(SingleFileExpression expression, Configuration config)
     for (const auto &left_side_system : expression.left_side)
     {
         std::filesystem::path full_path = config.base_path / left_side_system;
-        std::shared_ptr<Node> root = parse_file(full_path);
+        std::shared_ptr<Node> root = parse_file(full_path, config.options.language);
         if (config.options.debug) {
             std::cout << "Parsed file: " << full_path << std::endl;
             root->render(0);
@@ -24,7 +24,7 @@ void evaluateExpression(SingleFileExpression expression, Configuration config)
     for (const auto &right_side_system : expression.right_side)
     {
         std::filesystem::path full_path = config.base_path / right_side_system;
-        std::shared_ptr<Node> root = parse_file(full_path);
+        std::shared_ptr<Node> root = parse_file(full_path, config.options.language);
         right_side_trees.push_back(root);
     }
     auto difference_result{difference(left_side_trees[0], left_side_trees[1], right_side_trees[0], right_side_trees[1], config)};
@@ -140,7 +140,7 @@ std::vector<SingleFileExpression> buildFileBasedSubExpressions(ExpressionAllFile
                 const std::vector<BasePlusRelativePath> other_left_side_system{expression.left_side[i]};
                 for (const auto &other_file : other_left_side_system)
                 {
-                    if (file.relative == other_file.relative)
+                    if (file.relative == other_file.relative && config.file_extension_matches_language(file.fullPath()))
                     {
                         singleFileExpression.left_side.push_back(other_file.fullPath());
                         singleFileExpression.labels = expression.labels;
@@ -152,7 +152,7 @@ std::vector<SingleFileExpression> buildFileBasedSubExpressions(ExpressionAllFile
             {
                 for (const auto &right_side_file : right_side_system)
                 {
-                    if (file.relative == right_side_file.relative)
+                    if (file.relative == right_side_file.relative && config.file_extension_matches_language(right_side_file.fullPath()))
                     {
                         singleFileExpression.right_side.push_back(right_side_file.fullPath());
                         singleFileExpression.labels = expression.labels;

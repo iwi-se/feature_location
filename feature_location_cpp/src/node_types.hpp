@@ -60,17 +60,22 @@ std::vector<std::string> get_supertypes(const std::filesystem::path &node_types_
 
 bool is_included_node_type(const std::shared_ptr<Node> &node, const Configuration &config)
 {
+    if (!config.options.only_specific_nodes)
+    {
+        return true;
+    }
+
     auto supertypes = node->get_node_types();
     if (supertypes.empty())
     {
-        supertypes = get_supertypes(config.options.only_specific_nodes.node_types_file, node->get_tag());
+        supertypes = get_supertypes(config.options.only_specific_nodes->node_types_file, node->get_tag());
         supertypes.push_back(node->get_tag());
         node->set_node_types(supertypes);
     }
 
     // check if one of the supertypes is in the config.only_specific_nodes.node_types list
 
-    for (const auto &node_type : config.options.only_specific_nodes.node_types)
+    for (const auto &node_type : config.options.only_specific_nodes->node_types)
     {
         if (std::find(supertypes.begin(), supertypes.end(), node_type) != supertypes.end())
         {
