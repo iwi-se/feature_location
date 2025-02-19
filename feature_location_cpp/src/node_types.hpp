@@ -58,10 +58,16 @@ std::vector<std::string> get_supertypes(const std::filesystem::path &node_types_
     return supertypes;
 }
 
-bool is_included_node_type(const std::filesystem::path &node_types_file, const std::string &type, const Configuration &config)
+bool is_included_node_type(const std::shared_ptr<Node> &node, const Configuration &config)
 {
-    std::vector<std::string> supertypes = get_supertypes(node_types_file, type);
-    supertypes.push_back(type);
+    auto supertypes = node->get_node_types();
+    if (supertypes.empty())
+    {
+        supertypes = get_supertypes(config.options.only_specific_nodes.node_types_file, node->get_tag());
+        supertypes.push_back(node->get_tag());
+        node->set_node_types(supertypes);
+    }
+
     // check if one of the supertypes is in the config.only_specific_nodes.node_types list
 
     for (const auto &node_type : config.options.only_specific_nodes.node_types)
@@ -70,14 +76,14 @@ bool is_included_node_type(const std::filesystem::path &node_types_file, const s
         {
             if (config.options.debug)
             {
-                std::cout << "Type " << type << " is included" << std::endl;
+                std::cout << "Type " << node->get_tag() << " is included" << std::endl;
             }
             return true;
         }
     }
     if (config.options.debug)
     {
-        std::cout << "Type " << type << " is not included" << std::endl;
+        std::cout << "Type " << node->get_tag() << " is not included" << std::endl;
     }
     return false;
 }

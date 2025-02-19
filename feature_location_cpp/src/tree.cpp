@@ -227,3 +227,13 @@ const SourcePosition Node::get_source_position() const
 {
     return source_position;
 }
+
+void Node::set_node_types(const std::vector<std::string> &types)
+{
+    all_types = types;
+}
+
+std::vector<std::string> Node::get_node_types()
+{
+    return all_types;
+}

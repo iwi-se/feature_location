@@ -104,7 +104,7 @@ std::pair<std::vector<SourcePosition>, std::vector<SourcePosition>> intersection
             stack2.pop();
 
             if (node1->get_subtree_hash() == node2->get_subtree_hash() && 
-                is_included_node_type(config.options.only_specific_nodes.node_types_file, node2->get_tag(), config))
+                is_included_node_type(node2, config))
             {
                 pairs.push_back(std::make_pair(node1, node2));
                 match_found = true;

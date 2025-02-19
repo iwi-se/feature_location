@@ -47,6 +47,7 @@ public:
     const SourcePosition get_source_position() const;
     std::vector<std::shared_ptr<Node>> get_children();
 
+
     enum class RelativePosition
     {
         before,
@@ -55,6 +56,9 @@ public:
     };
 
     RelativePosition get_relative_position(const std::shared_ptr<Node> &other);
+
+    void set_node_types(const std::vector<std::string> &types);
+    std::vector<std::string> get_node_types();
 private:
     std::shared_ptr<Node> parent {nullptr};
     std::vector<std::shared_ptr<Node>> children {};
@@ -65,6 +69,7 @@ private:
     int connected_leaf_weight {};
     std::string subtree_hash {};
     SourcePosition source_position;
+    std::vector<std::string> all_types {};
 
     void set_parent(const std::shared_ptr<Node> &parent);
 };

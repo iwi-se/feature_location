@@ -14,6 +14,10 @@ void evaluateExpression(SingleFileExpression expression, Configuration config)
     {
         std::filesystem::path full_path = config.base_path / left_side_system;
         std::shared_ptr<Node> root = parse_file(full_path);
+        if (config.options.debug) {
+            std::cout << "Parsed file: " << full_path << std::endl;
+            root->render(0);
+        }
         left_side_trees.push_back(root);
     }
     std::vector<std::shared_ptr<Node>> right_side_trees{};
