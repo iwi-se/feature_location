@@ -52,7 +52,7 @@ void mark_character_color(std::vector<std::vector<CharacterWithColor>> &characte
     // Sort source positions by start position
     std::sort(source_positions.begin(), source_positions.end());
 
-    int current_source_position_index = 0;
+    size_t current_source_position_index = 0;
     for (std::size_t currentLineIndex = 0; currentLineIndex < character_lines.size(); currentLineIndex++)
     {
         std::vector<CharacterWithColor> &currentLine{character_lines[currentLineIndex]};
@@ -128,11 +128,11 @@ std::string render_difference(DifferenceResult difference, Configuration config)
     std::string result{"<html><body>"};
     if (difference.file1_intersection.size() > 0)
     {
-        result += render_file(difference.file1_intersection[0].get_file(), config, difference.file1_intersection, difference.file1_subtraction);
+        result += render_file(difference.file1_intersection[0]->get_source_position().get_file(), config, difference.file1_intersection, difference.file1_subtraction);
     }
     if (difference.file2_intersection.size() > 0)
     {
-        result += render_file(difference.file2_intersection[0].get_file(), config, difference.file2_intersection, difference.file2_subtraction);
+        result += render_file(difference.file2_intersection[0]->get_source_position().get_file(), config, difference.file2_intersection, difference.file2_subtraction);
     }
     result += "</body></html>";
     return result;
@@ -161,9 +161,22 @@ void debug_print_marked_characters(std::vector<std::vector<CharacterWithColor>> 
     }
 }
 
-std::string render_file(std::filesystem::path file, Configuration config, std::vector<SourcePosition> green_positions, std::vector<SourcePosition> red_positions)
+std::string render_file(std::filesystem::path file, Configuration config, std::vector<std::shared_ptr<Node>> green_nodes, std::vector<std::shared_ptr<Node>> red_nodes)
 {
     std::cout << "Rendering file: " << file << std::endl;
+
+    std::vector<SourcePosition> green_positions;
+    std::vector<SourcePosition> red_positions;
+
+    for (auto &node : green_nodes)
+    {
+        green_positions.push_back(node->get_source_position());
+    }
+
+    for (auto &node : red_nodes)
+    {
+        red_positions.push_back(node->get_source_position());
+    }
 
     if (config.options.debug)
     {

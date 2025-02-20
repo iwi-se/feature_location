@@ -9,23 +9,23 @@
 class SourcePosition
 {
 public:
-    SourcePosition(const std::filesystem::path &file, const std::pair<int, int> &start_position, const std::pair<int, int> &end_position) : file(file), start_position(start_position), end_position(end_position) {}
+    SourcePosition(const std::filesystem::path &file, const std::pair<size_t, size_t> &start_position, const std::pair<size_t, size_t> &end_position) : file(file), start_position(start_position), end_position(end_position) {}
 
     std::filesystem::path get_file() const;
-    std::pair<int, int> get_start_position() const;
-    int get_start_line() const;
-    int get_start_column() const;
-    std::pair<int, int> get_end_position() const;
-    int get_end_line() const;
-    int get_end_column() const;
+    std::pair<size_t, size_t> get_start_position() const;
+    size_t get_start_line() const;
+    size_t get_start_column() const;
+    std::pair<size_t, size_t> get_end_position() const;
+    size_t get_end_line() const;
+    size_t get_end_column() const;
     bool operator<(const SourcePosition &other) const;
     bool operator==(const SourcePosition &other) const;
     std::string render() const;
 
 private:
     std::filesystem::path file;
-    std::pair<int, int> start_position;
-    std::pair<int, int> end_position;
+    std::pair<size_t, size_t> start_position;
+    std::pair<size_t, size_t> end_position;
 };
 
 class Node : public std::enable_shared_from_this<Node>

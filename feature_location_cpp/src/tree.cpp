@@ -8,32 +8,32 @@ std::filesystem::path SourcePosition::get_file() const
     return file;
 }
 
-std::pair<int, int> SourcePosition::get_start_position() const
+std::pair<size_t, size_t> SourcePosition::get_start_position() const
 {
     return start_position;
 }
 
-int SourcePosition::get_start_line() const
+size_t SourcePosition::get_start_line() const
 {
     return start_position.first;
 }
 
-int SourcePosition::get_start_column() const
+size_t SourcePosition::get_start_column() const
 {
     return start_position.second;
 }
 
-std::pair<int, int> SourcePosition::get_end_position() const
+std::pair<size_t, size_t> SourcePosition::get_end_position() const
 {
     return end_position;
 }
 
-int SourcePosition::get_end_line() const
+size_t SourcePosition::get_end_line() const
 {
     return end_position.first;
 }
 
-int SourcePosition::get_end_column() const
+size_t SourcePosition::get_end_column() const
 {
     return end_position.second;
 }

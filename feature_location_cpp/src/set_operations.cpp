@@ -10,18 +10,18 @@
 // Assuming Node and Tree classes are defined elsewhere with necessary methods
 
 // Placeholder for calculate_depth_proximity function
-double calculate_depth_proximity(const std::shared_ptr<Node> &node1, const std::shared_ptr<Node> &node2)
-{
-    // Implement depth proximity calculation
-    return 0.0;
-}
+// double calculate_depth_proximity(const std::shared_ptr<Node> &node1, const std::shared_ptr<Node> &node2)
+// {
+//     // Implement depth proximity calculation
+//     return 0.0;
+// }
 
-// Placeholder for calculate_environment_similarity function
-double calculate_environment_similarity(const std::shared_ptr<Node> &node1, const std::shared_ptr<Node> &node2)
-{
-    // Implement environment similarity calculation
-    return 0.0;
-}
+// // Placeholder for calculate_environment_similarity function
+// double calculate_environment_similarity(const std::shared_ptr<Node> &node1, const std::shared_ptr<Node> &node2)
+// {
+//     // Implement environment similarity calculation
+//     return 0.0;
+// }
 
 void sort_by_decision_ratio(std::vector<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>> &pairs, const Configuration &config)
 {
@@ -83,7 +83,7 @@ void remove_overlapping_pairs(std::vector<std::pair<std::shared_ptr<Node>, std::
     pairs = result;
 }
 
-std::pair<std::vector<SourcePosition>, std::vector<SourcePosition>> intersection(
+std::pair<std::vector<std::shared_ptr<Node>>, std::vector<std::shared_ptr<Node>>> intersection(
     const std::shared_ptr<Node> &file1,
     const std::shared_ptr<Node> &file2,
     const Configuration &config)
@@ -132,12 +132,12 @@ std::pair<std::vector<SourcePosition>, std::vector<SourcePosition>> intersection
     sort_by_decision_ratio(pairs, config);
     remove_overlapping_pairs(pairs);
 
-    std::pair<std::vector<SourcePosition>, std::vector<SourcePosition>> result;
+    std::pair<std::vector<std::shared_ptr<Node>>, std::vector<std::shared_ptr<Node>>> result;
 
     for (const auto &pair : pairs)
     {
-        result.first.push_back(pair.first->get_source_position());
-        result.second.push_back(pair.second->get_source_position());
+        result.first.push_back(pair.first);
+        result.second.push_back(pair.second);
     }
 
     return result;
@@ -157,10 +157,10 @@ DifferenceResult difference(const std::shared_ptr<Node> &leftFile1,
     auto lf2_rf1_intersection = intersection(leftFile2, rightFile1, config);
     auto lf2_rf2_intersection = intersection(leftFile2, rightFile2, config);
 
-    std::vector<SourcePosition> file1_positions_to_remove;
+    std::vector<std::shared_ptr<Node>> file1_positions_to_remove;
     file1_positions_to_remove.insert(file1_positions_to_remove.end(), lf1_rf1_intersection.first.begin(), lf1_rf1_intersection.first.end());
     file1_positions_to_remove.insert(file1_positions_to_remove.end(), lf1_rf2_intersection.first.begin(), lf1_rf2_intersection.first.end());
-    std::vector<SourcePosition> file2_positions_to_remove;
+    std::vector<std::shared_ptr<Node>> file2_positions_to_remove;
     file2_positions_to_remove.insert(file2_positions_to_remove.end(), lf2_rf1_intersection.first.begin(), lf2_rf1_intersection.first.end());
     file2_positions_to_remove.insert(file2_positions_to_remove.end(), lf2_rf2_intersection.first.begin(), lf2_rf2_intersection.first.end());
 
