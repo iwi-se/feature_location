@@ -6,6 +6,7 @@
 #include <memory>
 #include <stack>
 #include "node_types.hpp"
+#include <ranges>
 
 // Assuming Node and Tree classes are defined elsewhere with necessary methods
 
@@ -23,46 +24,51 @@
 //     return 0.0;
 // }
 
-void sort_by_decision_ratio(std::vector<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>> &pairs, const Configuration &config)
-{
-    std::vector<std::tuple<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>, double>> pairs_with_ratio;
 
-    for (const auto &pair : pairs)
+void sort_by_decision_ratio(MatchList &matches, const Configuration &config)
+{
+    std::vector<std::pair<Match, double>> matches_with_ratio;
+
+    for (const Match &match : matches)
     {
         // double depth_proximity = calculate_depth_proximity(pair.first, pair.second);
         // double environment_similarity = calculate_environment_similarity(pair.first, pair.second);
-        int size = pair.first->get_connected_leaf_weight(); // Assuming get_subtree_size() is a method in Node
+        int size = match[0]->get_connected_leaf_weight();
 
         // double decision_ratio = 0.2 * depth_proximity + 0.3 * environment_similarity + 0.5 * std::min((size / 100.0), 1.0);
 
         double decision_ratio = size;
-        pairs_with_ratio.push_back(std::make_tuple(pair, decision_ratio));
+        matches_with_ratio.push_back(std::make_pair(match, decision_ratio));
     }
 
-    std::sort(pairs_with_ratio.begin(), pairs_with_ratio.end(),
+    std::sort(matches_with_ratio.begin(), matches_with_ratio.end(),
               [](const std::tuple<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>, double> &a, const std::tuple<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>, double> &b)
               {
                   return std::get<1>(a) > std::get<1>(b);
               });
 
-    pairs.clear();
-    for (const auto &tuple : pairs_with_ratio)
+    matches.clear();
+    for (const auto &pair : matches_with_ratio)
     {
-        if (std::get<1>(tuple) > config.options.minimum_trace_weight)
+        if (std::get<1>(pair) > config.options.minimum_trace_weight)
         {
-            pairs.push_back(std::get<0>(tuple));
+            matches.push_back(std::get<0>(pair));
         }
     }
 }
 
-bool non_overlapping(const std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>> &pair,
-                     const std::vector<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>> &result)
+bool non_overlapping(const Match &match,
+                     const MatchList &result)
 {
-    for (const auto &existing_pair : result)
+    for (const auto &existing_match : result)
     {
-        Node::RelativePosition rel_pos_1 = pair.first->get_relative_position(existing_pair.first);
-        Node::RelativePosition rel_pos_2 = pair.second->get_relative_position(existing_pair.second);
-        if (rel_pos_1 == Node::RelativePosition::overlapping || rel_pos_1 != rel_pos_2)
+        std::vector<Node::RelativePosition> all_relative_positions;
+        for (size_t i = 0; i < match.size(); i++)
+        {
+            Node::RelativePosition pos = match[i]->get_relative_position(existing_match[i]);
+            all_relative_positions.push_back(pos);
+        }
+        if (std::ranges::adjacent_find(all_relative_positions, std::ranges::not_equal_to()) != all_relative_positions.end() || all_relative_positions[0] == Node::RelativePosition::overlapping)
         {
             return false;
         }
@@ -70,77 +76,100 @@ bool non_overlapping(const std::pair<std::shared_ptr<Node>, std::shared_ptr<Node
     return true;
 }
 
-void remove_overlapping_pairs(std::vector<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>> &pairs)
+void remove_overlapping_pairs(MatchList &matches)
 {
-    std::vector<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>> result;
-    for (const auto &pair : pairs)
+    MatchList result;
+    for (const auto &match : matches)
     {
-        if (non_overlapping(pair, result))
+        if (non_overlapping(match, result))
         {
-            result.push_back(pair);
+            result.push_back(match);
         }
     }
-    pairs = result;
+    matches = result;
 }
 
-std::pair<std::vector<std::shared_ptr<Node>>, std::vector<std::shared_ptr<Node>>> intersection(
-    const std::shared_ptr<Node> &file1,
-    const std::shared_ptr<Node> &file2,
+MatchList match_node_in_trees(const std::shared_ptr<Node> &node, std::vector<std::shared_ptr<Node>> trees, const Configuration &config)
+{
+    MatchList matches;
+    std::stack<std::shared_ptr<Node>> stack{{trees[0]}};
+    trees.erase(trees.begin());
+    while (!stack.empty())
+    {
+        auto current_node = stack.top();
+        stack.pop();
+        if (current_node->get_subtree_hash() == node->get_subtree_hash())
+        {
+            if (trees.empty())
+            {
+                matches.push_back({current_node});
+            }
+            else
+            {
+                MatchList matches_in_trees = match_node_in_trees(current_node, trees, config);
+                for (auto &match : matches_in_trees)
+                {
+                    // insert current_node at the beginning of each match
+                    match.insert(match.begin(), current_node);
+                }
+                matches.insert(matches.end(), matches_in_trees.begin(), matches_in_trees.end());
+            }
+        }
+        else if (current_node->get_connected_leaf_weight() >= node->get_connected_leaf_weight())
+        {
+            for (const auto &child : current_node->get_children())
+            {
+                stack.push(child);
+            }
+        }
+    }
+
+    return matches;
+}
+
+MatchList match_trees(std::vector<std::shared_ptr<Node>> trees, const Configuration &config)
+{
+    std::vector<std::vector<std::shared_ptr<Node>>> matches;
+    std::stack<std::shared_ptr<Node>> stack{{trees[0]}};
+    while (!stack.empty())
+    {
+        auto current_node = stack.top();
+        stack.pop();
+        MatchList node_matches;
+
+        if (is_included_node_type(current_node, config))
+        {
+            std::vector<std::shared_ptr<Node>> remaining_trees{trees.begin() + 1, trees.end()};
+            node_matches = match_node_in_trees(current_node, remaining_trees, config);
+        }
+
+        if (node_matches.empty() || node_matches[0].empty())
+        {
+            for (const auto &child : current_node->get_children())
+            {
+                stack.push(child);
+            }
+        }
+        else
+        {
+            for (const auto &match : node_matches)
+            {
+                matches.push_back(match);
+            }
+        }
+    }
+    return matches;
+}
+
+MatchList intersection(
+    const std::vector<std::shared_ptr<Node>> &nodes,
     const Configuration &config)
 {
-    std::vector<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>> pairs;
+    MatchList matches = match_trees(nodes, config);
+    sort_by_decision_ratio(matches, config);
+    remove_overlapping_pairs(matches);
 
-    std::stack<std::shared_ptr<Node>> stack1{{file1}};
-    while (!stack1.empty())
-    {
-        auto node1 = stack1.top();
-        stack1.pop();
-
-        std::stack<std::shared_ptr<Node>> stack2{{file2}};
-        bool match_found = false;
-        while (!stack2.empty())
-        {
-            auto node2 = stack2.top();
-            stack2.pop();
-
-            if (node1->get_subtree_hash() == node2->get_subtree_hash() && 
-                is_included_node_type(node2, config))
-            {
-                pairs.push_back(std::make_pair(node1, node2));
-                match_found = true;
-            }
-            else if (node1->get_connected_leaf_weight() < node2->get_connected_leaf_weight())
-            {
-                for (const auto &child : node2->get_children())
-                {
-                    if (child->get_connected_leaf_weight() >= config.options.minimum_trace_weight)
-                    {
-                        stack2.push(child);
-                    }
-                }
-            }
-        }
-        if (!match_found)
-        {
-            for (const auto &child : node1->get_children())
-            {
-                stack1.push(child);
-            }
-        }
-    }
-
-    sort_by_decision_ratio(pairs, config);
-    remove_overlapping_pairs(pairs);
-
-    std::pair<std::vector<std::shared_ptr<Node>>, std::vector<std::shared_ptr<Node>>> result;
-
-    for (const auto &pair : pairs)
-    {
-        result.first.push_back(pair.first);
-        result.second.push_back(pair.second);
-    }
-
-    return result;
+    return matches;
 }
 
 DifferenceResult difference(const std::shared_ptr<Node> &leftFile1,
@@ -149,13 +178,13 @@ DifferenceResult difference(const std::shared_ptr<Node> &leftFile1,
                             const std::shared_ptr<Node> &rightFile2,
                             const Configuration &config)
 {
-    auto left_side_intersection = intersection(leftFile1, leftFile2, config);
+    auto left_side_intersection = intersection({leftFile1, leftFile2}, config);
 
-    auto lf1_rf1_intersection = intersection(leftFile1, rightFile1, config);
-    auto lf1_rf2_intersection = intersection(leftFile1, rightFile2, config);
+    auto lf1_rf1_intersection = intersection({leftFile1, rightFile1}, config);
+    auto lf1_rf2_intersection = intersection({leftFile1, rightFile2}, config);
 
-    auto lf2_rf1_intersection = intersection(leftFile2, rightFile1, config);
-    auto lf2_rf2_intersection = intersection(leftFile2, rightFile2, config);
+    auto lf2_rf1_intersection = intersection({leftFile2, rightFile1}, config);
+    auto lf2_rf2_intersection = intersection({leftFile2, rightFile2}, config);
 
     std::vector<std::shared_ptr<Node>> file1_positions_to_remove;
     file1_positions_to_remove.insert(file1_positions_to_remove.end(), lf1_rf1_intersection.first.begin(), lf1_rf1_intersection.first.end());

@@ -4,9 +4,12 @@
 #include "tree.hpp"
 #include "configuration.hpp"
 
-std::pair<std::vector<std::shared_ptr<Node>>, std::vector<std::shared_ptr<Node>>> intersection(
-    const std::shared_ptr<Node> &file1,
-    const std::shared_ptr<Node> &file2,
+using MatchList = std::vector<Match>;
+
+using Match = std::vector<std::shared_ptr<Node>>;
+
+MatchList intersection(
+    const std::vector<std::shared_ptr<Node>> &nodes1,
     const Configuration& config);
 
 struct DifferenceResult

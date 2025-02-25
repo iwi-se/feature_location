@@ -4,7 +4,7 @@
 CXX := g++
 
 # Compiler Flags
-CXXFLAGS := -std=c++17 -Wall -Wextra -I./src
+CXXFLAGS := -std=c++20 -Wall -Wextra -I./src
 
 # Library Paths (adjust these paths if your libraries are in different locations)
 LDFLAGS := -L/usr/local/lib
