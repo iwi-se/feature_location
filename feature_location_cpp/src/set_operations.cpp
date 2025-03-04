@@ -24,6 +24,15 @@
 //     return 0.0;
 // }
 
+MatchesPerFile extract_matches_per_file(const MatchList &matches, const int &index)
+{
+    MatchesPerFile matches_per_file;
+    for (const auto &match : matches)
+    {
+        matches_per_file.push_back(match[index]);
+    }
+    return matches_per_file;
+}
 
 void sort_by_decision_ratio(MatchList &matches, const Configuration &config)
 {
@@ -42,9 +51,9 @@ void sort_by_decision_ratio(MatchList &matches, const Configuration &config)
     }
 
     std::sort(matches_with_ratio.begin(), matches_with_ratio.end(),
-              [](const std::tuple<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>, double> &a, const std::tuple<std::pair<std::shared_ptr<Node>, std::shared_ptr<Node>>, double> &b)
+              [](const std::pair<Match, double> &a, const std::pair<Match, double> &b)
               {
-                  return std::get<1>(a) > std::get<1>(b);
+                  return a.second > b.second;
               });
 
     matches.clear();
@@ -102,7 +111,7 @@ MatchList match_node_in_trees(const std::shared_ptr<Node> &node, std::vector<std
         {
             if (trees.empty())
             {
-                matches.push_back({current_node});
+                matches.push_back({node, current_node});
             }
             else
             {
@@ -172,26 +181,28 @@ MatchList intersection(
     return matches;
 }
 
-DifferenceResult difference(const std::shared_ptr<Node> &leftFile1,
-                            const std::shared_ptr<Node> &leftFile2,
-                            const std::shared_ptr<Node> &rightFile1,
-                            const std::shared_ptr<Node> &rightFile2,
-                            const Configuration &config)
+DifferenceResult difference(
+    const std::vector<std::shared_ptr<Node>> &leftFiles, 
+    const std::vector<std::shared_ptr<Node>> &rightFiles, 
+    const Configuration &config)
 {
-    auto left_side_intersection = intersection({leftFile1, leftFile2}, config);
+    auto left_side_intersection = intersection(leftFiles, config);
 
-    auto lf1_rf1_intersection = intersection({leftFile1, rightFile1}, config);
-    auto lf1_rf2_intersection = intersection({leftFile1, rightFile2}, config);
+    // For now do a cartesian product of the left and right files
+    std::vector<FileDifferenceResult> difference_results;
+    for (int index = 0; index < leftFiles.size(); index++)
+    {
+        FileDifferenceResult file_difference_result;
+        file_difference_result.intersection = extract_matches_per_file(left_side_intersection, index);
 
-    auto lf2_rf1_intersection = intersection({leftFile2, rightFile1}, config);
-    auto lf2_rf2_intersection = intersection({leftFile2, rightFile2}, config);
+        for (const auto &right_file : rightFiles)
+        {
+            auto subtraction = intersection({leftFiles[index], right_file}, config);
+            auto subtraction_left_side = extract_matches_per_file(subtraction, 0);
+            file_difference_result.subtraction.insert(file_difference_result.subtraction.end(), subtraction_left_side.begin(), subtraction_left_side.end());
+        }
+        difference_results.push_back(file_difference_result);
+    }
 
-    std::vector<std::shared_ptr<Node>> file1_positions_to_remove;
-    file1_positions_to_remove.insert(file1_positions_to_remove.end(), lf1_rf1_intersection.first.begin(), lf1_rf1_intersection.first.end());
-    file1_positions_to_remove.insert(file1_positions_to_remove.end(), lf1_rf2_intersection.first.begin(), lf1_rf2_intersection.first.end());
-    std::vector<std::shared_ptr<Node>> file2_positions_to_remove;
-    file2_positions_to_remove.insert(file2_positions_to_remove.end(), lf2_rf1_intersection.first.begin(), lf2_rf1_intersection.first.end());
-    file2_positions_to_remove.insert(file2_positions_to_remove.end(), lf2_rf2_intersection.first.begin(), lf2_rf2_intersection.first.end());
-
-    return DifferenceResult{left_side_intersection.first, file1_positions_to_remove, left_side_intersection.second, file2_positions_to_remove};
+    return difference_results;
 }

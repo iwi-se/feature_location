@@ -3,8 +3,20 @@
 # Compiler
 CXX := g++
 
-# Compiler Flags
-CXXFLAGS := -std=c++20 -Wall -Wextra -I./src
+# Build type (debug or release)
+BUILD_TYPE ?= debug
+
+# Base compiler flags
+BASE_CXXFLAGS := -std=c++20 -Wall -Wextra -I./src
+
+# Debug and Release specific flags
+ifeq ($(BUILD_TYPE),debug)
+    CXXFLAGS := $(BASE_CXXFLAGS) -g -O0 -DDEBUG
+    BUILD_DIR := debug
+else
+    CXXFLAGS := $(BASE_CXXFLAGS) -O3 -DNDEBUG
+    BUILD_DIR := release
+endif
 
 # Library Paths (adjust these paths if your libraries are in different locations)
 LDFLAGS := -L/usr/local/lib
@@ -13,7 +25,7 @@ LDFLAGS := -L/usr/local/lib
 LIBS := -lyaml-cpp -l:libtree-sitter.a -l:libtree-sitter-java.a -l:libtree-sitter-cpp.a -lstdc++fs
 
 # Directories
-OBJ_DIR := obj
+OBJ_DIR := obj/$(BUILD_DIR)
 SRC_DIR := src
 
 # Source Files
@@ -34,6 +46,14 @@ EXEC := $(OBJ_DIR)/feature_location
 # Default Target
 all: $(EXEC)
 
+# Debug target
+debug:
+	$(MAKE) BUILD_TYPE=debug
+
+# Release target
+release:
+	$(MAKE) BUILD_TYPE=release
+
 # Create necessary directories
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
@@ -49,7 +69,7 @@ $(OBJ_DIR)/%.o: %.cpp | $(OBJ_DIR)
 
 # Clean Build Artifacts
 clean:
-	rm -rf $(OBJ_DIR)
+	rm -rf obj
 
 # Phony Targets
-.PHONY: all clean
+.PHONY: all clean debug release

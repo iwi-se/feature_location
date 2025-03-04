@@ -126,14 +126,17 @@ std::string render_character_lines(std::vector<std::vector<CharacterWithColor>> 
 std::string render_difference(DifferenceResult difference, Configuration config)
 {
     std::string result{"<html><body>"};
-    if (difference.file1_intersection.size() > 0)
+
+    for (auto &file_difference_result : difference)
     {
-        result += render_file(difference.file1_intersection[0]->get_source_position().get_file(), config, difference.file1_intersection, difference.file1_subtraction);
+        if (file_difference_result.intersection.size() > 0)
+        {
+            result += render_file(
+                file_difference_result.intersection[0]->get_source_position().get_file(), 
+                config, file_difference_result.intersection, file_difference_result.subtraction);
+        }
     }
-    if (difference.file2_intersection.size() > 0)
-    {
-        result += render_file(difference.file2_intersection[0]->get_source_position().get_file(), config, difference.file2_intersection, difference.file2_subtraction);
-    }
+
     result += "</body></html>";
     return result;
 }
