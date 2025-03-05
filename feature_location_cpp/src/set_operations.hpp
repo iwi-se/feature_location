@@ -24,7 +24,10 @@ struct FileDifferenceResult
     std::vector<std::shared_ptr<Node>> subtraction;
 };
 
-using DifferenceResult = std::vector<FileDifferenceResult>;
+struct DifferenceResult {
+    std::vector<FileDifferenceResult> result;
+    std::filesystem::path relative_path;
+};
 
 DifferenceResult difference(
     const std::vector<std::shared_ptr<Node>> &leftFiles,

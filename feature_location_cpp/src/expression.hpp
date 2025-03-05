@@ -84,6 +84,6 @@ public:
 
 using ExpressionSystemName = Expression<std::string>;                 // S1, S2, S3, ...
 using ExpressionAllFiles = Expression<std::vector<BasePlusRelativePath>>;      // contains only files
-using SingleFileExpression = Expression<std::filesystem::path>;                 // Each element is a single file
+using SingleFileExpression = Expression<BasePlusRelativePath>;                 // Each element is a single file
 
 #endif // EXPRESSION_HPP

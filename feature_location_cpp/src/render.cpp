@@ -127,7 +127,7 @@ std::string render_difference(DifferenceResult difference, Configuration config)
 {
     std::string result{"<html><body>"};
 
-    for (auto &file_difference_result : difference)
+    for (auto &file_difference_result : difference.result)
     {
         if (file_difference_result.intersection.size() > 0)
         {

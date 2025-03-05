@@ -5,8 +5,9 @@
 #include <string>
 #include "configuration.hpp"
 #include "expression.hpp"
+#include "set_operations.hpp"
 
-void runExpression(ExpressionSystemName expression, Configuration config);
+std::vector<DifferenceResult> runExpression(ExpressionSystemName expression, Configuration config);
 
 ExpressionAllFiles getExpressionFiles(ExpressionSystemName expression, Configuration config);
 

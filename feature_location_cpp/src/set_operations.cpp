@@ -189,7 +189,7 @@ DifferenceResult difference(
     auto left_side_intersection = intersection(leftFiles, config);
 
     // For now do a cartesian product of the left and right files
-    std::vector<FileDifferenceResult> difference_results;
+    DifferenceResult difference_result;
     for (int index = 0; index < leftFiles.size(); index++)
     {
         FileDifferenceResult file_difference_result;
@@ -201,8 +201,8 @@ DifferenceResult difference(
             auto subtraction_left_side = extract_matches_per_file(subtraction, 0);
             file_difference_result.subtraction.insert(file_difference_result.subtraction.end(), subtraction_left_side.begin(), subtraction_left_side.end());
         }
-        difference_results.push_back(file_difference_result);
+        difference_result.result.push_back(file_difference_result);
     }
 
-    return difference_results;
+    return difference_result;
 }

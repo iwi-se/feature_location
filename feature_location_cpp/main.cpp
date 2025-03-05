@@ -1,9 +1,25 @@
 #include <iostream>
 #include <vector>
+#include <fstream>
 #include "src/configuration.hpp"
 #include "src/expression.hpp"
 #include "src/evaluation.hpp"
 #include "src/tree.hpp"
+#include "render.hpp"
+
+void render_results_to_files(std::vector<DifferenceResult> difference_results, Configuration config)
+{
+    for (const auto &difference_result : difference_results)
+    {
+        std::string html_result = render_difference(difference_result, config);
+        auto rel_path_string {difference_result.relative_path.string()};
+        std::replace(rel_path_string.begin(), rel_path_string.end(), '/', '_');
+        std::string output_file_name = "difference_" + rel_path_string + ".html";
+        std::ofstream output_file(output_file_name);
+        output_file << html_result;
+        output_file.close();
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -20,7 +36,8 @@ int main(int argc, char *argv[])
 
     for (const auto &expression : expressions)
     {
-        runExpression(expression, config);
+        auto difference_results = runExpression(expression, config);
+        render_results_to_files(difference_results, config);
     }
     return 0;
 }
