@@ -46,7 +46,8 @@ public:
     bool is_descendant(const std::shared_ptr<Node> &node);
     const SourcePosition get_source_position() const;
     std::vector<std::shared_ptr<Node>> get_children();
-
+    std::shared_ptr<Node> get_child_by_tag(const std::string &tag);
+    std::shared_ptr<Node> get_parent();
 
     enum class RelativePosition
     {

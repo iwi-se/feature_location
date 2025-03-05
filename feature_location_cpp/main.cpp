@@ -6,6 +6,7 @@
 #include "src/evaluation.hpp"
 #include "src/tree.hpp"
 #include "render.hpp"
+#include "argouml_benchmark_results.hpp"
 
 void render_results_to_files(std::vector<DifferenceResult> difference_results, Configuration config)
 {
@@ -19,6 +20,14 @@ void render_results_to_files(std::vector<DifferenceResult> difference_results, C
         output_file << html_result;
         output_file.close();
     }
+}
+
+void render_argouml_benchmark_results_to_files(std::vector<DifferenceResult> difference_results, Configuration config)
+{
+    std::string result {build_argouml_benchmark_output(difference_results, config)};
+    std::ofstream output_file("argouml_benchmark_results.txt");
+    output_file << result;
+    output_file.close();
 }
 
 int main(int argc, char *argv[])
@@ -38,6 +47,7 @@ int main(int argc, char *argv[])
     {
         auto difference_results = runExpression(expression, config);
         render_results_to_files(difference_results, config);
+        render_argouml_benchmark_results_to_files(difference_results, config);
     }
     return 0;
 }

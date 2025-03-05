@@ -171,6 +171,23 @@ std::string Node::get_subtree_hash()
     return subtree_hash;
 }
 
+std::shared_ptr<Node> Node::get_child_by_tag(const std::string &tag)
+{
+    for (auto child : children)
+    {
+        if (child->get_tag() == tag)
+        {
+            return child;
+        }
+    }
+    return nullptr;
+}
+
+std::shared_ptr<Node> Node::get_parent()
+{
+    return parent;
+}
+
 bool Node::is_descendant(const std::shared_ptr<Node> &node)
 {
     auto current = node;
