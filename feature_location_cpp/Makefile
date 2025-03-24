@@ -35,7 +35,8 @@ SRCS := main.cpp \
         $(SRC_DIR)/parser.cpp \
         $(SRC_DIR)/render.cpp \
         $(SRC_DIR)/set_operations.cpp \
-        $(SRC_DIR)/tree.cpp
+        $(SRC_DIR)/tree.cpp \
+        $(SRC_DIR)/argouml_benchmark_results.cpp
 
 # Object Files (prefixed with obj directory)
 OBJS := $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
