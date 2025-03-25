@@ -53,7 +53,10 @@ int main(int argc, char *argv[])
   {
     auto differenceResults = runExpression(expression, config);
     renderResultsToFiles(differenceResults, config);
-    renderArgoumlBenchmarkResultsToFiles(differenceResults, config);
+    if (config.options.language == "java")
+    {
+      renderArgoumlBenchmarkResultsToFiles(differenceResults, config);
+    }
   }
   return 0;
 }
