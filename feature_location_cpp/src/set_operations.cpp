@@ -190,7 +190,7 @@ DifferenceResult difference(
 
     // For now do a cartesian product of the left and right files
     DifferenceResult difference_result;
-    for (int index = 0; index < leftFiles.size(); index++)
+    for (size_t index = 0; index < leftFiles.size(); index++)
     {
         FileDifferenceResult file_difference_result;
         file_difference_result.intersection = extract_matches_per_file(left_side_intersection, index);

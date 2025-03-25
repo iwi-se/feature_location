@@ -42,7 +42,7 @@ std::vector<DifferenceResult> runExpression(ExpressionSystemName expression,
 {
   ExpressionAllFiles expressionFiles = getExpressionFiles(expression, config);
   std::vector<SingleFileExpression> subexpressions
-      = buildFileBasedSubExpressions(expressionFiles, config);
+      = buildFileBasedSubExpressions(expressionFiles);
   std::vector<DifferenceResult> difference_results {};
   for (const auto &subexpression : subexpressions)
   {
@@ -123,8 +123,7 @@ ExpressionAllFiles getExpressionFiles(ExpressionSystemName expression,
 }
 
 std::vector<SingleFileExpression>
-    buildFileBasedSubExpressions(ExpressionAllFiles expression,
-                                 Configuration      config)
+    buildFileBasedSubExpressions(ExpressionAllFiles expression)
 {
   std::vector<SingleFileExpression> subexpressions {};
   if (hasOnlySingleFileSystems(expression))

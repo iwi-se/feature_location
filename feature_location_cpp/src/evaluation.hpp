@@ -11,7 +11,7 @@ std::vector<DifferenceResult> runExpression(ExpressionSystemName expression, Con
 
 ExpressionAllFiles getExpressionFiles(ExpressionSystemName expression, Configuration config);
 
-std::vector<SingleFileExpression> buildFileBasedSubExpressions(ExpressionAllFiles expression, Configuration config);
+std::vector<SingleFileExpression> buildFileBasedSubExpressions(ExpressionAllFiles expression);
 
 //SingleFileExpressionResult evaluateExpression(SingleFileExpression expression, Configuration config);
 
