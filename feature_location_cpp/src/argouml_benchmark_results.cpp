@@ -101,19 +101,20 @@ std::string get_class_fqn(std::shared_ptr<Node> node)
   while (current != nullptr)
   {
     auto children { current->get_children() };
+    std::vector<std::string> this_level_parts; // use intermediate vector, because of the order
     for (const auto &child : children)
     {
       if (child->get_tag() == "identifier")
       {
-        package_parts.push_back(child->get_ts_text());
+        this_level_parts.push_back(child->get_ts_text());
       }
     }
+    package_parts.insert(package_parts.begin(), this_level_parts.begin(), this_level_parts.end());
     current = current->get_child_by_tag("scoped_identifier");
   }
 
   // Combine package parts with dots
   std::string package_name;
-  std::reverse(package_parts.begin(), package_parts.end());
   for (size_t i = 0; i < package_parts.size(); ++i)
   {
     if (i > 0)
@@ -179,7 +180,7 @@ std::string get_method_fqn(std::shared_ptr<Node> node)
   }
 
   // Build the method FQN
-  std::string method_fqn = class_fqn + "." + identifier + "(";
+  std::string method_fqn = class_fqn + " " + identifier + "(";
   for (size_t i = 0; i < param_types.size(); ++i)
   {
     if (i > 0)
