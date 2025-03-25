@@ -1,5 +1,0 @@
-treelib
-tree_sitter==0.23.*
-tree_sitter_cpp==0.23.*
-tree_sitter_java==0.23.*
-pyyaml
