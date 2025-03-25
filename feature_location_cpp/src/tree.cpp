@@ -3,254 +3,269 @@
 #include <memory>
 #include <stack>
 
-std::filesystem::path SourcePosition::get_file() const
+std::filesystem::path SourcePosition::getFile() const
 {
-    return file;
+  return file;
 }
 
-std::pair<size_t, size_t> SourcePosition::get_start_position() const
+std::pair<size_t, size_t> SourcePosition::getStartPosition() const
 {
-    return start_position;
+  return startPosition;
 }
 
-size_t SourcePosition::get_start_line() const
+size_t SourcePosition::getStartLine() const
 {
-    return start_position.first;
+  return startPosition.first;
 }
 
-size_t SourcePosition::get_start_column() const
+size_t SourcePosition::getStartColumn() const
 {
-    return start_position.second;
+  return startPosition.second;
 }
 
-std::pair<size_t, size_t> SourcePosition::get_end_position() const
+std::pair<size_t, size_t> SourcePosition::getEndPosition() const
 {
-    return end_position;
+  return endPosition;
 }
 
-size_t SourcePosition::get_end_line() const
+size_t SourcePosition::getEndLine() const
 {
-    return end_position.first;
+  return endPosition.first;
 }
 
-size_t SourcePosition::get_end_column() const
+size_t SourcePosition::getEndColumn() const
 {
-    return end_position.second;
+  return endPosition.second;
 }
 
-bool SourcePosition::operator<(const SourcePosition &other) const
+bool SourcePosition::operator< (const SourcePosition &other) const
 {
-    return start_position < other.start_position;
+  return startPosition < other.startPosition;
 }
 
-bool SourcePosition::operator==(const SourcePosition &other) const
+bool SourcePosition::operator== (const SourcePosition &other) const
 {
-    return start_position == other.start_position && end_position == other.end_position && file == other.file;
+  return startPosition == other.startPosition
+         && endPosition == other.endPosition && file == other.file;
 }
 
 std::string SourcePosition::render() const
 {
-    return file.string() + "/" + std::to_string(start_position.first) + ":" + std::to_string(start_position.second) + "-" + std::to_string(end_position.first) + ":" + std::to_string(end_position.second);
+  return file.string() + "/" + std::to_string(startPosition.first) + ":"
+         + std::to_string(startPosition.second) + "-"
+         + std::to_string(endPosition.first) + ":"
+         + std::to_string(endPosition.second);
 }
 
-Node::Node(const std::string &tag, const std::string &ts_text,
-           const std::string &ts_type, const bool &ts_is_named,
-           const SourcePosition &source_position)
-    : tag(tag), ts_text(ts_text), ts_type(ts_type), ts_is_named(ts_is_named),
-      source_position(source_position) {}
+Node::Node(const std::string    &tag,
+           const std::string    &tsText,
+           const std::string    &tsType,
+           const bool           &tsIsNamed,
+           const SourcePosition &sourcePosition)
+    : tag(tag)
+    , tsText(tsText)
+    , tsType(tsType)
+    , tsIsNamed(tsIsNamed)
+    , sourcePosition(sourcePosition)
+{ }
 
-std::string Node::get_tag() const
+std::string Node::getTag() const
 {
-    return tag;
+  return tag;
 }
 
-std::string Node::get_ts_text() const
+std::string Node::getTsText() const
 {
-    return ts_text;
+  return tsText;
 }
 
-int Node::get_connected_leaf_weight()
+int Node::getConnectedLeafWeight()
 {
-    if (connected_leaf_weight == 0)
+  if (connectedLeafWeight == 0)
+  {
+    if (isLeaf())
     {
-        if (is_leaf())
-        {
-            if (tag == "identifier")
-            {
-                connected_leaf_weight = 3;
-            }
-            else if (ts_is_named)
-            {
-                connected_leaf_weight = 2;
-            }
-            else
-            {
-                connected_leaf_weight = 1;
-            }
-        }
-        else
-        {
-            for (auto child : children)
-            {
-                connected_leaf_weight += child->get_connected_leaf_weight();
-            }
-        }
+      if (tag == "identifier")
+      {
+        connectedLeafWeight = 3;
+      }
+      else if (tsIsNamed)
+      {
+        connectedLeafWeight = 2;
+      }
+      else
+      {
+        connectedLeafWeight = 1;
+      }
     }
-    return connected_leaf_weight;
+    else
+    {
+      for (auto child : children)
+      {
+        connectedLeafWeight += child->getConnectedLeafWeight();
+      }
+    }
+  }
+  return connectedLeafWeight;
 }
 
-void Node::add_child(const std::shared_ptr<Node> &child)
+void Node::addChild(const std::shared_ptr<Node> &child)
 {
-    children.push_back(child);
-    child->set_parent(shared_from_this());
+  children.push_back(child);
+  child->setParent(shared_from_this());
 }
 
-void Node::set_parent(const std::shared_ptr<Node> &parent)
+void Node::setParent(const std::shared_ptr<Node> &parent)
 {
-    this->parent = parent;
+  this->parent = parent;
 }
 
 void Node::render(const int &whitespace) const
 {
-    for (int i = 0; i < whitespace; i++)
+  for (int i = 0; i < whitespace; i++)
+  {
+    std::cout << " ";
+  }
+  std::cout << tag;
+  if (isLeaf())
+  {
+    std::cout << ": \"" << tsText << "\"";
+  }
+  std::cout << std::endl;
+  for (auto child : children)
+  {
+    child->render(whitespace + 2);
+  }
+}
+
+bool Node::isLeaf() const
+{
+  return children.empty();
+}
+
+std::vector<std::shared_ptr<Node>> Node::getPointerToEveryNode()
+{
+  std::vector<std::shared_ptr<Node>> nodes;
+  std::stack<std::shared_ptr<Node>>  stack;
+  stack.push(shared_from_this());
+
+  while (!stack.empty())
+  {
+    auto current = stack.top();
+    stack.pop();
+    nodes.push_back(current);
+
+    for (auto it = current->children.rbegin(); it != current->children.rend();
+         ++it)
     {
-        std::cout << " ";
+      stack.push(*it);
     }
-    std::cout << tag;
-    if (is_leaf())
+  }
+
+  return nodes;
+}
+
+std::string Node::getSubtreeHash()
+{
+  if (subtreeHash.empty())
+  {
+    subtreeHash = tag;
+    if (isLeaf())
     {
-        std::cout << ": \"" << ts_text << "\"";
+      subtreeHash += tsText;
     }
-    std::cout << std::endl;
     for (auto child : children)
     {
-        child->render(whitespace + 2);
+      subtreeHash += child->getSubtreeHash();
     }
+  }
+  return subtreeHash;
 }
 
-bool Node::is_leaf() const
+std::shared_ptr<Node> Node::getChildByTag(const std::string &tag)
 {
-    return children.empty();
-}
-
-std::vector<std::shared_ptr<Node>> Node::get_pointer_to_every_node()
-{
-    std::vector<std::shared_ptr<Node>> nodes;
-    std::stack<std::shared_ptr<Node>> stack;
-    stack.push(shared_from_this());
-
-    while (!stack.empty())
+  for (auto child : children)
+  {
+    if (child->getTag() == tag)
     {
-        auto current = stack.top();
-        stack.pop();
-        nodes.push_back(current);
-
-        for (auto it = current->children.rbegin(); it != current->children.rend(); ++it)
-        {
-            stack.push(*it);
-        }
+      return child;
     }
-
-    return nodes;
+  }
+  return nullptr;
 }
 
-std::string Node::get_subtree_hash()
+std::shared_ptr<Node> Node::getParent()
 {
-    if (subtree_hash.empty())
+  return parent;
+}
+
+bool Node::isDescendant(const std::shared_ptr<Node> &node)
+{
+  auto current = node;
+  while (current->parent != nullptr)
+  {
+    if ((current->parent).get() == this)
     {
-        subtree_hash = tag;
-        if (is_leaf())
-        {
-            subtree_hash += ts_text;
-        }
-        for (auto child : children)
-        {
-            subtree_hash += child->get_subtree_hash();
-        }
-    }
-    return subtree_hash;
-}
-
-std::shared_ptr<Node> Node::get_child_by_tag(const std::string &tag)
-{
-    for (auto child : children)
-    {
-        if (child->get_tag() == tag)
-        {
-            return child;
-        }
-    }
-    return nullptr;
-}
-
-std::shared_ptr<Node> Node::get_parent()
-{
-    return parent;
-}
-
-bool Node::is_descendant(const std::shared_ptr<Node> &node)
-{
-    auto current = node;
-    while (current->parent != nullptr)
-    {
-        if ((current->parent).get() == this)
-        {
-            return true;
-        }
-        else {
-            current = current->parent;
-        }
-    }
-    return false;
-}
-
-std::vector<std::shared_ptr<Node>> Node::get_children()
-{
-    return children;
-}
-
-Node::RelativePosition Node::get_relative_position(const std::shared_ptr<Node> &other)
-{
-    if (is_descendant(other) || other->is_descendant(shared_from_this()))
-    {
-        return RelativePosition::overlapping;
+      return true;
     }
     else
     {
-        int compare_value_1, compare_value_2;
-        if (shared_from_this()->source_position.get_start_position().first == other->source_position.get_start_position().first)
-        {
-            compare_value_1 = shared_from_this()->source_position.get_start_position().second;
-            compare_value_2 = other->source_position.get_start_position().second;
-        }
-        else
-        {
-            compare_value_1 = this->source_position.get_start_position().first;
-            compare_value_2 = other->source_position.get_start_position().first;
-        }
-
-        if (compare_value_1 < compare_value_2)
-        {
-            return RelativePosition::before;
-        }
-        else
-        {
-            return RelativePosition::after;
-        }
+      current = current->parent;
     }
+  }
+  return false;
 }
 
-const SourcePosition Node::get_source_position() const
+std::vector<std::shared_ptr<Node>> Node::getChildren()
 {
-    return source_position;
+  return children;
 }
 
-void Node::set_node_types(const std::vector<std::string> &types)
+Node::RelativePosition
+    Node::getRelativePosition(const std::shared_ptr<Node> &other)
 {
-    all_types = types;
+  if (isDescendant(other) || other->isDescendant(shared_from_this()))
+  {
+    return RelativePosition::overlapping;
+  }
+  else
+  {
+    int compareValue1, compareValue2;
+    if (shared_from_this()->sourcePosition.getStartPosition().first
+        == other->sourcePosition.getStartPosition().first)
+    {
+      compareValue1
+          = shared_from_this()->sourcePosition.getStartPosition().second;
+      compareValue2 = other->sourcePosition.getStartPosition().second;
+    }
+    else
+    {
+      compareValue1 = this->sourcePosition.getStartPosition().first;
+      compareValue2 = other->sourcePosition.getStartPosition().first;
+    }
+
+    if (compareValue1 < compareValue2)
+    {
+      return RelativePosition::before;
+    }
+    else
+    {
+      return RelativePosition::after;
+    }
+  }
 }
 
-std::vector<std::string> Node::get_node_types()
+const SourcePosition Node::getSourcePosition() const
 {
-    return all_types;
+  return sourcePosition;
+}
+
+void Node::setNodeTypes(const std::vector<std::string> &types)
+{
+  allTypes = types;
+}
+
+std::vector<std::string> Node::getNodeTypes()
+{
+  return allTypes;
 }

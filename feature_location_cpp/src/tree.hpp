@@ -1,78 +1,85 @@
 #ifndef TREE_HPP
 #define TREE_HPP
 
-#include <vector>
-#include <string>
-#include <memory>
 #include <filesystem>
+#include <memory>
+#include <string>
+#include <vector>
 
 class SourcePosition
 {
-public:
-    SourcePosition(const std::filesystem::path &file, const std::pair<size_t, size_t> &start_position, const std::pair<size_t, size_t> &end_position) : file(file), start_position(start_position), end_position(end_position) {}
+  public:
+    SourcePosition(const std::filesystem::path     &file,
+                   const std::pair<size_t, size_t> &startPosition,
+                   const std::pair<size_t, size_t> &endPosition)
+        : file(file)
+        , startPosition(startPosition)
+        , endPosition(endPosition)
+    { }
 
-    std::filesystem::path get_file() const;
-    std::pair<size_t, size_t> get_start_position() const;
-    size_t get_start_line() const;
-    size_t get_start_column() const;
-    std::pair<size_t, size_t> get_end_position() const;
-    size_t get_end_line() const;
-    size_t get_end_column() const;
-    bool operator<(const SourcePosition &other) const;
-    bool operator==(const SourcePosition &other) const;
-    std::string render() const;
-
-private:
-    std::filesystem::path file;
-    std::pair<size_t, size_t> start_position;
-    std::pair<size_t, size_t> end_position;
+    std::filesystem::path     getFile() const;
+    std::pair<size_t, size_t> getStartPosition() const;
+    size_t                    getStartLine() const;
+    size_t                    getStartColumn() const;
+    std::pair<size_t, size_t> getEndPosition() const;
+    size_t                    getEndLine() const;
+    size_t                    getEndColumn() const;
+    bool                      operator< (const SourcePosition &other) const;
+    bool                      operator== (const SourcePosition &other) const;
+    std::string               render() const;
+  private:
+    std::filesystem::path     file;
+    std::pair<size_t, size_t> startPosition;
+    std::pair<size_t, size_t> endPosition;
 };
 
-class Node : public std::enable_shared_from_this<Node>
+class Node: public std::enable_shared_from_this<Node>
 {
-public:
-    Node(const std::string &tag, const std::string &ts_text,
-         const std::string &ts_type, const bool &ts_is_named,
-         const SourcePosition &source_position);
+  public:
+    Node(const std::string    &tag,
+         const std::string    &tsText,
+         const std::string    &tsType,
+         const bool           &tsIsNamed,
+         const SourcePosition &sourcePosition);
 
-    std::string get_tag() const;
-    std::string get_ts_text() const;
-    void add_child(const std::shared_ptr<Node> &child);
-    void render(const int &whitespace) const;
-    bool is_leaf() const;
-    std::vector<std::shared_ptr<Node>> get_pointer_to_every_node();
-    std::string get_subtree_hash();
-    int get_connected_leaf_weight();
-    bool is_descendant(const std::shared_ptr<Node> &node);
-    const SourcePosition get_source_position() const;
-    std::vector<std::shared_ptr<Node>> get_children();
-    std::shared_ptr<Node> get_child_by_tag(const std::string &tag);
-    std::shared_ptr<Node> get_parent();
+    std::string getTag() const;
+    std::string getTsText() const;
+    void        addChild(const std::shared_ptr<Node> &child);
+    void        render(const int &whitespace) const;
+    bool        isLeaf() const;
+    std::vector<std::shared_ptr<Node>> getPointerToEveryNode();
+    std::string                        getSubtreeHash();
+    int                                getConnectedLeafWeight();
+    bool                 isDescendant(const std::shared_ptr<Node> &node);
+    const SourcePosition getSourcePosition() const;
+    std::vector<std::shared_ptr<Node>> getChildren();
+    std::shared_ptr<Node>              getChildByTag(const std::string &tag);
+    std::shared_ptr<Node>              getParent();
 
     enum class RelativePosition
     {
-        before,
-        after,
-        overlapping,
+      before,
+      after,
+      overlapping,
     };
 
-    RelativePosition get_relative_position(const std::shared_ptr<Node> &other);
+    RelativePosition getRelativePosition(const std::shared_ptr<Node> &other);
 
-    void set_node_types(const std::vector<std::string> &types);
-    std::vector<std::string> get_node_types();
-private:
-    std::shared_ptr<Node> parent {nullptr};
+    void setNodeTypes(const std::vector<std::string> &types);
+    std::vector<std::string> getNodeTypes();
+  private:
+    std::shared_ptr<Node>              parent { nullptr };
     std::vector<std::shared_ptr<Node>> children {};
-    std::string tag;
-    std::string ts_text;
-    std::string ts_type;
-    bool ts_is_named;
-    int connected_leaf_weight {};
-    std::string subtree_hash {};
-    SourcePosition source_position;
-    std::vector<std::string> all_types {};
+    std::string                        tag;
+    std::string                        tsText;
+    std::string                        tsType;
+    bool                               tsIsNamed;
+    int                                connectedLeafWeight {};
+    std::string                        subtreeHash {};
+    SourcePosition                     sourcePosition;
+    std::vector<std::string>           allTypes {};
 
-    void set_parent(const std::shared_ptr<Node> &parent);
+    void setParent(const std::shared_ptr<Node> &parent);
 };
 
 #endif // TREE_HPP

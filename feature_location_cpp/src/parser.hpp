@@ -5,6 +5,7 @@
 #include "tree_sitter/api.h"
 #include <filesystem>
 
-std::shared_ptr<Node> parse_file(const std::filesystem::path &file_path, const std::string &language);
+std::shared_ptr<Node> parseFile(const std::filesystem::path &filePath,
+                                 const std::string           &language);
 
 #endif // PARSER_HPP

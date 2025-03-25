@@ -1,82 +1,101 @@
-#include <iostream>
+#include "tree.hpp"
+#include "tree_sitter/api.h"
+#include "tree_sitter/tree-sitter-cpp.h"
+#include "tree_sitter/tree-sitter-java.h"
+#include <algorithm>
+#include <filesystem>
 #include <fstream>
+#include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
-#include <filesystem>
-#include <algorithm>
-#include "tree_sitter/api.h"
-#include "tree_sitter/tree-sitter-java.h"
-#include "tree_sitter/tree-sitter-cpp.h"
-#include "tree.hpp"
 
 const TSLanguage *tree_sitter_java(void);
 const TSLanguage *tree_sitter_cpp(void);
 
-std::string get_node_text(const TSNode &ts_node, const std::string& file_contents) {
-    // Get the byte range for this node
-    uint32_t start_byte = ts_node_start_byte(ts_node);
-    uint32_t end_byte = ts_node_end_byte(ts_node);
+std::string getNodeText(const TSNode      &tsNode,
+                          const std::string &fileContents)
+{
+  // Get the byte range for this node
+  uint32_t startByte = ts_node_start_byte(tsNode);
+  uint32_t endByte   = ts_node_end_byte(tsNode);
 
-    // Extract the text for this node based on its byte range
-    return file_contents.substr(start_byte, end_byte - start_byte);
+  // Extract the text for this node based on its byte range
+  return fileContents.substr(startByte, endByte - startByte);
 }
 
-std::shared_ptr<Node> convert_ts_node_to_node(TSNode ts_node, const std::filesystem::path& filepath, const std::string& file_contents) {
-    // Extract node data
-    const char *type = ts_node_type(ts_node);
-    bool is_named = ts_node_is_named(ts_node);
+std::shared_ptr<Node>
+    convertTsNodeToNode(TSNode                       tsNode,
+                            const std::filesystem::path &filepath,
+                            const std::string           &fileContents)
+{
+  // Extract node data
+  const char *type     = ts_node_type(tsNode);
+  bool        isNamed = ts_node_is_named(tsNode);
 
-    // Create SourcePosition
-    SourcePosition source_position = SourcePosition(filepath, {ts_node_start_point(ts_node).row, ts_node_start_point(ts_node).column},
-                        {ts_node_end_point(ts_node).row, ts_node_end_point(ts_node).column});
+  // Create SourcePosition
+  SourcePosition sourcePosition = SourcePosition(
+      filepath,
+      { ts_node_start_point(tsNode).row, ts_node_start_point(tsNode).column },
+      { ts_node_end_point(tsNode).row, ts_node_end_point(tsNode).column });
 
-    std::string text = get_node_text(ts_node, file_contents);
+  std::string text = getNodeText(tsNode, fileContents);
 
-    // Create the Node
-    auto node = std::make_shared<Node>(type, text, type, is_named, source_position);
+  // Create the Node
+  auto node
+      = std::make_shared<Node>(type, text, type, isNamed, sourcePosition);
 
-    // Recursively add children
-    uint32_t child_count = ts_node_child_count(ts_node);
-    for (uint32_t i = 0; i < child_count; i++) {
-        TSNode child_ts_node = ts_node_child(ts_node, i);
-        auto child_node = convert_ts_node_to_node(child_ts_node, filepath, file_contents);
-        node->add_child(child_node);
-    }
+  // Recursively add children
+  uint32_t childCount = ts_node_child_count(tsNode);
+  for (uint32_t i = 0; i < childCount; i++)
+  {
+    TSNode childTsNode = ts_node_child(tsNode, i);
+    auto   childNode
+        = convertTsNodeToNode(childTsNode, filepath, fileContents);
+    node->addChild(childNode);
+  }
 
-    return node;
+  return node;
 }
 
+// Assuming you have a function to initialize the parser with the correct
+// language
+std::shared_ptr<Node> parseFile(const std::filesystem::path &filename,
+                                 const std::string           &language)
+{
+  // Initialize the parser
+  TSParser *parser = ts_parser_new();
+  if (language == "java")
+  {
+    ts_parser_set_language(parser, tree_sitter_java());
+  }
+  else if (language == "cpp")
+  {
+    ts_parser_set_language(parser, tree_sitter_cpp());
+  }
+  else
+  {
+    throw std::runtime_error("Unsupported language: " + language);
+    return nullptr;
+  }
 
-// Assuming you have a function to initialize the parser with the correct language
-std::shared_ptr<Node> parse_file(const std::filesystem::path& filename, const std::string& language) {
-    // Initialize the parser
-    TSParser *parser = ts_parser_new();
-    if (language == "java") {
-        ts_parser_set_language(parser, tree_sitter_java());
-    } else if (language == "cpp") {
-        ts_parser_set_language(parser, tree_sitter_cpp());
-    } else {
-        throw std::runtime_error("Unsupported language: " + language);
-        return nullptr;
-    }
+  // Read the file
+  std::ifstream file(filename);
+  std::string   code((std::istreambuf_iterator<char>(file)),
+                   std::istreambuf_iterator<char>());
 
-    // Read the file
-    std::ifstream file(filename);
-    std::string code((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  // Parse the code
+  TSTree *tree
+      = ts_parser_parse_string(parser, nullptr, code.c_str(), code.size());
+  TSNode rootNode = ts_tree_root_node(tree);
 
-    // Parse the code
-    TSTree *tree = ts_parser_parse_string(parser, nullptr, code.c_str(), code.size());
-    TSNode root_node = ts_tree_root_node(tree);
+  // Convert the root TSNode to our Node structure
+  std::shared_ptr<Node> root
+      = convertTsNodeToNode(rootNode, filename, code);
 
-    // Convert the root TSNode to our Node structure
-    std::shared_ptr<Node> root = convert_ts_node_to_node(root_node, filename, code);
+  // Clean up
+  ts_tree_delete(tree);
+  ts_parser_delete(parser);
 
-    // Clean up
-    ts_tree_delete(tree);
-    ts_parser_delete(parser);
-
-    return root;
+  return root;
 }
-
-

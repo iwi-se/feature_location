@@ -1,53 +1,51 @@
 #ifndef CONFIGURATION_HPP
 #define CONFIGURATION_HPP
 
-#include <yaml-cpp/yaml.h>
-#include <string>
-#include <vector>
+#include "expression.hpp"
 #include <map>
 #include <optional>
-#include "expression.hpp"
+#include <string>
+#include <vector>
+#include <yaml-cpp/yaml.h>
 
-using NamePathMappings =
-    std::map<std::string, std::vector<std::string>>;
+using NamePathMappings = std::map<std::string, std::vector<std::string>>;
 
 class Options
 {
-public:
+  public:
     struct OnlySpecificNodes
     {
-        std::filesystem::path node_types_file;
-        std::vector<std::string> node_types;
+        std::filesystem::path    nodeTypesFile;
+        std::vector<std::string> nodeTypes;
     };
 
-    int minimum_trace_weight;
-    bool only_named_nodes;
-    std::string language;
-    bool debug {};
-    std::optional<OnlySpecificNodes> only_specific_nodes;
-
+    int                              minimumTraceWeight;
+    bool                             onlyNamedNodes;
+    std::string                      language;
+    bool                             debug {};
+    std::optional<OnlySpecificNodes> onlySpecificNodes;
 };
 
-const std::vector<std::string> cpp_file_extensions = {".cpp", ".h", ".hpp"};
-const std::vector<std::string> java_file_extensions = {".java"};
+const std::vector<std::string> cppFileExtensions  = { ".cpp", ".h", ".hpp" };
+const std::vector<std::string> javaFileExtensions = { ".java" };
 
 class Configuration
 {
-public:
+  public:
     Configuration(const std::string &filename);
-    ~Configuration();
-    void render();
-    std::vector<ExpressionSystemName> getExpressionsToEvaluate();
-    std::vector<std::string> getPathsForSystem(std::string systemName);
-    std::filesystem::path base_path;
-    Options options;
-    bool file_extension_matches_language(const std::filesystem::path &path);
-
-private:
-    std::string action;
-    NamePathMappings name_path_mappings;
+    void                              render();
+    std::vector<ExpressionSystemName> getExpressionsToEvaluate() const;
+    std::vector<std::string>
+        getPathsForSystem(const std::string &systemName) const;
+    std::filesystem::path basePath;
+    Options               options;
+    bool                  fileExtensionMatchesLanguage(
+                         const std::filesystem::path &path) const;
+  private:
+    std::string                       action;
+    NamePathMappings                  namePathMappings;
     std::vector<ExpressionSystemName> expressions;
-    std::vector<std::string> run;
+    std::vector<std::string>          run;
 };
 
 #endif // CONFIGURATION_HPP

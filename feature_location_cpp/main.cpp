@@ -1,53 +1,59 @@
+#include "argouml_benchmark_results.hpp"
+#include "render.hpp"
+#include "src/configuration.hpp"
+#include "src/evaluation.hpp"
+#include "src/expression.hpp"
+#include "src/tree.hpp"
+#include <fstream>
 #include <iostream>
 #include <vector>
-#include <fstream>
-#include "src/configuration.hpp"
-#include "src/expression.hpp"
-#include "src/evaluation.hpp"
-#include "src/tree.hpp"
-#include "render.hpp"
-#include "argouml_benchmark_results.hpp"
 
-void render_results_to_files(std::vector<DifferenceResult> difference_results, Configuration config)
+void renderResultsToFiles(std::vector<DifferenceResult> differenceResults,
+                             Configuration                 config)
 {
-    for (const auto &difference_result : difference_results)
-    {
-        std::string html_result = render_difference(difference_result, config);
-        auto rel_path_string {difference_result.relative_path.string()};
-        std::replace(rel_path_string.begin(), rel_path_string.end(), '/', '_');
-        std::string output_file_name = "difference_" + rel_path_string + ".html";
-        std::ofstream output_file(output_file_name);
-        output_file << html_result;
-        output_file.close();
-    }
+  for (const auto &differenceResult : differenceResults)
+  {
+    std::string htmlResult = renderDifference(differenceResult, config);
+    auto        relPathString { differenceResult.relativePath.string() };
+    std::replace(relPathString.begin(), relPathString.end(), '/', '_');
+    std::string   outputFileName = "difference_" + relPathString + ".html";
+    std::ofstream outputFile(outputFileName);
+    outputFile << htmlResult;
+    outputFile.close();
+  }
 }
 
-void render_argouml_benchmark_results_to_files(std::vector<DifferenceResult> difference_results, Configuration config)
+void renderArgoumlBenchmarkResultsToFiles(
+    std::vector<DifferenceResult> differenceResults, Configuration config)
 {
-    std::string result {build_argouml_benchmark_output(difference_results, config)};
-    std::ofstream output_file("argouml_benchmark_results.txt");
-    output_file << result;
-    output_file.close();
+  std::string   result { buildArgoumlBenchmarkOutput(differenceResults,
+                                                      config) };
+  std::ofstream outputFile("argouml_benchmark_results.txt");
+  outputFile << result;
+  outputFile.close();
 }
 
 int main(int argc, char *argv[])
 {
-    if (argc != 2) {
-        std::cerr << "Usage: " << argv[0] << " <config.yaml>" << std::endl;
-        return 1;
-    }
-    std::string config_file = argv[1];
-    Configuration config(config_file);
-    std::vector<ExpressionSystemName> expressions = config.getExpressionsToEvaluate();
-    if (config.options.debug) {
-        config.render();
-    }
+  if (argc != 2)
+  {
+    std::cerr << "Usage: " << argv[0] << " <config.yaml>" << std::endl;
+    return 1;
+  }
+  std::string                       configFile = argv[1];
+  Configuration                     config(configFile);
+  std::vector<ExpressionSystemName> expressions
+      = config.getExpressionsToEvaluate();
+  if (config.options.debug)
+  {
+    config.render();
+  }
 
-    for (const auto &expression : expressions)
-    {
-        auto difference_results = runExpression(expression, config);
-        render_results_to_files(difference_results, config);
-        render_argouml_benchmark_results_to_files(difference_results, config);
-    }
-    return 0;
+  for (const auto &expression : expressions)
+  {
+    auto differenceResults = runExpression(expression, config);
+    renderResultsToFiles(differenceResults, config);
+    renderArgoumlBenchmarkResultsToFiles(differenceResults, config);
+  }
+  return 0;
 }
