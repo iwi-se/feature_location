@@ -68,3 +68,7 @@ graph_info.json
 # local files
 local_*
 *.local
+
+/.example-config.yaml.swp
+/experimental/a.out
+/experimental/.s2s.cpp.swp
