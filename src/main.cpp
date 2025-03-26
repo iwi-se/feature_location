@@ -1,9 +1,9 @@
 #include "argouml_benchmark_results.hpp"
 #include "render.hpp"
-#include "src/configuration.hpp"
-#include "src/evaluation.hpp"
-#include "src/expression.hpp"
-#include "src/tree.hpp"
+#include "configuration.hpp"
+#include "evaluation.hpp"
+#include "expression.hpp"
+#include "tree.hpp"
 #include <fstream>
 #include <iostream>
 #include <vector>

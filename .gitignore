@@ -1,10 +1,67 @@
-spl/*
-*.html
+# Build directory
+/build/
+/obj/
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+
+# Conan files
+conan.lock
+conanbuildinfo.*
+conaninfo.txt
+graph_info.json
+
+# macOS specific
 .DS_Store
-__pycache__/
 
-*.local
+# Generated files
+*.html
+
+# local files
 local_*
-
-
-build
+*.local

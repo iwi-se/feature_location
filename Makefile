@@ -29,7 +29,7 @@ OBJ_DIR := obj/$(BUILD_DIR)
 SRC_DIR := src
 
 # Source Files
-SRCS := main.cpp \
+SRCS := $(SRC_DIR)/main.cpp \
         $(SRC_DIR)/configuration.cpp \
         $(SRC_DIR)/evaluation.cpp \
         $(SRC_DIR)/parser.cpp \
