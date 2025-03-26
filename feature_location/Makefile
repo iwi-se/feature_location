@@ -7,7 +7,7 @@ CXX := g++
 BUILD_TYPE ?= debug
 
 # Base compiler flags
-BASE_CXXFLAGS := -std=c++20 -Wall -Wextra -I./src
+BASE_CXXFLAGS := -std=c++20 -Wall -Wextra -I./src -MMD -MP
 
 # Debug and Release specific flags
 ifeq ($(BUILD_TYPE),debug)
@@ -41,6 +41,9 @@ SRCS := main.cpp \
 # Object Files (prefixed with obj directory)
 OBJS := $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
 
+# Dependency Files (prefixed with obj directory)
+DEPS := $(OBJS:.o=.d)
+
 # Executable Name (in obj directory)
 EXEC := $(OBJ_DIR)/feature_location
 
@@ -67,6 +70,9 @@ $(EXEC): $(OBJS)
 # Compile Source Files to Object Files
 $(OBJ_DIR)/%.o: %.cpp | $(OBJ_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Include dependency files
+-include $(DEPS)
 
 # Clean Build Artifacts
 clean:
