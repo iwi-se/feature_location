@@ -26,16 +26,15 @@ enum class RelativePosition
   AFTER
 };
 
-CharacterWithColor
-    makeCharacterWithColorFromCharacter(const char &character)
+CharacterWithColor makeCharacterWithColorFromCharacter(const char &character)
 {
   return CharacterWithColor { std::string(1, character),
                               CharacterColor::TRANSPARENT };
 }
 
 RelativePosition getRelativePosition(const SourcePosition &sourcePosition,
-                                       const std::size_t    &lineIndex,
-                                       const std::size_t    &columnIndex)
+                                     const std::size_t    &lineIndex,
+                                     const std::size_t    &columnIndex)
 {
   if (lineIndex < sourcePosition.getStartLine()
       || (lineIndex == sourcePosition.getStartLine()
@@ -84,8 +83,7 @@ void markCharacterColor(
              && currentSourcePositionIndex < sourcePositions.size() - 1)
       {
         currentSourcePositionIndex++;
-        currentSourcePosition
-            = sourcePositions[currentSourcePositionIndex];
+        currentSourcePosition = sourcePositions[currentSourcePositionIndex];
       }
       if (getRelativePosition(
               currentSourcePosition, currentLineIndex, currentColumnIndex)
@@ -156,12 +154,11 @@ std::string renderDifference(DifferenceResult difference, Configuration config)
   {
     if (fileDifferenceResult.intersection.size() > 0)
     {
-      result += renderFile(fileDifferenceResult.intersection[0]
-                                ->getSourcePosition()
-                                .getFile(),
-                            config,
-                            fileDifferenceResult.intersection,
-                            fileDifferenceResult.subtraction);
+      result += renderFile(
+          fileDifferenceResult.intersection[0]->getSourcePosition().getFile(),
+          config,
+          fileDifferenceResult.intersection,
+          fileDifferenceResult.subtraction);
     }
   }
 
@@ -194,9 +191,9 @@ void debugPrintMarkedCharacters(
 }
 
 std::string renderFile(std::filesystem::path              file,
-                        Configuration                      config,
-                        std::vector<std::shared_ptr<Node>> greenNodes,
-                        std::vector<std::shared_ptr<Node>> redNodes)
+                       Configuration                      config,
+                       std::vector<std::shared_ptr<Node>> greenNodes,
+                       std::vector<std::shared_ptr<Node>> redNodes)
 {
   std::cout << "Rendering file: " << file << std::endl;
 
@@ -218,18 +215,16 @@ std::string renderFile(std::filesystem::path              file,
     std::cout << "Green positions: " << std::endl;
     for (auto &position : greenPositions)
     {
-      std::cout << position.getStartLine() << ":"
-                << position.getStartColumn() << " - "
-                << position.getEndLine() << ":" << position.getEndColumn()
-                << std::endl;
+      std::cout << position.getStartLine() << ":" << position.getStartColumn()
+                << " - " << position.getEndLine() << ":"
+                << position.getEndColumn() << std::endl;
     }
     std::cout << "Red positions: " << std::endl;
     for (auto &position : redPositions)
     {
-      std::cout << position.getStartLine() << ":"
-                << position.getStartColumn() << " - "
-                << position.getEndLine() << ":" << position.getEndColumn()
-                << std::endl;
+      std::cout << position.getStartLine() << ":" << position.getStartColumn()
+                << " - " << position.getEndLine() << ":"
+                << position.getEndColumn() << std::endl;
     }
   }
 

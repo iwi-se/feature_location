@@ -9,7 +9,7 @@
 #include <vector>
 
 void renderResultsToFiles(std::vector<DifferenceResult> differenceResults,
-                             Configuration                 config)
+                          Configuration                 config)
 {
   for (const auto &differenceResult : differenceResults)
   {
@@ -26,8 +26,7 @@ void renderResultsToFiles(std::vector<DifferenceResult> differenceResults,
 void renderArgoumlBenchmarkResultsToFiles(
     std::vector<DifferenceResult> differenceResults, Configuration config)
 {
-  std::string   result { buildArgoumlBenchmarkOutput(differenceResults,
-                                                      config) };
+  std::string result { buildArgoumlBenchmarkOutput(differenceResults, config) };
   std::ofstream outputFile("argouml_benchmark_results.txt");
   outputFile << result;
   outputFile.close();

@@ -13,8 +13,7 @@
 const TSLanguage *tree_sitter_java(void);
 const TSLanguage *tree_sitter_cpp(void);
 
-std::string getNodeText(const TSNode      &tsNode,
-                          const std::string &fileContents)
+std::string getNodeText(const TSNode &tsNode, const std::string &fileContents)
 {
   // Get the byte range for this node
   uint32_t startByte = ts_node_start_byte(tsNode);
@@ -24,13 +23,12 @@ std::string getNodeText(const TSNode      &tsNode,
   return fileContents.substr(startByte, endByte - startByte);
 }
 
-std::shared_ptr<Node>
-    convertTsNodeToNode(TSNode                       tsNode,
-                            const std::filesystem::path &filepath,
-                            const std::string           &fileContents)
+std::shared_ptr<Node> convertTsNodeToNode(TSNode                       tsNode,
+                                          const std::filesystem::path &filepath,
+                                          const std::string &fileContents)
 {
   // Extract node data
-  const char *type     = ts_node_type(tsNode);
+  const char *type    = ts_node_type(tsNode);
   bool        isNamed = ts_node_is_named(tsNode);
 
   // Create SourcePosition
@@ -42,16 +40,14 @@ std::shared_ptr<Node>
   std::string text = getNodeText(tsNode, fileContents);
 
   // Create the Node
-  auto node
-      = std::make_shared<Node>(type, text, type, isNamed, sourcePosition);
+  auto node = std::make_shared<Node>(type, text, type, isNamed, sourcePosition);
 
   // Recursively add children
   uint32_t childCount = ts_node_child_count(tsNode);
   for (uint32_t i = 0; i < childCount; i++)
   {
     TSNode childTsNode = ts_node_child(tsNode, i);
-    auto   childNode
-        = convertTsNodeToNode(childTsNode, filepath, fileContents);
+    auto   childNode = convertTsNodeToNode(childTsNode, filepath, fileContents);
     node->addChild(childNode);
   }
 
@@ -61,7 +57,7 @@ std::shared_ptr<Node>
 // Assuming you have a function to initialize the parser with the correct
 // language
 std::shared_ptr<Node> parseFile(const std::filesystem::path &filename,
-                                 const std::string           &language)
+                                const std::string           &language)
 {
   // Initialize the parser
   TSParser *parser = ts_parser_new();
@@ -90,8 +86,7 @@ std::shared_ptr<Node> parseFile(const std::filesystem::path &filename,
   TSNode rootNode = ts_tree_root_node(tree);
 
   // Convert the root TSNode to our Node structure
-  std::shared_ptr<Node> root
-      = convertTsNodeToNode(rootNode, filename, code);
+  std::shared_ptr<Node> root = convertTsNodeToNode(rootNode, filename, code);
 
   // Clean up
   ts_tree_delete(tree);

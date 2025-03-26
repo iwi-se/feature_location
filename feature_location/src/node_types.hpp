@@ -13,7 +13,7 @@ json nodeTypes;
 
 std::vector<std::string>
     getSupertypes(const std::filesystem::path &nodeTypesFile,
-                   const std::string           &type)
+                  const std::string           &type)
 {
   std::vector<std::string> supertypes;
 
@@ -61,7 +61,7 @@ std::vector<std::string>
 }
 
 bool isIncludedNodeType(const std::shared_ptr<Node> &node,
-                           const Configuration         &config)
+                        const Configuration         &config)
 {
   if (!config.options.onlySpecificNodes)
   {
@@ -71,8 +71,8 @@ bool isIncludedNodeType(const std::shared_ptr<Node> &node,
   auto supertypes = node->getNodeTypes();
   if (supertypes.empty())
   {
-    supertypes = getSupertypes(
-        config.options.onlySpecificNodes->nodeTypesFile, node->getTag());
+    supertypes = getSupertypes(config.options.onlySpecificNodes->nodeTypesFile,
+                               node->getTag());
     supertypes.push_back(node->getTag());
     node->setNodeTypes(supertypes);
   }

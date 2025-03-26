@@ -39,8 +39,7 @@ class Configuration
         getPathsForSystem(const std::string &systemName) const;
     std::filesystem::path basePath;
     Options               options;
-    bool                  fileExtensionMatchesLanguage(
-                         const std::filesystem::path &path) const;
+    bool fileExtensionMatchesLanguage(const std::filesystem::path &path) const;
   private:
     std::string                       action;
     NamePathMappings                  namePathMappings;

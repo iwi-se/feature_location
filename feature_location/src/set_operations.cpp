@@ -26,8 +26,7 @@
 //     return 0.0;
 // }
 
-MatchesPerFile extractMatchesPerFile(const MatchList &matches,
-                                        const int       &index)
+MatchesPerFile extractMatchesPerFile(const MatchList &matches, const int &index)
 {
   MatchesPerFile matchesPerFile;
   for (const auto &match : matches)
@@ -107,8 +106,8 @@ void removeOverlappingPairs(MatchList &matches)
 }
 
 MatchList matchNodeInTrees(const std::shared_ptr<Node>       &node,
-                              std::vector<std::shared_ptr<Node>> trees,
-                              const Configuration               &config)
+                           std::vector<std::shared_ptr<Node>> trees,
+                           const Configuration               &config)
 {
   MatchList                         matches;
   std::stack<std::shared_ptr<Node>> stack { { trees[0] } };
@@ -125,8 +124,7 @@ MatchList matchNodeInTrees(const std::shared_ptr<Node>       &node,
       }
       else
       {
-        MatchList matchesInTrees
-            = matchNodeInTrees(currentNode, trees, config);
+        MatchList matchesInTrees = matchNodeInTrees(currentNode, trees, config);
         for (auto &match : matchesInTrees)
         {
           // insert currentNode at the beginning of each match
@@ -150,7 +148,7 @@ MatchList matchNodeInTrees(const std::shared_ptr<Node>       &node,
 }
 
 MatchList matchTrees(std::vector<std::shared_ptr<Node>> trees,
-                      const Configuration               &config)
+                     const Configuration               &config)
 {
   std::vector<std::vector<std::shared_ptr<Node>>> matches;
   std::stack<std::shared_ptr<Node>>               stack { { trees[0] } };
@@ -163,7 +161,7 @@ MatchList matchTrees(std::vector<std::shared_ptr<Node>> trees,
     if (isIncludedNodeType(currentNode, config))
     {
       std::vector<std::shared_ptr<Node>> remainingTrees { trees.begin() + 1,
-                                                           trees.end() };
+                                                          trees.end() };
       nodeMatches = matchNodeInTrees(currentNode, remainingTrees, config);
     }
 

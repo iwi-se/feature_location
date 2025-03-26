@@ -13,7 +13,7 @@ using MatchList = std::vector<Match>;
 using MatchesPerFile = std::vector<std::shared_ptr<Node>>;
 
 MatchesPerFile extractMatchesPerFile(const MatchList &matches,
-                                        const int       &index);
+                                     const int       &index);
 
 MatchList intersection(const std::vector<std::shared_ptr<Node>> &nodes1,
                        const Configuration                      &config);

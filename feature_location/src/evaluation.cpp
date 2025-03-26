@@ -31,8 +31,7 @@ DifferenceResult evaluateExpression(SingleFileExpression expression,
     std::shared_ptr<Node> root = parseFile(fullPath, config.options.language);
     rightSideTrees.push_back(root);
   }
-  auto differenceResult { difference(
-      leftSideTrees, rightSideTrees, config) };
+  auto differenceResult { difference(leftSideTrees, rightSideTrees, config) };
   differenceResult.relativePath = expression.leftSide[0].relative;
   return differenceResult;
 }

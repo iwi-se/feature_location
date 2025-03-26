@@ -21,8 +21,8 @@ Configuration::Configuration(const std::string &filename)
   options.minimumTraceWeight
       = config["options"]["minimum_trace_weight"].as<int>();
   options.onlyNamedNodes = config["options"]["only_named_nodes"].as<bool>();
-  options.language         = config["options"]["language"].as<std::string>();
-  options.debug            = config["options"]["debug"].as<bool>();
+  options.language       = config["options"]["language"].as<std::string>();
+  options.debug          = config["options"]["debug"].as<bool>();
 
   if (config["options"]["only_specific_nodes"])
   {
@@ -42,11 +42,11 @@ Configuration::Configuration(const std::string &filename)
     ExpressionSystemName expr;
     expr.leftSide  = expression["left-side"].as<std::vector<std::string>>();
     expr.rightSide = expression["right-side"].as<std::vector<std::string>>();
-    expr.labels     = expression["labels"].as<std::vector<std::string>>();
+    expr.labels    = expression["labels"].as<std::vector<std::string>>();
     expressions.push_back(expr);
   }
 
-  run       = config["run"].as<std::vector<std::string>>();
+  run      = config["run"].as<std::vector<std::string>>();
   basePath = std::filesystem::path(filename).parent_path();
 }
 

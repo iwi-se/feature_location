@@ -14,7 +14,7 @@ enum class TraceExtent
 };
 
 TraceExtent isTrace(const std::shared_ptr<Node>              &node,
-                     const std::vector<std::shared_ptr<Node>> &otherNodes)
+                    const std::vector<std::shared_ptr<Node>> &otherNodes)
 {
   auto result { TraceExtent::full };
   for (const auto &otherNode : otherNodes)
@@ -110,9 +110,8 @@ std::string getClassFqn(std::shared_ptr<Node> node)
         thisLevelParts.push_back(child->getTsText());
       }
     }
-    packageParts.insert(packageParts.begin(),
-                         thisLevelParts.begin(),
-                         thisLevelParts.end());
+    packageParts.insert(
+        packageParts.begin(), thisLevelParts.begin(), thisLevelParts.end());
     current = current->getChildByTag("scoped_identifier");
   }
 
@@ -264,9 +263,9 @@ class OutputLines
     std::vector<OutputLine> lines;
 };
 
-OutputLines findFullTraces(
-    const std::vector<std::shared_ptr<Node>> &nodes,
-    const std::vector<std::shared_ptr<Node>> &subtractionNodes)
+OutputLines
+    findFullTraces(const std::vector<std::shared_ptr<Node>> &nodes,
+                   const std::vector<std::shared_ptr<Node>> &subtractionNodes)
 {
   OutputLines outputLines;
   for (const auto &node : nodes)
@@ -294,8 +293,7 @@ OutputLines findFullTraces(
     // Recursively check children
     else
     {
-      auto childTraces
-          = findFullTraces(node->getChildren(), subtractionNodes);
+      auto childTraces = findFullTraces(node->getChildren(), subtractionNodes);
       // Merge child traces into output lines
       outputLines.insertMany(childTraces);
     }
@@ -333,7 +331,7 @@ OutputLines findRefinementTraces(
 
 std::string
     buildArgoumlBenchmarkOutputForFile(DifferenceResult differenceResult,
-                                            Configuration    config)
+                                       Configuration    config)
 {
   if (config.options.language != "java")
   {
@@ -343,12 +341,10 @@ std::string
   const auto &fileDifferenceResult { differenceResult.result[0] };
 
   OutputLines fullTraceOutputLines { findFullTraces(
-      fileDifferenceResult.intersection,
-      fileDifferenceResult.subtraction) };
+      fileDifferenceResult.intersection, fileDifferenceResult.subtraction) };
 
   OutputLines refinementOutputLines { findRefinementTraces(
-      fileDifferenceResult.intersection,
-      fileDifferenceResult.subtraction) };
+      fileDifferenceResult.intersection, fileDifferenceResult.subtraction) };
 
   fullTraceOutputLines.insertMany(refinementOutputLines);
 
@@ -357,14 +353,14 @@ std::string
 
 // TODO: Add support for nested classes/methods, currently they are handled
 // wrong
-std::string buildArgoumlBenchmarkOutput(
-    std::vector<DifferenceResult> differenceResults, Configuration config)
+std::string
+    buildArgoumlBenchmarkOutput(std::vector<DifferenceResult> differenceResults,
+                                Configuration                 config)
 {
   std::string output;
   for (const auto &differenceResult : differenceResults)
   {
-    output
-        += buildArgoumlBenchmarkOutputForFile(differenceResult, config);
+    output += buildArgoumlBenchmarkOutputForFile(differenceResult, config);
   }
   return output;
 }

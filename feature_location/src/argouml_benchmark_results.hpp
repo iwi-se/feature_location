@@ -6,7 +6,8 @@
 #include <string>
 #include <vector>
 
-std::string buildArgoumlBenchmarkOutput(
-    std::vector<DifferenceResult> differenceResults, Configuration config);
+std::string
+    buildArgoumlBenchmarkOutput(std::vector<DifferenceResult> differenceResults,
+                                Configuration                 config);
 
 #endif
