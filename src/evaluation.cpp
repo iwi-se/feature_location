@@ -6,6 +6,8 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <iostream>
+#include <iomanip>
 
 DifferenceResult evaluateExpression(SingleFileExpression expression,
                                     Configuration        config)
@@ -43,12 +45,30 @@ std::vector<DifferenceResult> runExpression(ExpressionSystemName expression,
   std::vector<SingleFileExpression> subexpressions
       = buildFileBasedSubExpressions(expressionFiles);
   std::vector<DifferenceResult> differenceResults {};
-  for (const auto &subexpression : subexpressions)
+  
+  // Print the expression being processed
+  std::cout << "Processing expression: " << expression.labels[0] << " (" 
+            << subexpressions.size() << " files) ";
+  std::cout.flush();
+  
+  // Progress tracking variables
+  int totalFiles = subexpressions.size();
+  
+  for (size_t i = 0; i < subexpressions.size(); ++i)
   {
-    auto differenceResult { evaluateExpression(subexpression, config) };
-    differenceResult.relativePath = subexpression.leftSide[0].relative;
+    // Update file counter for every file
+    std::cout << "\rProcessing expression: " << expression.labels[0] << " (" 
+              << subexpressions.size() << " files) " << (i+1) << "/" << totalFiles;
+    std::cout.flush();
+
+    auto differenceResult { evaluateExpression(subexpressions[i], config) };
+    differenceResult.relativePath = subexpressions[i].leftSide[0].relative;
     differenceResults.push_back(differenceResult);
   }
+  
+  // Print completed message
+  std::cout << " done" << std::endl;
+  
   return differenceResults;
 }
 
