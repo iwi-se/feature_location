@@ -27,7 +27,7 @@ std::vector<std::string>
     }
     catch (const std::exception &e)
     {
-      std::cerr << "Error parsing node types file: " << e.what() << std::endl;
+      std::cerr << "Error parsing node types file: " << nodeTypesFile << " " << e.what() << std::endl;
       return supertypes;
     }
   }

@@ -90,11 +90,13 @@ The configuration file (YAML format) specifies:
 - `action`: The action to perform (e.g., "difference")
 - `name-path-mappings`: Maps system variant names to their respective file paths
 - `options`: Configuration options including:
-  - `minimum_trace_weight`: Minimum weight for including a trace
-  - `only_named_nodes`: Whether to only include named nodes
+  - `minimum_trace_weight`: Minimum weight for including a trace, start with a value of 2 or 3 and adjust if necessary
+  - `only_named_nodes`: Whether to only include named nodes. Named nodes is a treesitter concept. Non-named nodes are for examples, parentheses, semicolons, etc. Named nodes are semantically more important.
   - `language`: The programming language of the source code (e.g., "cpp" or "java")
-  - `debug`: Enable debug output (optional)
+  - `debug`: Enable debug output
   - `only_specific_nodes`: Limit analysis to specific node types (optional)
+    - `node_types_file`: File for the specified language, provided by the Treesitter grammar, contains subtyping information
+    - `node_types`: List of node types to include in the calculations. All subtypes of the specified node types will be considered as well.
 - `expressions`: Set theory expressions to evaluate
   - `left-side`: List of system variants for the left side of the expression
   - `right-side`: List of system variants for the right side of the expression
@@ -146,12 +148,13 @@ Example usage:
 
 ### Output
 
-The tool generates HTML files with the results of the feature location analysis:
-- For each processed file, an HTML file named `difference_<relative_path>.html` is created
-- For Java projects, an additional benchmark results file `argouml_benchmark_results.txt` may be generated
+The tool generates output files in the `results` directory, which is created automatically if it doesn't exist:
+- For each processed file, an HTML file named `difference_<relative_path>.html` is created in the results directory
+- For Java projects, an additional benchmark results file `argouml_benchmark_results.txt` is generated in the results directory
 
 ## Project Structure
 
 - `src/` - Contains all source code files including the main entry point (main.cpp)
 - `obj/` - Contains build artifacts (object files and executables)
 - `example/` - Contains example product line code
+- `results/` - Contains generated output files (automatically created)

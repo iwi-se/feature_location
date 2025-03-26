@@ -2,6 +2,9 @@
 /build/
 /obj/
 
+# Results directory
+/results/
+
 # Prerequisites
 *.d
 

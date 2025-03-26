@@ -22,7 +22,7 @@ options:
   language: cpp
   debug: false
   only_specific_nodes:
-    node_types_file: "../../../node_types_cpp.json"
+    node_types_file: "node_types_cpp.json"
     node_types: [
       "statement",
       "expression",

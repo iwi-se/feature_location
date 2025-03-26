@@ -181,18 +181,5 @@ std::vector<SingleFileExpression>
       }
     }
   }
-  std::cout << "Subexpressions: " << subexpressions.size() << std::endl;
-  for (const auto &subexpression : subexpressions)
-  {
-    std::cout << "Subexpression: " << std::endl;
-    for (const auto &leftSide : subexpression.leftSide)
-    {
-      std::cout << "Left Side: " << leftSide.fullPath() << std::endl;
-    }
-    for (const auto &rightSide : subexpression.rightSide)
-    {
-      std::cout << "Right Side: " << rightSide.fullPath() << std::endl;
-    }
-  }
   return subexpressions;
 }

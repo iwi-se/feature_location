@@ -1,22 +1,38 @@
 #include "argouml_benchmark_results.hpp"
-#include "render.hpp"
 #include "configuration.hpp"
 #include "evaluation.hpp"
 #include "expression.hpp"
+#include "render.hpp"
 #include "tree.hpp"
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <vector>
 
+namespace fs = std::filesystem;
+
+// Ensure the results directory exists
+void ensureResultsDirectoryExists()
+{
+  const fs::path resultsDir = "results";
+  if (!fs::exists(resultsDir))
+  {
+    fs::create_directory(resultsDir);
+  }
+}
+
 void renderResultsToFiles(std::vector<DifferenceResult> differenceResults,
                           Configuration                 config)
 {
+  ensureResultsDirectoryExists();
+
   for (const auto &differenceResult : differenceResults)
   {
     std::string htmlResult = renderDifference(differenceResult, config);
     auto        relPathString { differenceResult.relativePath.string() };
     std::replace(relPathString.begin(), relPathString.end(), '/', '_');
-    std::string   outputFileName = "difference_" + relPathString + ".html";
+    fs::path outputFileName
+        = fs::path("results") / ("difference_" + relPathString + ".html");
     std::ofstream outputFile(outputFileName);
     outputFile << htmlResult;
     outputFile.close();
@@ -26,8 +42,12 @@ void renderResultsToFiles(std::vector<DifferenceResult> differenceResults,
 void renderArgoumlBenchmarkResultsToFiles(
     std::vector<DifferenceResult> differenceResults, Configuration config)
 {
+  ensureResultsDirectoryExists();
+
   std::string result { buildArgoumlBenchmarkOutput(differenceResults, config) };
-  std::ofstream outputFile("argouml_benchmark_results.txt");
+  fs::path    outputFileName
+      = fs::path("results") / "argouml_benchmark_results.txt";
+  std::ofstream outputFile(outputFileName);
   outputFile << result;
   outputFile.close();
 }
@@ -47,6 +67,9 @@ int main(int argc, char *argv[])
   {
     config.render();
   }
+
+  // Ensure results directory exists
+  ensureResultsDirectoryExists();
 
   for (const auto &expression : expressions)
   {
