@@ -19,7 +19,7 @@ else
 endif
 
 # Library Paths (adjust these paths if your libraries are in different locations)
-LDFLAGS := -L/usr/local/lib
+LDFLAGS := -L/usr/local/lib -Wl,-rpath,/usr/local/lib
 
 # Libraries to link against
 LIBS := -lyaml-cpp -ltree-sitter -ltree-sitter-java -ltree-sitter-cpp
