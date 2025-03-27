@@ -22,7 +22,7 @@ endif
 LDFLAGS := -L/usr/local/lib
 
 # Libraries to link against
-LIBS := -lyaml-cpp -ltree-sitter -ltree-sitter-java -ltree-sitter-cpp -lstdc++fs
+LIBS := -lyaml-cpp -ltree-sitter -ltree-sitter-java -ltree-sitter-cpp
 
 # Directories
 OBJ_DIR := obj/$(BUILD_DIR)
