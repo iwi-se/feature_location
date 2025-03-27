@@ -172,7 +172,11 @@ std::string getMethodFqn(std::shared_ptr<Node> node)
     {
       if (child->getTag() == "formal_parameter")
       {
-        auto typeIdentifier = child->getChildByTag("type_identifier");
+        auto typeIdentifier = child->getChildren()[0];
+        if (typeIdentifier->getTag() == "modifiers")
+        {
+          typeIdentifier = child->getChildren()[1]; // index 0 might be modifiers, then type identifier is index 1
+        }
         if (typeIdentifier != nullptr)
         {
           paramTypes.push_back(typeIdentifier->getTsText());
@@ -187,7 +191,7 @@ std::string getMethodFqn(std::shared_ptr<Node> node)
   {
     if (i > 0)
     {
-      methodFqn += ", ";
+      methodFqn += ",";
     }
     methodFqn += paramTypes[i];
   }
