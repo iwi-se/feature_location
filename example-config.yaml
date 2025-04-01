@@ -25,10 +25,11 @@ options:
     node_types_file: "node_types_cpp.json"
     node_types: [
       "statement",
-      "expression",
-      #"declaration",
-      #"type_specifier",
-      #"function_definition",
+      #"expression",
+      "declaration",
+      "type_specifier",
+      "function_definition",
+      "preproc_include"
     ]
 expressions:
   - left-side: [S2, S8]

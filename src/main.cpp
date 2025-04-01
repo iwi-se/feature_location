@@ -22,7 +22,8 @@ void ensureResultsDirectoryExists()
 }
 
 void renderResultsToFiles(std::vector<DifferenceResult> differenceResults,
-                          Configuration                 config)
+                          Configuration                 config,
+                          std::string                   expressionName)
 {
   ensureResultsDirectoryExists();
 
@@ -32,7 +33,9 @@ void renderResultsToFiles(std::vector<DifferenceResult> differenceResults,
     auto        relPathString { differenceResult.relativePath.string() };
     std::replace(relPathString.begin(), relPathString.end(), '/', '_');
     fs::path outputFileName
-        = fs::path("results") / ("difference_" + relPathString + ".html");
+        = fs::path("results")
+          / ("difference_" + expressionName
+             + (relPathString == "" ? "" : "_" + relPathString) + ".html");
     std::ofstream outputFile(outputFileName);
     outputFile << htmlResult;
     outputFile.close();
@@ -74,7 +77,7 @@ int main(int argc, char *argv[])
   for (const auto &expression : expressions)
   {
     auto differenceResults = runExpression(expression, config);
-    renderResultsToFiles(differenceResults, config);
+    renderResultsToFiles(differenceResults, config, expression.labels[0]);
     if (config.options.language == "java")
     {
       renderArgoumlBenchmarkResultsToFiles(differenceResults, config);

@@ -110,8 +110,12 @@ MatchList matchNodeInTrees(const std::shared_ptr<Node>       &node,
                            const Configuration               &config)
 {
   MatchList                         matches;
-  std::stack<std::shared_ptr<Node>> stack { { trees[0] } };
-  trees.erase(trees.begin());
+  std::stack<std::shared_ptr<Node>> stack {};
+  if (trees.size() > 0)
+  {
+    stack.push(trees[0]);
+    trees.erase(trees.begin());
+  }
   while (!stack.empty())
   {
     auto currentNode = stack.top();
@@ -186,6 +190,12 @@ MatchList matchTrees(std::vector<std::shared_ptr<Node>> trees,
 MatchList intersection(const std::vector<std::shared_ptr<Node>> &nodes,
                        const Configuration                      &config)
 {
+  if (nodes.size() == 1)
+  {
+    MatchList matches;
+    matches.push_back(nodes);
+    return matches;
+  }
   MatchList matches = matchTrees(nodes, config);
   sortByDecisionRatio(matches, config);
   removeOverlappingPairs(matches);
