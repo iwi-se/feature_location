@@ -8,23 +8,54 @@
 #include <utility>
 #include <vector>
 
-// Assuming Node and Tree classes are defined elsewhere with necessary methods
+double calculateEnvironmentSimilarity(const Match &match)
+{
+  std::vector<std::vector<std::shared_ptr<Node>>> environments;
+  for (const auto &node : match)
+  {
+    std::vector<std::shared_ptr<Node>> environment;
+    for (const auto &sibling : node->getParent()->getChildren())
+    {
+      environment.push_back(sibling);
+    }
+    environments.push_back(environment);
+  }
 
-// Placeholder for calculateDepthProximity function
-// double calculateDepthProximity(const std::shared_ptr<Node> &node1, const
-// std::shared_ptr<Node> &node2)
-// {
-//     // Implement depth proximity calculation
-//     return 0.0;
-// }
-
-// // Placeholder for calculateEnvironmentSimilarity function
-// double calculateEnvironmentSimilarity(const std::shared_ptr<Node> &node1,
-// const std::shared_ptr<Node> &node2)
-// {
-//     // Implement environment similarity calculation
-//     return 0.0;
-// }
+  // Count siblings that have equal tsText across all environments
+  int equalSiblingsCount = 0;
+  
+  // Use the first environment as reference
+  if (!environments.empty()) {
+    for (const auto &referenceSibling : environments[0]) {
+      bool isEqualInAllEnvironments = true;
+      
+      // Check if this sibling exists with same tsText in all other environments
+      for (size_t i = 1; i < environments.size(); ++i) {
+        bool foundEqual = false;
+        for (const auto &sibling : environments[i]) {
+          if (referenceSibling->getTsText() == sibling->getTsText()) {
+            foundEqual = true;
+            break;
+          }
+        }
+        if (!foundEqual) {
+          isEqualInAllEnvironments = false;
+          break;
+        }
+      }
+      
+      if (isEqualInAllEnvironments) {
+        equalSiblingsCount++;
+      }
+    }
+  }
+  
+  // Normalize by the size of the first environment (or any environment since they should be same size)
+  double normalizedCount = environments.empty() ? 0.0 : 
+    static_cast<double>(equalSiblingsCount) / environments[0].size();
+    
+  return normalizedCount;
+}
 
 MatchesPerFile extractMatchesPerFile(const MatchList &matches, const int &index)
 {
@@ -43,14 +74,13 @@ void sortByDecisionRatio(MatchList &matches, const Configuration &config)
   for (const Match &match : matches)
   {
     // double depthProximity = calculateDepthProximity(pair.first,
-    // pair.second); double environmentSimilarity =
-    // calculateEnvironmentSimilarity(pair.first, pair.second);
+    // pair.second); 
+    double environmentSimilarity =
+        calculateEnvironmentSimilarity(match);
     int size = match[0]->getConnectedLeafWeight();
 
-    // double decisionRatio = 0.2 * depthProximity + 0.3 *
-    // environmentSimilarity + 0.5 * std::min((size / 100.0), 1.0);
+    double decisionRatio = 0.2 * environmentSimilarity + 0.8 * size;
 
-    double decisionRatio = size;
     matchesWithRatio.push_back(std::make_pair(match, decisionRatio));
   }
 
@@ -132,7 +162,7 @@ MatchList matchNodeInTrees(const std::shared_ptr<Node>       &node,
         for (auto &match : matchesInTrees)
         {
           // insert currentNode at the beginning of each match
-          match.insert(match.begin(), currentNode);
+          match.insert(match.begin(), node);
         }
         matches.insert(
             matches.end(), matchesInTrees.begin(), matchesInTrees.end());
@@ -187,6 +217,19 @@ MatchList matchTrees(std::vector<std::shared_ptr<Node>> trees,
   return matches;
 }
 
+void debugOutputMatches(const MatchList &matches)
+{
+  for (const auto &match : matches)
+  {
+    std::cout << match[0]->getTag() << " " << match[0]->getTsText() << " ";
+    for (const auto &node : match)
+    {
+      std::cout << node->getSourcePosition().render() << "||";
+    }
+    std::cout << std::endl;
+  }
+}
+
 MatchList intersection(const std::vector<std::shared_ptr<Node>> &nodes,
                        const Configuration                      &config)
 {
@@ -197,8 +240,18 @@ MatchList intersection(const std::vector<std::shared_ptr<Node>> &nodes,
     return matches;
   }
   MatchList matches = matchTrees(nodes, config);
+  if (config.options.debug)
+  {
+    std::cout << "Potential Matches: " << matches.size() << std::endl;
+    debugOutputMatches(matches);
+  }
   sortByDecisionRatio(matches, config);
   removeOverlappingPairs(matches);
+  if (config.options.debug)
+  {
+    std::cout << "Final Matches: " << matches.size() << std::endl;
+    debugOutputMatches(matches);
+  }
 
   return matches;
 }

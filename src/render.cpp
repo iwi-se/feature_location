@@ -59,6 +59,11 @@ void markCharacterColor(
     std::vector<SourcePosition>                  &sourcePositions,
     const CharacterColor                         &color)
 {
+  if (sourcePositions.size() == 0)
+  {
+    return;
+  }
+
   // Sort source positions by start position
   std::sort(sourcePositions.begin(), sourcePositions.end());
 

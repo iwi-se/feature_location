@@ -224,6 +224,10 @@ std::vector<std::shared_ptr<Node>> Node::getChildren()
 Node::RelativePosition
     Node::getRelativePosition(const std::shared_ptr<Node> &other)
 {
+  if (other.get() == this)
+  {
+    return RelativePosition::overlapping;
+  }
   if (isDescendant(other) || other->isDescendant(shared_from_this()))
   {
     return RelativePosition::overlapping;
