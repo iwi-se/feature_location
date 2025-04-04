@@ -1,0 +1,120 @@
+action: difference
+name-path-mappings:
+  - name: S1
+    paths: [example/r.hpp]
+  - name: S2
+    paths: [example/rl.hpp]
+  - name: S3
+    paths: [example/rc.hpp]
+  - name: S4
+    paths: [example/rcl.hpp]
+  - name: S5
+    paths: [example/i.hpp]
+  - name: S6
+    paths: [example/il.hpp]
+  - name: S7
+    paths: [example/ic.hpp]
+  - name: S8
+    paths: [example/icl.hpp]
+options:
+  minimum_trace_weight: 2
+  only_named_nodes: false
+  language: cpp
+  debug: false
+  only_specific_nodes:
+    node_types_file: "node_types_cpp.json"
+    node_types: [
+      "statement",
+      #"expression",
+      "declaration",
+      "type_specifier",
+      "function_definition",
+      "preproc_include"
+    ]
+expressions:
+  - left-side: [S2, S4]
+    right-side: [S1, S7]
+    labels:
+      - 3i_1n_I_md01a
+  - left-side: [S4, S2]
+    right-side: [S1, S7]
+    labels:
+      - 3i_1n_I_md01b
+  - left-side: [S2, S4]
+    right-side: [S7, S1]
+    labels:
+      - 3i_1n_I_md01c
+  - left-side: [S4, S2]
+    right-side: [S7, S1]
+    labels:
+      - 3i_1n_I_md01d
+  - left-side: [S2, S4]
+    right-side: [S3, S5]
+    labels:
+      -  3i_1n_I_md02
+  - left-side: [S2, S4]
+    right-side: [S3, S7]
+    labels:
+      -  3i_1n_I_md03
+  - left-side: [S2, S6]
+    right-side: [S1, S7]
+    labels:
+      -  3i_1n_I_md04
+  - left-side: [S2, S6]
+    right-side: [S3, S5]
+    labels:
+      -  3i_1n_I_md05
+  - left-side: [S2, S6]
+    right-side: [S5, S7]
+    labels:
+      -  3i_1n_I_md06
+  - left-side: [S2, S8]
+    right-side: [S1, S7]
+    labels:
+      -  3i_1n_I_md07
+  - left-side: [S2, S8]
+    right-side: [S3, S5]
+    labels:
+      -  3i_1n_I_md08
+  - left-side: [S2, S8]
+    right-side: [S3, S7]
+    labels:
+      -  3i_1n_I_md09
+  - left-side: [S2, S8]
+    right-side: [S5, S7]
+    labels:
+      -  3i_1n_I_md10
+  - left-side: [S4, S6]
+    right-side: [S1, S7]
+    labels:
+      -  3i_1n_I_md11
+  - left-side: [S4, S6]
+    right-side: [S3, S5]
+    labels:
+      -  3i_1n_I_md12
+  - left-side: [S4, S6]
+    right-side: [S3, S7]
+    labels:
+      -  3i_1n_I_md13
+  - left-side: [S4, S6]
+    right-side: [S5, S7]
+    labels:
+      -  3i_1n_I_md14
+run:
+  - 3i_1n_I_md01a
+  - 3i_1n_I_md01b
+  - 3i_1n_I_md01c
+  - 3i_1n_I_md01d
+  - 3i_1n_I_md02
+  - 3i_1n_I_md03
+  - 3i_1n_I_md04
+  - 3i_1n_I_md05
+  - 3i_1n_I_md06
+  - 3i_1n_I_md07
+  - 3i_1n_I_md08
+  - 3i_1n_I_md09
+  - 3i_1n_I_md10
+  - 3i_1n_I_md11
+  - 3i_1n_I_md12
+  - 3i_1n_I_md13
+  - 3i_1n_I_md14
