@@ -58,7 +58,7 @@ std::vector<DifferenceResult> runExpression(ExpressionSystemName expression,
     // Update file counter for every file
     std::cout << "\rProcessing expression: " << expression.labels[0] << " ("
               << subexpressions.size() << " files) " << (i + 1) << "/"
-              << totalFiles;
+              << totalFiles << " " << subexpressions[i].leftSide[0].relative << std::string(50, ' ');
     std::cout.flush();
 
     auto differenceResult { evaluateExpression(subexpressions[i], config) };
@@ -67,7 +67,7 @@ std::vector<DifferenceResult> runExpression(ExpressionSystemName expression,
   }
 
   // Print completed message
-  std::cout << " done" << std::endl;
+  std::cout << "\nProcessing expressions done." << std::endl;
 
   return differenceResults;
 }

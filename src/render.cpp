@@ -200,8 +200,6 @@ std::string renderFile(std::filesystem::path              file,
                        std::vector<std::shared_ptr<Node>> greenNodes,
                        std::vector<std::shared_ptr<Node>> redNodes)
 {
-  std::cout << "Rendering file: " << file << std::endl;
-
   std::vector<SourcePosition> greenPositions;
   std::vector<SourcePosition> redPositions;
 

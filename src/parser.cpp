@@ -91,6 +91,8 @@ std::shared_ptr<Node> parseFile(const std::filesystem::path &filename,
   // Clean up
   ts_tree_delete(tree);
   ts_parser_delete(parser);
+  ts_language_delete(tree_sitter_cpp());
+  ts_language_delete(tree_sitter_java());
 
   return root;
 }
