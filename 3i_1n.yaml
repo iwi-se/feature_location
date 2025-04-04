@@ -3,17 +3,17 @@ name-path-mappings:
   - name: S1
     paths: [example/r.hpp]
   - name: S2
-    paths: [example/rl.hpp]
-  - name: S3
-    paths: [example/rc.hpp]
-  - name: S4
-    paths: [example/rcl.hpp]
-  - name: S5
     paths: [example/i.hpp]
-  - name: S6
+  - name: S3
+    paths: [example/rl.hpp]
+  - name: S4
     paths: [example/il.hpp]
-  - name: S7
+  - name: S5
+    paths: [example/rc.hpp]
+  - name: S6
     paths: [example/ic.hpp]
+  - name: S7
+    paths: [example/rcl.hpp]
   - name: S8
     paths: [example/icl.hpp]
 options:
