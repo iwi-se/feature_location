@@ -100,6 +100,342 @@ expressions:
     right-side: [S5, S7]
     labels:
       -  3i_1n_I_md14
+  - left-side: [S3, S4]
+    right-side: [S1, S6]
+    labels:
+      -  3i_1n_L_md01
+  - left-side: [S3, S4]
+    right-side: [S2, S5]
+    labels:
+      -  3i_1n_L_md02
+  - left-side: [S3, S7]
+    right-side: [S1, S6]
+    labels:
+      -  3i_1n_L_md03
+  - left-side: [S3, S7]
+    right-side: [S2, S5]
+    labels:
+      -  3i_1n_L_md04
+  - left-side: [S3, S7]
+    right-side: [S5, S6]
+    labels:
+      -  3i_1n_L_md05
+  - left-side: [S3, S8]
+    right-side: [S1, S6]
+    labels:
+      -  3i_1n_L_md06
+  - left-side: [S3, S8]
+    right-side: [S2, S5]
+    labels:
+      -  3i_1n_L_md07
+  - left-side: [S3, S8]
+    right-side: [S2, S6]
+    labels:
+      -  3i_1n_L_md08
+  - left-side: [S3, S8]
+    right-side: [S5, S6]
+    labels:
+      -  3i_1n_L_md09
+  - left-side: [S4, S7]
+    right-side: [S1, S6]
+    labels:
+      -  3i_1n_L_md10
+  - left-side: [S4, S7]
+    right-side: [S2, S5]
+    labels:
+      -  3i_1n_L_md11
+  - left-side: [S4, S7]
+    right-side: [S2, S6]
+    labels:
+      -  3i_1n_L_md12
+  - left-side: [S4, S7]
+    right-side: [S5, S6]
+    labels:
+      -  3i_1n_L_md13
+  - left-side: [S4, S7]
+    right-side: [S2, S6]
+    labels:
+      -  3i_1n_L_md13
+  - left-side: [S4, S7]
+    right-side: [S5, S6]
+    labels:
+      -  3i_1n_L_md14
+  - left-side: [S5, S6]
+    right-side: [S1, S4]
+    labels:
+      -  3i_1n_C_md01
+  - left-side: [S5, S6]
+    right-side: [S2, S3]
+    labels:
+      -  3i_1n_C_md02
+  - left-side: [S5, S6]
+    right-side: [S2, S4]
+    labels:
+      -  3i_1n_C_md03
+  - left-side: [S5, S7]
+    right-side: [S1, S4]
+    labels:
+      -  3i_1n_C_md04
+  - left-side: [S5, S7]
+    right-side: [S2, S3]
+    labels:
+      -  3i_1n_C_md05
+  - left-side: [S5, S7]
+    right-side: [S3, S4]
+    labels:
+      -  3i_1n_C_md06
+  - left-side: [S5, S8]
+    right-side: [S1, S4]
+    labels:
+      -  3i_1n_C_md07
+  - left-side: [S5, S8]
+    right-side: [S2, S3]
+    labels:
+      -  3i_1n_C_md08
+  - left-side: [S5, S8]
+    right-side: [S2, S4]
+    labels:
+      -  3i_1n_C_md09
+  - left-side: [S5, S8]
+    right-side: [S3, S4]
+    labels:
+      -  3i_1n_C_md10
+  - left-side: [S6, S7]
+    right-side: [S1, S4]
+    labels:
+      -  3i_1n_C_md11
+  - left-side: [S6, S7]
+    right-side: [S2, S3]
+    labels:
+      -  3i_1n_C_md12
+  - left-side: [S6, S7]
+    right-side: [S2, S4]
+    labels:
+      -  3i_1n_C_md13
+  - left-side: [S6, S7]
+    right-side: [S3, S4]
+    labels:
+      -  3i_1n_C_md14
+  - left-side: [S1, S7]
+    right-side: [S2, S4]
+    labels:
+      -  3i_1n_NOT_I_md01
+  - left-side: [S1, S7]
+    right-side: [S2, S6]
+    labels:
+      -  3i_1n_NOT_I_md02
+  - left-side: [S1, S7]
+    right-side: [S2, S8]
+    labels:
+      -  3i_1n_NOT_I_md03
+  - left-side: [S1, S7]
+    right-side: [S4, S6]
+    labels:
+      -  3i_1n_NOT_I_md04
+  - left-side: [S3, S5]
+    right-side: [S2, S4]
+    labels:
+      -  3i_1n_NOT_I_md05
+  - left-side: [S3, S5]
+    right-side: [S2, S6]
+    labels:
+      -  3i_1n_NOT_I_md06
+  - left-side: [S3, S5]
+    right-side: [S2, S8]
+    labels:
+      -  3i_1n_NOT_I_md07
+  - left-side: [S3, S5]
+    right-side: [S4, S6]
+    labels:
+      -  3i_1n_NOT_I_md08
+  - left-side: [S3, S7]
+    right-side: [S2, S4]
+    labels:
+      -  3i_1n_NOT_I_md09
+  - left-side: [S3, S7]
+    right-side: [S2, S8]
+    labels:
+      -  3i_1n_NOT_I_md10
+  - left-side: [S3, S7]
+    right-side: [S4, S6]
+    labels:
+      -  3i_1n_NOT_I_md11
+  - left-side: [S5, S7]
+    right-side: [S2, S6]
+    labels:
+      -  3i_1n_NOT_I_md12
+  - left-side: [S5, S7]
+    right-side: [S2, S8]
+    labels:
+      -  3i_1n_NOT_I_md13
+  - left-side: [S5, S7]
+    right-side: [S4, S6]
+    labels:
+      -  3i_1n_NOT_I_md14
+  - left-side: [S1, S6]
+    right-side: [S3, S4]
+    labels:
+      -  3i_1n_NOT_L_md01
+  - left-side: [S1, S6]
+    right-side: [S3, S7]
+    labels:
+      -  3i_1n_NOT_L_md02
+  - left-side: [S1, S6]
+    right-side: [S3, S8]
+    labels:
+      -  3i_1n_NOT_L_md03
+  - left-side: [S1, S6]
+    right-side: [S4, S7]
+    labels:
+      -  3i_1n_NOT_L_md04
+  - left-side: [S2, S5]
+    right-side: [S3, S7]
+    labels:
+      -  3i_1n_NOT_L_md05
+  - left-side: [S2, S5]
+    right-side: [S3, S8]
+    labels:
+      -  3i_1n_NOT_L_md06
+  - left-side: [S2, S5]
+    right-side: [S4, S7]
+    labels:
+      -  3i_1n_NOT_L_md07
+  - left-side: [S2, S6]
+    right-side: [S3, S4]
+    labels:
+      -  3i_1n_NOT_L_md08
+  - left-side: [S2, S6]
+    right-side: [S3, S8]
+    labels:
+      -  3i_1n_NOT_L_md09
+  - left-side: [S2, S6]
+    right-side: [S4, S7]
+    labels:
+      -  3i_1n_NOT_L_md10
+  - left-side: [S5, S6]
+    right-side: [S3, S7]
+    labels:
+      -  3i_1n_NOT_L_md11
+  - left-side: [S5, S6]
+    right-side: [S3, S8]
+    labels:
+      -  3i_1n_NOT_L_md12
+  - left-side: [S5, S7]
+    right-side: [S2, S8]
+    labels:
+      -  3i_1n_NOT_L_md13
+  - left-side: [S5, S6]
+    right-side: [S4, S7]
+    labels:
+      -  3i_1n_NOT_L_md14
+  - left-side: [S1, S4]
+    right-side: [S5, S6]
+    labels:
+      -  3i_1n_NOT_C_md01
+  - left-side: [S1, S4]
+    right-side: [S5, S7]
+    labels:
+      -  3i_1n_NOT_C_md02
+  - left-side: [S1, S4]
+    right-side: [S5, S8]
+    labels:
+      -  3i_1n_NOT_C_md03
+  - left-side: [S1, S4]
+    right-side: [S6, S7]
+    labels:
+      -  3i_1n_NOT_C_md04
+  - left-side: [S2, S3]
+    right-side: [S5, S6]
+    labels:
+      -  3i_1n_NOT_C_md05
+  - left-side: [S2, S3]
+    right-side: [S5, S7]
+    labels:
+      -  3i_1n_NOT_C_md06
+  - left-side: [S2, S3]
+    right-side: [S5, S8]
+    labels:
+      -  3i_1n_NOT_C_md07
+  - left-side: [S2, S3]
+    right-side: [S6, S7]
+    labels:
+      -  3i_1n_NOT_C_md08
+  - left-side: [S2, S4]
+    right-side: [S5, S6]
+    labels:
+      -  3i_1n_NOT_C_md09
+  - left-side: [S2, S4]
+    right-side: [S5, S8]
+    labels:
+      -  3i_1n_NOT_C_md10
+  - left-side: [S2, S4]
+    right-side: [S6, S7]
+    labels:
+      -  3i_1n_NOT_C_md11
+  - left-side: [S3, S4]
+    right-side: [S5, S7]
+    labels:
+      -  3i_1n_NOT_C_md12
+  - left-side: [S3, S4]
+    right-side: [S5, S8]
+    labels:
+      -  3i_1n_NOT_C_md13
+  - left-side: [S3, S4]
+    right-side: [S6, S7]
+    labels:
+      -  3i_1n_NOT_C_md14
+  - left-side: [S4, S8]
+    right-side: [S2, S2]
+    labels:
+      -  3i_1n_I_AND_L_md01
+  - left-side: [S4, S8]
+    right-side: [S2, S7]
+    labels:
+      -  3i_1n_I_AND_L_md02
+  - left-side: [S4, S8]
+    right-side: [S3, S6]
+    labels:
+      -  3i_1n_I_AND_L_md03
+  - left-side: [S4, S8]
+    right-side: [S6, S7]
+    labels:
+      -  3i_1n_I_AND_L_md04
+  - left-side: [S6, S8]
+    right-side: [S2, S5]
+    labels:
+      -  3i_1n_I_AND_C_md01
+  - left-side: [S6, S8]
+    right-side: [S2, S7]
+    labels:
+      -  3i_1n_I_AND_C_md02
+  - left-side: [S6, S8]
+    right-side: [S4, S5]
+    labels:
+      -  3i_1n_I_AND_C_md03
+  - left-side: [S6, S8]
+    right-side: [S4, S7]
+    labels:
+      -  3i_1n_I_AND_C_md04
+  - left-side: [S7, S8]
+    right-side: [S3, S5]
+    labels:
+      -  3i_1n_L_AND_C_md01
+  - left-side: [S7, S8]
+    right-side: [S3, S6]
+    labels:
+      -  3i_1n_L_AND_C_md02
+  - left-side: [S7, S8]
+    right-side: [S4, S5]
+    labels:
+      -  3i_1n_L_AND_C_md03
+  - left-side: [S7, S8]
+    right-side: [S4, S6]
+    labels:
+      -  3i_1n_L_AND_C_md04
+  - left-side: [S8]
+    right-side: [S4, S6, S7]
+    labels:
+      -  3i_1n_I_AND_L_AND_C_md01
 run:
   - 3i_1n_I_md01a
   - 3i_1n_I_md01b
@@ -118,3 +454,87 @@ run:
   - 3i_1n_I_md12
   - 3i_1n_I_md13
   - 3i_1n_I_md14
+  - 3i_1n_L_md01
+  - 3i_1n_L_md02
+  - 3i_1n_L_md03
+  - 3i_1n_L_md04
+  - 3i_1n_L_md05
+  - 3i_1n_L_md06
+  - 3i_1n_L_md07
+  - 3i_1n_L_md08
+  - 3i_1n_L_md09
+  - 3i_1n_L_md10
+  - 3i_1n_L_md11
+  - 3i_1n_L_md12
+  - 3i_1n_L_md13
+  - 3i_1n_L_md14
+  - 3i_1n_C_md01
+  - 3i_1n_C_md02
+  - 3i_1n_C_md03
+  - 3i_1n_C_md04
+  - 3i_1n_C_md05
+  - 3i_1n_C_md06
+  - 3i_1n_C_md07
+  - 3i_1n_C_md08
+  - 3i_1n_C_md09
+  - 3i_1n_C_md10
+  - 3i_1n_C_md11
+  - 3i_1n_C_md12
+  - 3i_1n_C_md13
+  - 3i_1n_C_md14
+  - 3i_1n_NOT_I_md01
+  - 3i_1n_NOT_I_md02
+  - 3i_1n_NOT_I_md03
+  - 3i_1n_NOT_I_md04
+  - 3i_1n_NOT_I_md05
+  - 3i_1n_NOT_I_md06
+  - 3i_1n_NOT_I_md07
+  - 3i_1n_NOT_I_md08
+  - 3i_1n_NOT_I_md09
+  - 3i_1n_NOT_I_md10
+  - 3i_1n_NOT_I_md11
+  - 3i_1n_NOT_I_md12
+  - 3i_1n_NOT_I_md13
+  - 3i_1n_NOT_I_md14
+  - 3i_1n_NOT_L_md01
+  - 3i_1n_NOT_L_md02
+  - 3i_1n_NOT_L_md03
+  - 3i_1n_NOT_L_md04
+  - 3i_1n_NOT_L_md05
+  - 3i_1n_NOT_L_md06
+  - 3i_1n_NOT_L_md07
+  - 3i_1n_NOT_L_md08
+  - 3i_1n_NOT_L_md09
+  - 3i_1n_NOT_L_md10
+  - 3i_1n_NOT_L_md11
+  - 3i_1n_NOT_L_md12
+  - 3i_1n_NOT_L_md13
+  - 3i_1n_NOT_L_md14
+  - 3i_1n_NOT_C_md01
+  - 3i_1n_NOT_C_md02
+  - 3i_1n_NOT_C_md03
+  - 3i_1n_NOT_C_md04
+  - 3i_1n_NOT_C_md05
+  - 3i_1n_NOT_C_md06
+  - 3i_1n_NOT_C_md07
+  - 3i_1n_NOT_C_md08
+  - 3i_1n_NOT_C_md09
+  - 3i_1n_NOT_C_md10
+  - 3i_1n_NOT_C_md11
+  - 3i_1n_NOT_C_md12
+  - 3i_1n_NOT_C_md13
+  - 3i_1n_NOT_C_md14
+  - 3i_1n_I_AND_L_md01
+  - 3i_1n_I_AND_L_md02
+  - 3i_1n_I_AND_L_md03
+  - 3i_1n_I_AND_L_md04
+  - 3i_1n_I_AND_C_md01
+  - 3i_1n_I_AND_C_md02
+  - 3i_1n_I_AND_C_md03
+  - 3i_1n_I_AND_C_md04
+  - 3i_1n_L_AND_C_md01
+  - 3i_1n_L_AND_C_md02
+  - 3i_1n_L_AND_C_md03
+  - 3i_1n_L_AND_C_md04
+  -  3i_1n_I_AND_L_AND_C_md01
+
