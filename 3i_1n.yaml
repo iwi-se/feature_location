@@ -20,7 +20,7 @@ options:
   minimum_trace_weight: 1
   only_named_nodes: false
   language: cpp
-  debug: true
+  debug: false
   only_specific_nodes:
     node_types_file: "node_types_cpp.json"
     node_types: [
@@ -535,59 +535,111 @@ expressions:
   - left-side: [S1, S2]
     right-side: [S4, S6]
     labels:
-      -   3i_1n_NOT_L_OR_NOT_C_md04
-  - left-side: [S1, S2, S3, S4, S5, S6, S6]
-    right-side: []
+      - 3i_1n_NOT_L_OR_NOT_C_md04
+  - left-side: [S1, S2, S3, S4, S5, S6, S7]
+    right-side: [ ]
     labels:
       - 3i_1n_NOT_I_OR_NOT_L_OR_NOT_C_md01
-  - left-side: [2]
-  - right-side: [1, 4]
+  - left-side: [S2]
+    right-side: [S1, S4]
     labels:
       - 3i_1n_I_AND_NOT_L_AND_NOT_C_md01
-  - left-side: [2]
-  - right-side: [1, 6]
+  - left-side: [S2]
+    right-side: [S1, S6]
     labels:
       - 3i_1n_I_AND_NOT_L_AND_NOT_C_md02
-  - left-side: [2]
-  - right-side: [1, 8]
+  - left-side: [S2]
+    right-side: [S1, S8]
     labels:
       - 3i_1n_I_AND_NOT_L_AND_NOT_C_md03
-  - left-side: [3]
-  - right-side: [1, 4]
+  - left-side: [S3]
+    right-side: [S1, S4]
     labels:
       - 3i_1n_NOT_I_AND_L_AND_NOT_C_md01
-  - left-side: [3]
-  - right-side: [1, 8]
+  - left-side: [S3]
+    right-side: [S1, S8]
     labels:
       - 3i_1n_NOT_I_AND_L_AND_NOT_C_md02
-  - left-side: [3]
-  - right-side: [1, 4]
+  - left-side: [S3]
+    right-side: [S1, S4]
     labels:
       - 3i_1n_NOT_I_AND_L_AND_NOT_C_md03
-  - left-side: [5]
-  - right-side: [1, 6]
+  - left-side: [S5]
+    right-side: [S1, S6]
     labels:
       - 3i_1n_NOT_I_AND_NOT_L_AND_C_md01
-  - left-side: [5]
-  - right-side: [1, 7]
+  - left-side: [S5]
+    right-side: [S1, S7]
     labels:
       - 3i_1n_NOT_I_AND_NOT_L_AND_C_md02
-  - left-side: [5]
-  - right-side: [1, 8]
+  - left-side: [S5]
+    right-side: [S1, S8]
     labels:
       - 3i_1n_NOT_I_AND_NOT_L_AND_C_md03
-  - left-side: [4]
-  - right-side: [1, 8]
+  - left-side: [S4]
+    right-side: [S1, S8]
     labels:
       - 3i_1n_I_AND_L_AND_NOT_C_md01
-  - left-side: [4]
-  - right-side: [2, 8]
+  - left-side: [S4]
+    right-side: [S2, S8]
     labels:
       - 3i_1n_I_AND_L_AND_NOT_C_md02
-  - left-side: [4]
-  - right-side: [3, 8]
+  - left-side: [S4]
+    right-side: [S3, S8]
     labels:
       - 3i_1n_I_AND_L_AND_NOT_C_md03
+  - left-side: [S6]
+    right-side: [S1, S8]
+    labels:
+      - 3i_1n_I_AND_NOT_L_AND_C_md01
+  - left-side: [S6]
+    right-side: [S2, S8]
+    labels:
+      - 3i_1n_I_AND_NOT_L_AND_C_md02
+  - left-side: [S6]
+    right-side: [S5, S8]
+    labels:
+      - 3i_1n_I_AND_NOT_L_AND_C_md03
+  - left-side: [S7]
+    right-side: [S1, S8]
+    labels:
+      - 3i_1n_I_AND_NOT_L_AND_C_md01
+  - left-side: [S7]
+    right-side: [S3, S8]
+    labels:
+      - 3i_1n_I_AND_NOT_L_AND_C_md02
+  - left-side: [S67]
+    right-side: [S5, S8]
+    labels:
+      - 3i_1n_I_AND_NOT_L_AND_C_md03
+  - left-side: [S1, S2, S3, S4, S5, S6, S8]
+    right-side: []
+    labels:
+      - 3i_1n_I_OR_NOT_L_OR_NOT_C_md1
+  - left-side: [S1, S2, S3, S4, S5, S7, S8]
+    right-side: []
+    labels:
+      - 3i_1n_NOT_I_OR_L_OR_NOT_C_md1
+  - left-side: [S1, S2, S3, S4, S5, S7, S8]
+    right-side: []
+    labels:
+      - 3i_1n_NOT_I_OR_L_OR_NOT_C_md1
+  - left-side: [S1, S2, S3, S5, S6, S7, S8]
+    right-side: []
+    labels:
+      - 3i_1n_NOT_I_OR_NOT_L_OR_C_md1
+  - left-side: [S1, S2, S3, S4, S6, S7, S8]
+    right-side: []
+    labels:
+      - 3i_1n_I_OR_L_OR_NOT_C_md1
+  - left-side: [S1, S2, S4, S5, S6, S7, S8]
+    right-side: []
+    labels:
+      - 3i_1n_I_OR_NOT_L_OR_C_md1
+  - left-side: [S1, S3, S4, S5, S6, S7, S8]
+    right-side: []
+    labels:
+      - 3i_1n_NOT_I_OR_L_OR_C_md1
 run:
   - 3i_1n_I_md01a
   - 3i_1n_I_md01b
@@ -724,6 +776,18 @@ run:
   - 3i_1n_NOT_I_AND_NOT_L_AND_C_md01
   - 3i_1n_NOT_I_AND_NOT_L_AND_C_md02
   - 3i_1n_NOT_I_AND_NOT_L_AND_C_md03
-  - 31_1n_I_AND_L_AND_NOT_C_md01
-  - 31_1n_I_AND_L_AND_NOT_C_md02
-  - 31_1n_I_AND_L_AND_NOT_C_md03
+  - 3i_1n_I_AND_L_AND_NOT_C_md01
+  - 3i_1n_I_AND_L_AND_NOT_C_md02
+  - 3i_1n_I_AND_L_AND_NOT_C_md03
+  - 3i_1n_I_AND_NOT_L_AND_C_md01
+  - 3i_1n_I_AND_NOT_L_AND_C_md02
+  - 3i_1n_I_AND_NOT_L_AND_C_md03
+  - 3i_1n_NOT_I_AND_L_AND_C_md01
+  - 3i_1n_NOT_I_AND_L_AND_C_md02
+  - 3i_1n_NOT_I_AND_L_AND_C_md03
+  - 3i_1n_I_OR_NOT_L_AND_NOT_C_md01
+  - 3i_1n_NOT_I_OR_L_OR_NOT_C_md01
+  - 3i_1n_NOT_I_OR_NOT_L_OR_C_md01
+  - 3i_1n_I_OR_L_OR_NOT_C_md01
+  - 3i_1n_I_OR_NOT_L_OR_C_md01
+  - 3i_1n_NOT_I_OR_L_OR_C_md01
