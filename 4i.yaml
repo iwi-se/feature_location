@@ -1,0 +1,204 @@
+action: difference
+name-path-mappings:
+  - name: S2
+    paths: [example/i.hpp]
+  - name: S3
+    paths: [example/r.hpp]
+  - name: S6
+    paths: [example/il.hpp]
+  - name: S7
+    paths: [example/rl.hpp]
+  - name: S10
+    paths: [example/ic.hpp]
+  - name: S11
+    paths: [example/rc.hpp]
+  - name: S14
+    paths: [example/icl.hpp]
+  - name: S15
+    paths: [example/rcl.hpp]
+options:
+  minimum_trace_weight: 1
+  only_named_nodes: false
+  language: cpp
+  debug: false
+  only_specific_nodes:
+    node_types_file: "node_types_cpp.json"
+    node_types: [
+      "statement",
+      "expression",
+      "declaration",
+      "type_specifier",
+      "function_definition",
+      "preproc_include"
+    ]
+expressions:
+  # Iterative
+  - left-side: [S2]
+    right-side: [S7, S11]
+    labels:
+      - 4i_I_md01
+  - left-side: [S2]
+    right-side: [S15]
+    labels:
+      - 4i_I_md02
+  - left-side: [S6, S10]
+    right-side: [S7, S11]
+    labels:
+      - 4i_I_md03
+  - left-side: [S6, S10]
+    right-side: [S7, S11]
+    labels:
+      - 4i_I_md04
+
+  # Recursive
+  - left-side: [S3]
+    right-side: [S6, S10]
+    labels:
+      - 4i_R_md01
+  - left-side: [S3]
+    right-side: [S14]
+    labels:
+      - 4i_R_md02
+  - left-side: [S7, S11]
+    right-side: [S6, S10]
+    labels:
+      - 4i_R_md03
+  - left-side: [S7, S11]
+    right-side: [S14]
+    labels:
+      - 4i_R_md04
+
+  # Logging
+  - left-side: [S6, S7]
+    right-side: [S2, S11]
+    labels:
+      - 4i_L_md01
+  - left-side: [S6, S7]
+    right-side: [S3, S10]
+    labels:
+      - 4i_L_md02
+  - left-side: [S6, S7]
+    right-side: [S10, S11]
+    labels:
+      - 4i_L_md03
+  - left-side: [S6, S15]
+    right-side: [S2, S11]
+    labels:
+      - 4i_L_md04
+  - left-side: [S6, S15]
+    right-side: [S3, S10]
+    labels:
+      - 4i_L_md05
+  - left-side: [S6, S15]
+    right-side: [S10, S11]
+    labels:
+      - 4i_L_md06
+  - left-side: [S7, S14]
+    right-side: [S2, S11]
+    labels:
+      - 4i_L_md07
+  - left-side: [S7, S14]
+    right-side: [S3, S10]
+    labels:
+      - 4i_L_md08
+  - left-side: [S7, S14]
+    right-side: [S10, S11]
+    labels:
+      - 4i_L_md09
+
+  # Checking
+  - left-side: [S10, S11]
+    right-side: [S2, S7]
+    labels:
+      - 4i_C_md01
+  - left-side: [S10, S11]
+    right-side: [S3, S6]
+    labels:
+      - 4i_C_md02
+  - left-side: [S10, S11]
+    right-side: [S6, S7]
+    labels:
+      - 4i_C_md03
+  - left-side: [S10, S15]
+    right-side: [S2, S7]
+    labels:
+      - 4i_C_md04
+  - left-side: [S10, S15]
+    right-side: [S3, S6]
+    labels:
+      - 4i_C_md05
+  - left-side: [S10, S15]
+    right-side: [S6, S7]
+    labels:
+      - 4i_C_md06
+  - left-side: [S11, S14]
+    right-side: [S2, S7]
+    labels:
+      - 4i_C_md07
+  - left-side: [S11, S14]
+    right-side: [S3, S6]
+    labels:
+      - 4i_C_md08
+  - left-side: [S11, S14]
+    right-side: [S6, S7]
+    labels:
+      - 4i_C_md09
+
+  # Iterative AND Logging
+  - left-side: [S6]
+    right-side: [S2, S7]
+    labels:
+      - 4i_I_AND_L_md01
+  - left-side: [S6]
+    right-side: [S2, S15]
+    labels:
+      - 4i_I_AND_L_md02
+  - left-side: [S6]
+    right-side: [S7, S10]
+    labels:
+      - 4i_I_AND_L_md03
+  - left-side: [S6]
+    right-side: [S10, S15]
+    labels:
+      - 4i_I_AND_L_md04
+
+run:
+  # Iterative
+  - 4i_I_md01
+  - 4i_I_md02
+  - 4i_I_md03
+  - 4i_I_md04
+
+  # Recursive
+  - 4i_R_md01
+  - 4i_R_md02
+  - 4i_R_md03
+  - 4i_R_md04
+
+  # Logging
+  - 4i_L_md01
+  - 4i_L_md02
+  - 4i_L_md03
+  - 4i_L_md04
+  - 4i_L_md05
+  - 4i_L_md06
+  - 4i_L_md07
+  - 4i_L_md08
+  - 4i_L_md09
+
+    # Checking
+  - 4i_C_md01
+  - 4i_C_md02
+  - 4i_C_md03
+  - 4i_C_md04
+  - 4i_C_md05
+  - 4i_C_md06
+  - 4i_C_md07
+  - 4i_C_md08
+  - 4i_C_md09
+
+  # Iterative AND Logging
+  - 4i_I_AND_L_md01
+  - 4i_I_AND_L_md02
+  - 4i_I_AND_L_md03
+  - 4i_I_AND_L_md04
