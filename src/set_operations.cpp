@@ -192,7 +192,7 @@ MatchList matchTrees(std::vector<std::shared_ptr<Node>> trees,
     stack.pop();
     MatchList nodeMatches;
 
-    if (isIncludedNodeType(currentNode, config))
+    if (isIncludedNodeType(currentNode, config) && currentNode->getConnectedLeafWeight() >= config.options.minimumTraceWeight)
     {
       std::vector<std::shared_ptr<Node>> remainingTrees { trees.begin() + 1,
                                                           trees.end() };
