@@ -1,6 +1,7 @@
 #include "configuration.hpp"
 #include <iostream>
 #include <yaml-cpp/yaml.h>
+#include <fstream>
 
 Configuration::Configuration(const std::string &filename)
 {
@@ -35,6 +36,19 @@ Configuration::Configuration(const std::string &filename)
               .as<std::vector<std::string>>();
     options.onlySpecificNodes
         = std::optional<Options::OnlySpecificNodes>(onlySpecificNodes);
+
+    // Read the node types file
+    try
+    {
+      
+      std::ifstream f(onlySpecificNodes.nodeTypesFile);
+      options.nodeTypes = json::parse(f);
+    }
+    catch (const std::exception &e)
+    {
+      std::cerr << "Error parsing node types file: " << onlySpecificNodes.nodeTypesFile << " "
+                << e.what() << std::endl;
+    }
   }
 
   for (const auto &expression : config["expressions"])

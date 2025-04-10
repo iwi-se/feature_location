@@ -165,7 +165,7 @@ std::vector<std::shared_ptr<Node>> Node::getPointerToEveryNode()
   return nodes;
 }
 
-std::string Node::getSubtreeHash()
+const std::string& Node::getSubtreeHash()
 {
   if (subtreeHash.empty())
   {

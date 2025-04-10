@@ -7,6 +7,9 @@
 #include <string>
 #include <vector>
 #include <yaml-cpp/yaml.h>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 using NamePathMappings = std::map<std::string, std::vector<std::string>>;
 
@@ -24,6 +27,7 @@ class Options
     std::string                      language;
     bool                             debug {};
     std::optional<OnlySpecificNodes> onlySpecificNodes;
+    json                             nodeTypes;
 };
 
 const std::vector<std::string> cppFileExtensions  = { ".cpp", ".h", ".hpp" };

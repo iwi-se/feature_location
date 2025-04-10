@@ -151,7 +151,8 @@ std::string renderCharacterLines(
   return result;
 }
 
-std::string renderDifference(DifferenceResult difference, Configuration config)
+std::string renderDifference(DifferenceResult     difference,
+                             const Configuration &config)
 {
   std::string result { "<html><body>" };
 
@@ -196,7 +197,7 @@ void debugPrintMarkedCharacters(
 }
 
 std::string renderFile(std::filesystem::path              file,
-                       Configuration                      config,
+                       const Configuration               &config,
                        std::vector<std::shared_ptr<Node>> greenNodes,
                        std::vector<std::shared_ptr<Node>> redNodes)
 {

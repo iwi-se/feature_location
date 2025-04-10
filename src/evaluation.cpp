@@ -8,9 +8,10 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <thread>
 
 DifferenceResult evaluateExpression(SingleFileExpression expression,
-                                    Configuration        config)
+                                    const Configuration &config)
 {
   std::vector<std::shared_ptr<Node>> leftSideTrees {};
   for (const auto &leftSideSystem : expression.leftSide)
@@ -37,8 +38,27 @@ DifferenceResult evaluateExpression(SingleFileExpression expression,
   return differenceResult;
 }
 
+class EvaluateExpression
+{
+  public:
+    EvaluateExpression(SingleFileExpression expression,
+                       const Configuration &config)
+        : expression(expression)
+        , config(config)
+    { }
+
+    void run()
+    {
+      differenceResult = evaluateExpression(expression, config);
+    }
+
+    SingleFileExpression expression;
+    const Configuration &config;
+    DifferenceResult     differenceResult;
+};
+
 std::vector<DifferenceResult> runExpression(ExpressionSystemName expression,
-                                            Configuration        config)
+                                            const Configuration &config)
 {
   ExpressionAllFiles expressionFiles = getExpressionFiles(expression, config);
   std::vector<SingleFileExpression> subexpressions
@@ -47,21 +67,31 @@ std::vector<DifferenceResult> runExpression(ExpressionSystemName expression,
 
   // Print the expression being processed
   std::cout << "Processing expression: " << expression.labels[0] << " ("
-            << subexpressions.size() << " files) ";
-  std::cout.flush();
+            << subexpressions.size() << " files) " << std::endl;
 
   // Progress tracking variables
   int totalFiles = subexpressions.size();
 
+  std::vector<std::thread>                         threads {};
+  std::vector<std::shared_ptr<EvaluateExpression>> evaluateExpressions {};
   for (size_t i = 0; i < subexpressions.size(); ++i)
   {
-    // Update file counter for every file
-    std::cout << "\rProcessing expression: " << expression.labels[0] << " ("
-              << subexpressions.size() << " files) " << (i + 1) << "/"
-              << totalFiles << " " << subexpressions[i].leftSide[0].relative << std::string(50, ' ');
-    std::cout.flush();
+    auto evaluateExpression
+        = std::make_shared<EvaluateExpression>(subexpressions[i], config);
+    threads.push_back(
+        std::thread(&EvaluateExpression::run, evaluateExpression));
+    evaluateExpressions.push_back(evaluateExpression);
+  }
 
-    auto differenceResult { evaluateExpression(subexpressions[i], config) };
+  for (size_t i = 0; i < threads.size(); ++i)
+  {
+    std::cout << "Waiting for " << expression.labels[0] << " ("
+              << subexpressions.size() << " files) " << (i + 1) << "/"
+              << totalFiles << " " << subexpressions[i].leftSide[0].relative
+              << std::endl;
+    threads[i].join();
+    std::cout << "Joined " << (i + 1) << "/" << totalFiles << std::endl;
+    auto differenceResult { evaluateExpressions[i]->differenceResult };
     differenceResult.relativePath = subexpressions[i].leftSide[0].relative;
     differenceResults.push_back(differenceResult);
   }
@@ -92,8 +122,8 @@ bool hasOnlySingleFileSystems(ExpressionAllFiles expression)
   return lengthIsOne;
 }
 
-std::vector<BasePlusRelativePath> getFilesForSystem(std::string   systemName,
-                                                    Configuration config)
+std::vector<BasePlusRelativePath> getFilesForSystem(std::string systemName,
+                                                    const Configuration &config)
 {
   std::vector<std::string> paths = config.getPathsForSystem(systemName);
   std::vector<BasePlusRelativePath> allFiles {};
@@ -122,7 +152,7 @@ std::vector<BasePlusRelativePath> getFilesForSystem(std::string   systemName,
 }
 
 ExpressionAllFiles getExpressionFiles(ExpressionSystemName expression,
-                                      Configuration        config)
+                                      const Configuration &config)
 {
   ExpressionAllFiles expressionAllFiles {};
   for (const auto &systemName : expression.leftSide)

@@ -4,12 +4,13 @@
 #include "expression.hpp"
 #include "render.hpp"
 #include "tree.hpp"
+#include <chrono>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
-#include <vector>
-#include <chrono>
 #include <iomanip>
+#include <iostream>
+#include <thread>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -23,32 +24,46 @@ void ensureResultsDirectoryExists()
   }
 }
 
+void renderResultToFile(const DifferenceResult &differenceResult,
+                        const Configuration    &config,
+                        const std::string      &expressionName)
+{
+  std::string htmlResult = renderDifference(differenceResult, config);
+  auto        relPathString { differenceResult.relativePath.string() };
+  std::replace(relPathString.begin(), relPathString.end(), '/', '_');
+  fs::path outputFileName
+      = fs::path("results")
+        / ("difference_" + expressionName
+           + (relPathString == "" ? "" : "_" + relPathString) + ".html");
+  std::ofstream outputFile(outputFileName);
+  outputFile << htmlResult;
+  outputFile.close();
+}
+
 void renderResultsToFiles(std::vector<DifferenceResult> differenceResults,
-                          Configuration                 config,
+                          const Configuration          &config,
                           std::string                   expressionName)
 {
   ensureResultsDirectoryExists();
   std::cout << "Rendering results..." << std::endl;
+  std::vector<std::thread> threads;
 
   for (const auto &differenceResult : differenceResults)
   {
-    std::string htmlResult = renderDifference(differenceResult, config);
-    auto        relPathString { differenceResult.relativePath.string() };
-    std::replace(relPathString.begin(), relPathString.end(), '/', '_');
-    fs::path outputFileName
-        = fs::path("results")
-          / ("difference_" + expressionName
-             + (relPathString == "" ? "" : "_" + relPathString) + ".html");
-    std::ofstream outputFile(outputFileName);
-    outputFile << htmlResult;
-    outputFile.close();
+    threads.push_back(std::thread(renderResultToFile, differenceResult, config, expressionName));
+  }
+
+  for (auto &thread : threads)
+  {
+    thread.join();
   }
 
   std::cout << "Results rendered." << std::endl;
 }
 
 void renderArgoumlBenchmarkResultsToFiles(
-    std::vector<DifferenceResult> differenceResults, Configuration config)
+    std::vector<DifferenceResult> differenceResults,
+    const Configuration          &config)
 {
   ensureResultsDirectoryExists();
 
@@ -95,9 +110,10 @@ int main(int argc, char *argv[])
     }
   }
 
-  auto endTime = std::chrono::high_resolution_clock::now();
+  auto endTime  = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration<double>(endTime - startTime);
-  std::cout << "\nTotal execution time: " << std::fixed << std::setprecision(3) << duration.count() << " seconds" << std::endl;
+  std::cout << "\nTotal execution time: " << std::fixed << std::setprecision(3)
+            << duration.count() << " seconds" << std::endl;
 
   return 0;
 }

@@ -9,28 +9,9 @@
 
 using json = nlohmann::json;
 
-json nodeTypes;
-
-std::vector<std::string>
-    getSupertypes(const std::filesystem::path &nodeTypesFile,
-                  const std::string           &type)
+std::vector<std::string> getSupertypes(const json &nodeTypes, const std::string &type)
 {
   std::vector<std::string> supertypes;
-
-  // Read and parse JSON file
-  if (nodeTypes.empty())
-  {
-    try
-    {
-      std::ifstream f(nodeTypesFile);
-      nodeTypes = json::parse(f);
-    }
-    catch (const std::exception &e)
-    {
-      std::cerr << "Error parsing node types file: " << nodeTypesFile << " " << e.what() << std::endl;
-      return supertypes;
-    }
-  }
 
   // Use stack for iterative traversal
   std::stack<std::string> stack;
@@ -71,8 +52,7 @@ bool isIncludedNodeType(const std::shared_ptr<Node> &node,
   auto supertypes = node->getNodeTypes();
   if (supertypes.empty())
   {
-    supertypes = getSupertypes(config.options.onlySpecificNodes->nodeTypesFile,
-                               node->getTag());
+    supertypes = getSupertypes(config.options.nodeTypes, node->getTag());
     supertypes.push_back(node->getTag());
     node->setNodeTypes(supertypes);
   }

@@ -335,7 +335,7 @@ OutputLines findRefinementTraces(
 
 std::string
     buildArgoumlBenchmarkOutputForFile(DifferenceResult differenceResult,
-                                       Configuration    config)
+                                       const Configuration &config)
 {
   if (config.options.language != "java")
   {
@@ -359,7 +359,7 @@ std::string
 // wrong
 std::string
     buildArgoumlBenchmarkOutput(std::vector<DifferenceResult> differenceResults,
-                                Configuration                 config)
+                                const Configuration                 &config)
 {
   std::string output;
   for (const auto &differenceResult : differenceResults)

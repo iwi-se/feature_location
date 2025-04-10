@@ -8,10 +8,10 @@
 #include <vector>
 
 std::vector<DifferenceResult> runExpression(ExpressionSystemName expression,
-                                            Configuration        config);
+                                            const Configuration        &config);
 
 ExpressionAllFiles getExpressionFiles(ExpressionSystemName expression,
-                                      Configuration        config);
+                                      const Configuration        &config);
 
 std::vector<SingleFileExpression>
     buildFileBasedSubExpressions(ExpressionAllFiles expression);

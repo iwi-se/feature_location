@@ -23,37 +23,47 @@ double calculateEnvironmentSimilarity(const Match &match)
 
   // Count siblings that have equal tsText across all environments
   int equalSiblingsCount = 0;
-  
+
   // Use the first environment as reference
-  if (!environments.empty()) {
-    for (const auto &referenceSibling : environments[0]) {
+  if (!environments.empty())
+  {
+    for (const auto &referenceSibling : environments[0])
+    {
       bool isEqualInAllEnvironments = true;
-      
+
       // Check if this sibling exists with same tsText in all other environments
-      for (size_t i = 1; i < environments.size(); ++i) {
+      for (size_t i = 1; i < environments.size(); ++i)
+      {
         bool foundEqual = false;
-        for (const auto &sibling : environments[i]) {
-          if (referenceSibling->getTsText() == sibling->getTsText()) {
+        for (const auto &sibling : environments[i])
+        {
+          if (referenceSibling->getTsText() == sibling->getTsText())
+          {
             foundEqual = true;
             break;
           }
         }
-        if (!foundEqual) {
+        if (!foundEqual)
+        {
           isEqualInAllEnvironments = false;
           break;
         }
       }
-      
-      if (isEqualInAllEnvironments) {
+
+      if (isEqualInAllEnvironments)
+      {
         equalSiblingsCount++;
       }
     }
   }
-  
-  // Normalize by the size of the first environment (or any environment since they should be same size)
-  double normalizedCount = environments.empty() ? 0.0 : 
-    static_cast<double>(equalSiblingsCount) / environments[0].size();
-    
+
+  // Normalize by the size of the first environment (or any environment since
+  // they should be same size)
+  double normalizedCount
+      = environments.empty()
+            ? 0.0
+            : static_cast<double>(equalSiblingsCount) / environments[0].size();
+
   return normalizedCount;
 }
 
@@ -74,10 +84,9 @@ void sortByDecisionRatio(MatchList &matches, const Configuration &config)
   for (const Match &match : matches)
   {
     // double depthProximity = calculateDepthProximity(pair.first,
-    // pair.second); 
-    double environmentSimilarity =
-        calculateEnvironmentSimilarity(match);
-    int size = match[0]->getConnectedLeafWeight();
+    // pair.second);
+    double environmentSimilarity = calculateEnvironmentSimilarity(match);
+    int    size                  = match[0]->getConnectedLeafWeight();
 
     double decisionRatio = 0.2 * environmentSimilarity + 0.8 * size;
 
@@ -192,7 +201,9 @@ MatchList matchTrees(std::vector<std::shared_ptr<Node>> trees,
     stack.pop();
     MatchList nodeMatches;
 
-    if (isIncludedNodeType(currentNode, config) && currentNode->getConnectedLeafWeight() >= config.options.minimumTraceWeight)
+    if (isIncludedNodeType(currentNode, config)
+        && currentNode->getConnectedLeafWeight()
+               >= config.options.minimumTraceWeight)
     {
       std::vector<std::shared_ptr<Node>> remainingTrees { trees.begin() + 1,
                                                           trees.end() };

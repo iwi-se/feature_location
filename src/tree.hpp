@@ -48,7 +48,7 @@ class Node: public std::enable_shared_from_this<Node>
     void        render(const int &whitespace) const;
     bool        isLeaf() const;
     std::vector<std::shared_ptr<Node>> getPointerToEveryNode();
-    std::string                        getSubtreeHash();
+    const std::string&                        getSubtreeHash();
     int                                getConnectedLeafWeight();
     bool                 isDescendant(const std::shared_ptr<Node> &node);
     const SourcePosition getSourcePosition() const;
