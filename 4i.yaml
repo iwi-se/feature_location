@@ -228,29 +228,6 @@ expressions:
     labels:
       - 4i_R_AND_L_AND_C_md01
 
-  # Iterative AND Recursive AND Logging AND Checking
-  # Iterative OR Recursive - GIVEN THE CONSTRAINTS: HOW CAN THAT BE?
-  # Iterative OR Recursive OR Logging - GIVEN THE CONSTRAINTS: HOW CAN THAT BE?
-  # Iterative OR Recursive OR Checking - GIVEN THE CONSTRAINTS: HOW CAN THAT BE?
-  #
-  # Actually, the result comprises more than one feature:
-  # Iterative + Recursive, Iterative + Recursive + Logging, Iterative + Recursive + Checking
-  #- left-side: [S2, S3]
-  #  right-side: []
-  #  labels:
-  #    - 4i_I_AND_R_AND_L_AND_C_md01_MUST_BE_CHECKED
-  #    - 4i_I_OR_R_md01_MUST_BE_CHECKED
-  #    - 4i_I_OR_R_OR_L_md01_MUST_BE_CHECKED
-  #    - 4i_I_OR_R_OR_C_md01_MUST_BE_CHECKED
-
-  # Iterative OR Recursive - GIVEN THE CONSTRAINTS: HOW CAN THAT BE?
-  # Actually, the result comprises more than one feature:
-  # Iterative + Recursive, Iterative + Recursive + Logging, Iterative + Recursive + Checking
-  #- left-side: [S2, S3]
-  #  right-side: []
-  #  labels:
-  #    - 4i_I_OR_R_md01_MUST_BE_CHECKED
-
   # Iterative OR Logging
   - left-side: [S2, S7]
     right-side: [S11]
@@ -349,14 +326,6 @@ expressions:
   #  labels:
   #    - 4i_I_OR_R_OR_L_md01_MUST_BE_CHECKED
 
-  # Iterative OR Recursive OR Checking - GIVEN THE CONSTRAINTS: HOW CAN THAT BE?
-  # Actually, the result comprises more than one feature:
-  # Iterative + Recursive, Iterative + Recursive + Logging, Iterative + Recursive + Checking
-  #- left-side: [S2, S3]
-  #  right-side: []
-  #  labels:
-  #    - 4i_I_OR_R_OR_C_md01_MUST_BE_CHECKED
-
   # Iterative OR Logging OR Checking
   - left-side: [S2, S7, S11]
     right-side: [S3]
@@ -431,19 +400,6 @@ run:
   # Iterative_AND_Logging_AND_Checking
   - 4i_I_AND_L_AND_C_md01
 
-  # Recursive AND Logging AND Checking
-  #- 4i_R_AND_L_AND_C_md01
-
-  # Iterative AND Recursive AND Logging AND Checking
-  # Actually, the result comprises more than one feature:
-  #  Iterative + Recursive, Iterative + Recursive + Logging, Iterative + Recursive + Checking
-  #- 4i_I_AND_R_AND_L_AND_C_md01_MUST_BE_CHECKED
-
-  # Iterative OR Recursive - GIVEN THE CONSTRAINTS: HOW CAN THAT BE?
-  # Actually, the result comprises more than one feature:
-  # Iterative + Recursive, Iterative + Recursive + Logging, Iterative + Recursive + Checking
-  #- 4i_I_OR_R_md01_MUST_BE_CHECKED
-
   # Iterative OR Logging
   - 4i_I_OR_L_md01
   - 4i_I_OR_L_md02
@@ -473,16 +429,6 @@ run:
   - 4i_L_OR_C_md02
   - 4i_L_OR_C_md03
   - 4i_L_OR_C_md04
-
-  # Iterative OR Recursive OR Logging - GIVEN THE CONSTRAINTS: HOW CAN THAT BE?
-  # Actually, the result comprises more than one feature:
-  # Iterative + Recursive, Iterative + Recursive + Logging, Iterative + Recursive + Checking
-  #- 4i_I_OR_R_OR_L_md01_MUST_BE_CHECKED
-
-  # Iterative OR Recursive OR Checking - GIVEN THE CONSTRAINTS: HOW CAN THAT BE?
-  # Actually, the result comprises more than one feature:
-  # Iterative + Recursive, Iterative + Recursive + Logging, Iterative + Recursive + Checking
-  #- 4i_I_OR_R_OR_C_md01_MUST_BE_CHECKED
 
   # Iterative OR Logging OR Checking
   - 4i_I_OR_L_OR_C_md01
