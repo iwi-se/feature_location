@@ -228,6 +228,14 @@ expressions:
     labels:
       - 4i_R_AND_L_AND_C_md01
 
+  # Iterative AND Recursive AND Logging AND Checking
+  # Actually, the result comprises more than one feature:
+  #  Iterative + Recursive, Iterative + Recursive + Logging, Iterative + Recursive + Checking
+  - left-side: [S2, S3]
+    right-side: []
+    labels:
+      - 4i_I_AND_R_AND_L_AND_C_md01
+
   # Iterative OR Recursive - GIVEN THE CONSTRAINTS: HOW CAN THAT BE?
   # Actually, the result comprises more than one feature:
   # Iterative + Recursive, Iterative + Recursive + Logging, Iterative + Recursive + Checking
