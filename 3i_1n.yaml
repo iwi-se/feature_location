@@ -32,6 +32,8 @@ options:
       "preproc_include"
     ]
 expressions:
+  # Iterative, 14 minimal differences
+  # 4 commutativity for the 1st minimal difference
   - left-side: [S2, S4]
     right-side: [S1, S7]
     labels:
@@ -46,6 +48,7 @@ expressions:
       - 3i_1n_I_md01c
   - left-side: [S4, S2]
     right-side: [S7, S1]
+  # End of commutativity tests
     labels:
       - 3i_1n_I_md01d
   - left-side: [S2, S4]
@@ -100,58 +103,56 @@ expressions:
     right-side: [S5, S7]
     labels:
       -  3i_1n_I_md14
+
+  # Logging, 14 minimal differences
   - left-side: [S3, S4]
     right-side: [S1, S6]
     labels:
       -  3i_1n_L_md01
   - left-side: [S3, S4]
-    right-side: [S2, S5]
-    labels:
-      -  3i_1n_L_md02
-  - left-side: [S3, S7]
     right-side: [S1, S6]
     labels:
-      -  3i_1n_L_md03
-  - left-side: [S3, S7]
+      -  3i_1n_L_md02
+  - left-side: [S3, S4]
     right-side: [S2, S5]
+    labels:
+      -  3i_1n_L_md03
+  - left-side: [S3, S4]
+    right-side: [S2, S6]
     labels:
       -  3i_1n_L_md04
   - left-side: [S3, S7]
-    right-side: [S5, S6]
-    labels:
-      -  3i_1n_L_md05
-  - left-side: [S3, S8]
     right-side: [S1, S6]
     labels:
-      -  3i_1n_L_md06
-  - left-side: [S3, S8]
+      -  3i_1n_L_md05
+  - left-side: [S3, S7]
     right-side: [S2, S5]
+    labels:
+      -  3i_1n_L_md06
+  - left-side: [S3, S7]
+    right-side: [S5, S6]
     labels:
       -  3i_1n_L_md07
   - left-side: [S3, S8]
-    right-side: [S2, S6]
+    right-side: [S1, S6]
     labels:
       -  3i_1n_L_md08
   - left-side: [S3, S8]
-    right-side: [S5, S6]
+    right-side: [S2, S5]
     labels:
       -  3i_1n_L_md09
-  - left-side: [S4, S7]
-    right-side: [S1, S6]
+  - left-side: [S3, S8]
+    right-side: [S5, S6]
     labels:
       -  3i_1n_L_md10
   - left-side: [S4, S7]
-    right-side: [S2, S5]
+    right-side: [S1, S6]
     labels:
       -  3i_1n_L_md11
   - left-side: [S4, S7]
-    right-side: [S2, S6]
+    right-side: [S2, S5]
     labels:
       -  3i_1n_L_md12
-  - left-side: [S4, S7]
-    right-side: [S5, S6]
-    labels:
-      -  3i_1n_L_md13
   - left-side: [S4, S7]
     right-side: [S2, S6]
     labels:
@@ -160,6 +161,8 @@ expressions:
     right-side: [S5, S6]
     labels:
       -  3i_1n_L_md14
+
+  # Checking, 14 minimal differences
   - left-side: [S5, S6]
     right-side: [S1, S4]
     labels:
@@ -216,6 +219,8 @@ expressions:
     right-side: [S3, S4]
     labels:
       -  3i_1n_C_md14
+
+  # Not Iterative, 14 minimal differences
   - left-side: [S1, S7]
     right-side: [S2, S4]
     labels:
@@ -272,6 +277,8 @@ expressions:
     right-side: [S4, S6]
     labels:
       -  3i_1n_NOT_I_md14
+
+  # Not Logging, 14 minimal differences
   - left-side: [S1, S6]
     right-side: [S3, S4]
     labels:
@@ -289,7 +296,7 @@ expressions:
     labels:
       -  3i_1n_NOT_L_md04
   - left-side: [S2, S5]
-    right-side: [S3, S7]
+    right-side: [S3, S4]
     labels:
       -  3i_1n_NOT_L_md05
   - left-side: [S2, S5]
@@ -321,13 +328,15 @@ expressions:
     labels:
       -  3i_1n_NOT_L_md12
   - left-side: [S5, S7]
-    right-side: [S2, S8]
+    right-side: [S3, S8]
     labels:
       -  3i_1n_NOT_L_md13
   - left-side: [S5, S6]
     right-side: [S4, S7]
     labels:
       -  3i_1n_NOT_L_md14
+
+  # CONTINUE HERE    
   - left-side: [S1, S4]
     right-side: [S5, S6]
     labels:
