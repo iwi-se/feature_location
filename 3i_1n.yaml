@@ -336,7 +336,7 @@ expressions:
     labels:
       -  3i_1n_NOT_L_md14
 
-  # CONTINUE HERE    
+  # Not Checking, 14 minimal differences
   - left-side: [S1, S4]
     right-side: [S5, S6]
     labels:
@@ -393,8 +393,10 @@ expressions:
     right-side: [S6, S7]
     labels:
       -  3i_1n_NOT_C_md14
+
+  # Iterative And Logging, 4 minimsl differences
   - left-side: [S4, S8]
-    right-side: [S2, S2]
+    right-side: [S2, S3]
     labels:
       -  3i_1n_I_AND_L_md01
   - left-side: [S4, S8]
@@ -409,6 +411,8 @@ expressions:
     right-side: [S6, S7]
     labels:
       -  3i_1n_I_AND_L_md04
+
+  # Iterative And Checking, 4 minimal differences
   - left-side: [S6, S8]
     right-side: [S2, S5]
     labels:
@@ -425,6 +429,8 @@ expressions:
     right-side: [S4, S7]
     labels:
       -  3i_1n_I_AND_C_md04
+
+  # Logging And Checking, 4 minimal differences
   - left-side: [S7, S8]
     right-side: [S3, S5]
     labels:
@@ -441,19 +447,23 @@ expressions:
     right-side: [S4, S6]
     labels:
       -  3i_1n_L_AND_C_md04
+
+  # Iterative And Logging And Checking, 1 minimal difference
   - left-side: [S8]
     right-side: [S4, S6, S7]
     labels:
       -  3i_1n_I_AND_L_AND_C_md01
-  - left-side: [S7, S8]
-    right-side: [S3, S5]
-    labels:
-      -  3i_1n_I_OR_L_md01
+
+  # Iterative Or Logging, 4 minimal differences
   - left-side: [S2, S3]
     right-side: [S1, S5]
     labels:
-      -  3i_1n_I_OR_L_md02
+      -  3i_1n_I_OR_L_md01
   - left-side: [S2, S7]
+    right-side: [S1, S5]
+    labels:
+      -  3i_1n_I_OR_L_md02
+  - left-side: [S3, S6]
     right-side: [S1, S5]
     labels:
       -  3i_1n_I_OR_L_md03
@@ -461,6 +471,8 @@ expressions:
     right-side: [S1, S5]
     labels:
       -  3i_1n_I_OR_L_md04
+
+  # Iterative Or Checking, 4 minimal differences
   - left-side: [S2, S5]
     right-side: [S1, S3]
     labels:
@@ -474,9 +486,11 @@ expressions:
     labels:
       -  3i_1n_I_OR_C_md03
   - left-side: [S4, S7]
-    right-side: [S1, S4]
+    right-side: [S1, S3]
     labels:
       -  3i_1n_I_OR_C_md04
+
+  # Logging Or Checking, 4 minimal differences
   - left-side: [S3, S5]
     right-side: [S1, S2]
     labels:
@@ -493,62 +507,134 @@ expressions:
     right-side: [S1, S2]
     labels:
       -  3i_1n_L_OR_C_md04
-  - left-side: [S2, S3, S4, S5, S6, S7, S8]
-    right-side: []
-    labels:
-      - 3i_1n_I_OR_L_OR_C_md01
+
+  # Iterative Or Logging Or Checking, 1 minimal difference
+  #- left-side: [S2, S3, S4, S5, S6, S7, S8]
+  #  right-side: []
+  #  labels:
+  #    - 3i_1n_I_OR_L_OR_C_md01
+
+  # Not Iterative And Not Logging, 4 minimal differences
   - left-side: [S1, S5]
     right-side: [S2, S3]
     labels:
-      -  3i_1n_NOT_I_OR_NOT_L_md01
+      -  3i_1n_NOT_I_AND_NOT_L_md01
   - left-side: [S1, S5]
     right-side: [S2, S7]
     labels:
-      -   3i_1n_NOT_I_OR_NOT_L_md02
+      -   3i_1n_NOT_I_AND_NOT_L_md02
   - left-side: [S1, S5]
     right-side: [S3, S6]
     labels:
-      -  3i_1n_NOT_I_OR_NOT_L_md03
+      -  3i_1n_NOT_I_AND_NOT_L_md03
   - left-side: [S1, S5]
     right-side: [S6, S7]
     labels:
-      -   3i_1n_NOT_I_OR_NOT_L_md04
+      -   3i_1n_NOT_I_AND_NOT_L_md04
+
+  # Not Iterative And Not Checking, 4 minimal differences
   - left-side: [S1, S3]
     right-side: [S2, S5]
     labels:
-      -  3i_1n_NOT_I_OR_NOT_C_md01
+      -  3i_1n_NOT_I_AND_NOT_C_md01
   - left-side: [S1, S3]
     right-side: [S2, S7]
     labels:
-      -   3i_1n_NOT_I_OR_NOT_C_md02
+      -   3i_1n_NOT_I_AND_NOT_C_md02
   - left-side: [S1, S3]
     right-side: [S4, S5]
     labels:
-      -  3i_1n_NOT_I_OR_NOT_C_md03
+      -  3i_1n_NOT_I_AND_NOT_C_md03
   - left-side: [S1, S3]
     right-side: [S4, S7]
     labels:
-      -   3i_1n_NOT_I_OR_NOT_C_md04
+      -   3i_1n_NOT_I_AND_NOT_C_md04
+
+  # Not Logging And Not Checking, 4 minimal differences
   - left-side: [S1, S2]
     right-side: [S3, S5]
     labels:
-      -  3i_1n_NOT_L_OR_NOT_C_md01
+      -  3i_1n_NOT_L_AND_NOT_C_md01
   - left-side: [S1, S2]
     right-side: [S3, S6]
     labels:
-      -   3i_1n_NOT_L_OR_NOT_C_md02
-  - left-side: [S1, S3]
+      -   3i_1n_NOT_L_AND_NOT_C_md02
+  - left-side: [S1, S2]
     right-side: [S4, S5]
     labels:
-      -  3i_1n_NOT_L_OR_NOT_C_md03
+      -  3i_1n_NOT_L_AND_NOT_C_md03
   - left-side: [S1, S2]
     right-side: [S4, S6]
     labels:
-      - 3i_1n_NOT_L_OR_NOT_C_md04
-  - left-side: [S1, S2, S3, S4, S5, S6, S7]
-    right-side: [ ]
+      - 3i_1n_NOT_L_AND_NOT_C_md04
+
+  # Not Iterative And Not Logging And Not Checking, 1 minimal difference
+  - left-side: [S1]
+    right-side: [S2, S3, S5]
     labels:
-      - 3i_1n_NOT_I_OR_NOT_L_OR_NOT_C_md01
+      - 3i_1n_NOT_I_AND_NOT_L_AND_NOT_C_md01
+
+  # Not Iterative Or Not Logging, 4 minimal differences
+  - left-side: [S2, S3]
+    right-side: [S4, S8]
+    labels:
+      - 3i_1n_NOT_I_OR_NOT_L_md01
+  - left-side: [S2, S7]
+    right-side: [S4, S8]
+    labels:
+      - 3i_1n_NOT_I_OR_NOT_L_md02
+  - left-side: [S3, S6]
+    right-side: [S4, S8]
+    labels:
+      - 3i_1n_NOT_I_OR_NOT_L_md03
+  - left-side: [S6, S7]
+    right-side: [S4, S8]
+    labels:
+      - 3i_1n_NOT_I_OR_NOT_md04
+
+  # Not Iterative Or Not Checking, 4 minimal differences
+  - left-side: [S2, S5]
+    right-side: [S6, S8]
+    labels:
+      - 3i_1n_NOT_I_OR_NOT_C_md01
+  - left-side: [S2, S7]
+    right-side: [S6, S8]
+    labels:
+      - 3i_1n_NOT_I_OR_NOT_C_md02
+  - left-side: [S4, S5]
+    right-side: [S6, S8]
+    labels:
+      - 3i_1n_NOT_I_OR_NOT_C_md03
+  - left-side: [S4, S7]
+    right-side: [S6, S8]
+    labels:
+      - 3i_1n_NOT_I_OR_NOT_C_md04
+
+  # Not Logging Or Not Checking, 4 minimal differences
+  - left-side: [S3, S5]
+    right-side: [S7, S8]
+    labels:
+      - 3i_1n_NOT_L_OR_NOT_C_md01
+  - left-side: [S3, S6]
+    right-side: [S7, S8]
+    labels:
+      - 3i_1n_NOT_L_OR_NOT_C_md02
+  - left-side: [S4, S5]
+    right-side: [S7, S8]
+    labels:
+      - 3i_1n_NOT_L_OR_NOT_C_md03
+  - left-side: [S4, S6]
+    right-side: [S7, S8]
+    labels:
+      - 3i_1n_NOT_L_OR_NOT_C_md04
+
+  # Not Iterative Or Not Logging Or Not Checking, 1 minimal difference
+  #- left-side: [S1, S2, S3, S4, S5, S6, S7]
+  #  right-side: []
+  #  labels:
+  #    - 3i_1n_NOT_I_OR_NOT_L_OR_NOT_C_md01
+
+  # Iterative And Not Logging And Not Checking, 3 minimal differences
   - left-side: [S2]
     right-side: [S1, S4]
     labels:
@@ -561,18 +647,24 @@ expressions:
     right-side: [S1, S8]
     labels:
       - 3i_1n_I_AND_NOT_L_AND_NOT_C_md03
+
+  # Not Iterative And Logging And Not Checking, 3 minimal differences
+
   - left-side: [S3]
     right-side: [S1, S4]
     labels:
       - 3i_1n_NOT_I_AND_L_AND_NOT_C_md01
   - left-side: [S3]
-    right-side: [S1, S8]
+    right-side: [S1, S7]
     labels:
       - 3i_1n_NOT_I_AND_L_AND_NOT_C_md02
   - left-side: [S3]
-    right-side: [S1, S4]
+    right-side: [S1, S8]
     labels:
       - 3i_1n_NOT_I_AND_L_AND_NOT_C_md03
+
+  # Not Iterative And Not Logging And Checking, 3 minimal differences
+
   - left-side: [S5]
     right-side: [S1, S6]
     labels:
@@ -585,71 +677,102 @@ expressions:
     right-side: [S1, S8]
     labels:
       - 3i_1n_NOT_I_AND_NOT_L_AND_C_md03
+
+  # Iterative And Logging And Not Checking, 3 minimal differences
+
   - left-side: [S4]
     right-side: [S1, S8]
     labels:
       - 3i_1n_I_AND_L_AND_NOT_C_md01
+
   - left-side: [S4]
     right-side: [S2, S8]
     labels:
       - 3i_1n_I_AND_L_AND_NOT_C_md02
+
   - left-side: [S4]
     right-side: [S3, S8]
     labels:
-      - 3i_1n_I_AND_L_AND_NOT_C_md03
+      - 3i_1n_I_AND_L_AND_NOT_C_md02
+
+  # Iterative And Not Logging And Checking, 3 minimal differences
+
   - left-side: [S6]
     right-side: [S1, S8]
     labels:
       - 3i_1n_I_AND_NOT_L_AND_C_md01
+
   - left-side: [S6]
     right-side: [S2, S8]
     labels:
       - 3i_1n_I_AND_NOT_L_AND_C_md02
+
   - left-side: [S6]
     right-side: [S5, S8]
     labels:
       - 3i_1n_I_AND_NOT_L_AND_C_md03
+
+  # Not Iterative And Logging And Checking, 3 minimal differences
+
   - left-side: [S7]
     right-side: [S1, S8]
     labels:
-      - 3i_1n_I_AND_NOT_L_AND_C_md01
+      - 3i_1n_NOT_I_AND_L_AND_C_md01
+
   - left-side: [S7]
     right-side: [S3, S8]
     labels:
-      - 3i_1n_I_AND_NOT_L_AND_C_md02
-  - left-side: [S67]
+      - 3i_1n_NOT_I_AND_L_AND_C_md02
+
+  - left-side: [S7]
     right-side: [S5, S8]
     labels:
-      - 3i_1n_I_AND_NOT_L_AND_C_md03
+      - 3i_1n_NOT_I_AND_L_AND_C_md03
+
+  # Iterative Or Not Logging Or Not Checking, 1 minimal difference
+  
   - left-side: [S1, S2, S3, S4, S5, S6, S8]
     right-side: []
     labels:
       - 3i_1n_I_OR_NOT_L_OR_NOT_C_md1
+  # Not Iterative Or Logging Or Not Checking, 1 minimal difference
+  
   - left-side: [S1, S2, S3, S4, S5, S7, S8]
     right-side: []
     labels:
       - 3i_1n_NOT_I_OR_L_OR_NOT_C_md1
-  - left-side: [S1, S2, S3, S4, S5, S7, S8]
-    right-side: []
-    labels:
-      - 3i_1n_NOT_I_OR_L_OR_NOT_C_md1
+
+  # Not Iterative Or Not Logging Or Checking, 1 minimal difference
+
   - left-side: [S1, S2, S3, S5, S6, S7, S8]
     right-side: []
     labels:
       - 3i_1n_NOT_I_OR_NOT_L_OR_C_md1
+
+  # Iterative Or Logging Or Not Checking, 1 minimal difference
+
   - left-side: [S1, S2, S3, S4, S6, S7, S8]
     right-side: []
     labels:
-      - 3i_1n_I_OR_L_OR_NOT_C_md1
+      - 3i_1n_NOT_I_OR_L_OR_NOT_C_md1
+
+  # Iterative Or Not Logging Or Checking, 1 minimal difference
+
   - left-side: [S1, S2, S4, S5, S6, S7, S8]
     right-side: []
     labels:
       - 3i_1n_I_OR_NOT_L_OR_C_md1
+
+  # Not Iterative Or Logging Or Checking, 1 minimal difference
+
   - left-side: [S1, S3, S4, S5, S6, S7, S8]
     right-side: []
     labels:
       - 3i_1n_NOT_I_OR_L_OR_C_md1
+
 run:
+  # Iterative
+
   - 3i_1n_I_md01a
   - 3i_1n_I_md01b
   - 3i_1n_I_md01c
@@ -667,6 +790,9 @@ run:
   - 3i_1n_I_md12
   - 3i_1n_I_md13
   - 3i_1n_I_md14
+
+  # Logging
+
   - 3i_1n_L_md01
   - 3i_1n_L_md02
   - 3i_1n_L_md03
@@ -681,6 +807,9 @@ run:
   - 3i_1n_L_md12
   - 3i_1n_L_md13
   - 3i_1n_L_md14
+
+  # Checking
+
   - 3i_1n_C_md01
   - 3i_1n_C_md02
   - 3i_1n_C_md03
@@ -695,6 +824,9 @@ run:
   - 3i_1n_C_md12
   - 3i_1n_C_md13
   - 3i_1n_C_md14
+
+  # Not Iterative
+
   - 3i_1n_NOT_I_md01
   - 3i_1n_NOT_I_md02
   - 3i_1n_NOT_I_md03
@@ -709,6 +841,9 @@ run:
   - 3i_1n_NOT_I_md12
   - 3i_1n_NOT_I_md13
   - 3i_1n_NOT_I_md14
+
+  # Not Logging
+
   - 3i_1n_NOT_L_md01
   - 3i_1n_NOT_L_md02
   - 3i_1n_NOT_L_md03
@@ -723,6 +858,9 @@ run:
   - 3i_1n_NOT_L_md12
   - 3i_1n_NOT_L_md13
   - 3i_1n_NOT_L_md14
+
+  # Not Checking
+
   - 3i_1n_NOT_C_md01
   - 3i_1n_NOT_C_md02
   - 3i_1n_NOT_C_md03
@@ -737,66 +875,167 @@ run:
   - 3i_1n_NOT_C_md12
   - 3i_1n_NOT_C_md13
   - 3i_1n_NOT_C_md14
+
+  # Iterative And Logging
+
   - 3i_1n_I_AND_L_md01
   - 3i_1n_I_AND_L_md02
   - 3i_1n_I_AND_L_md03
   - 3i_1n_I_AND_L_md04
+
+  # Iterative And Checking
+
   - 3i_1n_I_AND_C_md01
   - 3i_1n_I_AND_C_md02
   - 3i_1n_I_AND_C_md03
   - 3i_1n_I_AND_C_md04
+
+  # Logging And Checking
+
   - 3i_1n_L_AND_C_md01
   - 3i_1n_L_AND_C_md02
   - 3i_1n_L_AND_C_md03
   - 3i_1n_L_AND_C_md04
+
+  # Iterative And Logging And Checking
+
   - 3i_1n_I_AND_L_AND_C_md01
+
+  # Iterative Or Logging
+
   - 3i_1n_I_OR_L_md01
   - 3i_1n_I_OR_L_md02
   - 3i_1n_I_OR_L_md03
   - 3i_1n_I_OR_L_md04
+
+  # Iterative Or Checking
+
   - 3i_1n_I_OR_C_md01
   - 3i_1n_I_OR_C_md02
   - 3i_1n_I_OR_C_md03
   - 3i_1n_I_OR_C_md04
+
+  # Logging Or Checking
+
   - 3i_1n_L_OR_C_md01
   - 3i_1n_L_OR_C_md02
   - 3i_1n_L_OR_C_md03
   - 3i_1n_L_OR_C_md04
-  - 3i_1n_I_OR_L_OR_C_md01
+
+  # Iterative Or Logging Or Checking
+
+  # - 3i_1n_I_OR_L_OR_C_md01
+
+  # Not Iterative And Not Logging
+
+  - 3i_1n_NOT_I_AND_NOT_L_md01
+  - 3i_1n_NOT_I_AND_NOT_L_md02
+  - 3i_1n_NOT_I_AND_NOT_L_md03
+  - 3i_1n_NOT_I_AND_NOT_L_md04
+
+  # Not Iterative And Not Checking
+
+  - 3i_1n_NOT_I_AND_NOT_C_md01
+  - 3i_1n_NOT_I_AND_NOT_C_md02
+  - 3i_1n_NOT_I_AND_NOT_C_md03
+  - 3i_1n_NOT_I_AND_NOT_C_md04
+
+  # Not Logging And Not Checking
+
+  - 3i_1n_NOT_L_AND_NOT_C_md01
+  - 3i_1n_NOT_L_AND_NOT_C_md02
+  - 3i_1n_NOT_L_AND_NOT_C_md03
+  - 3i_1n_NOT_L_AND_NOT_C_md04
+
+  # Not Iterative And Not Logging And Not Checking
+
+  - 3i_1n_NOT_I_AND_NOT_L_AND_NOT_C_md01
+
+  # Not Iterative Or Not Logging
+
   - 3i_1n_NOT_I_OR_NOT_L_md01
   - 3i_1n_NOT_I_OR_NOT_L_md02
   - 3i_1n_NOT_I_OR_NOT_L_md03
   - 3i_1n_NOT_I_OR_NOT_L_md04
+
+  # Not Iterative Or Not Checking
+
   - 3i_1n_NOT_I_OR_NOT_C_md01
   - 3i_1n_NOT_I_OR_NOT_C_md02
   - 3i_1n_NOT_I_OR_NOT_C_md03
   - 3i_1n_NOT_I_OR_NOT_C_md04
+
+  # Not Logging Or Not Checking
+
   - 3i_1n_NOT_L_OR_NOT_C_md01
   - 3i_1n_NOT_L_OR_NOT_C_md02
   - 3i_1n_NOT_L_OR_NOT_C_md03
   - 3i_1n_NOT_L_OR_NOT_C_md04
-  - 3i_1n_NOT_I_OR_NOT_L_OR_NOT_C_md01
+
+  # Not Iterative Or Not Logging Or Not Checking
+
+  # - 3i_1n_NOT_I_OR_NOT_L_OR_NOT_C_md01
+
+  # Iterative And Not Logging And Not Checking
+
   - 3i_1n_I_AND_NOT_L_AND_NOT_C_md01
   - 3i_1n_I_AND_NOT_L_AND_NOT_C_md02
   - 3i_1n_I_AND_NOT_L_AND_NOT_C_md03
+
+  # Not Iterative And Logging And Not Checking
+
   - 3i_1n_NOT_I_AND_L_AND_NOT_C_md01
   - 3i_1n_NOT_I_AND_L_AND_NOT_C_md02
   - 3i_1n_NOT_I_AND_L_AND_NOT_C_md03
+
+  # Not Iterative And Not Logging And Checking
+
   - 3i_1n_NOT_I_AND_NOT_L_AND_C_md01
   - 3i_1n_NOT_I_AND_NOT_L_AND_C_md02
   - 3i_1n_NOT_I_AND_NOT_L_AND_C_md03
+
+  # Iterative And Logging And Not Checking
+
   - 3i_1n_I_AND_L_AND_NOT_C_md01
   - 3i_1n_I_AND_L_AND_NOT_C_md02
   - 3i_1n_I_AND_L_AND_NOT_C_md03
+
+  # Iterative And Not Logging And Checking
+
   - 3i_1n_I_AND_NOT_L_AND_C_md01
   - 3i_1n_I_AND_NOT_L_AND_C_md02
   - 3i_1n_I_AND_NOT_L_AND_C_md03
+
+  # Not Iterative And Logging And Checking
+
   - 3i_1n_NOT_I_AND_L_AND_C_md01
   - 3i_1n_NOT_I_AND_L_AND_C_md02
   - 3i_1n_NOT_I_AND_L_AND_C_md03
-  - 3i_1n_I_OR_NOT_L_AND_NOT_C_md01
+
+  # Iterative Or Not Logging Or Not Checking
+
+  - 3i_1n_I_OR_NOT_L_OR_NOT_C_md01
+
+  # Not Iterative Or Logging Or Not Checking
+
   - 3i_1n_NOT_I_OR_L_OR_NOT_C_md01
+
+  # Not Iterative Or Not Logging Or Checking
+
   - 3i_1n_NOT_I_OR_NOT_L_OR_C_md01
+
+  # Not Iterative Or Not Logging Or Checking
+
+  - 3i_1n_NOT_I_OR_NOT_L_OR_C_md01
+
+  # Iterative Or Logging Or Not Checking
+
   - 3i_1n_I_OR_L_OR_NOT_C_md01
+
+  # Iterative Or Not Logging Or Checking
+
   - 3i_1n_I_OR_NOT_L_OR_C_md01
+
+  # Not Iterative Or Logging Or Checking
+
   - 3i_1n_NOT_I_OR_L_OR_C_md01
