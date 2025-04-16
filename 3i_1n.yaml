@@ -48,9 +48,9 @@ expressions:
       - 3i_1n_I_md01c
   - left-side: [S4, S2]
     right-side: [S7, S1]
-  # End of commutativity tests
     labels:
       - 3i_1n_I_md01d
+  # End of commutativity tests
   - left-side: [S2, S4]
     right-side: [S3, S5]
     labels:
