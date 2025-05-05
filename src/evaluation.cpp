@@ -1,3 +1,4 @@
+#include <vector>
 #include "evaluation.hpp"
 #include "parser.hpp"
 #include "render.hpp"
@@ -10,32 +11,38 @@
 #include <memory>
 #include <thread>
 
-DifferenceResult evaluateExpression(SingleFileExpression expression,
-                                    const Configuration &config)
+SingleFileExpressionResult evaluateExpression(SingleFileExpression expression,
+                                              const Configuration &config)
 {
-  std::vector<std::shared_ptr<Node>> leftSideTrees {};
+  std::vector<std::unique_ptr<Node>> leftSideTrees {};
   for (const auto &leftSideSystem : expression.leftSide)
   {
     std::filesystem::path fullPath
         = config.basePath / leftSideSystem.fullPath();
-    std::shared_ptr<Node> root = parseFile(fullPath, config.options.language);
+    leftSideTrees.push_back(parseFile(fullPath, config.options.language));
     if (config.options.debug)
     {
       std::cout << "Parsed file: " << fullPath << std::endl;
-      root->render(0);
+      leftSideTrees.back()->render(0);
     }
-    leftSideTrees.push_back(root);
   }
-  std::vector<std::shared_ptr<Node>> rightSideTrees {};
+  std::vector<std::unique_ptr<Node>> rightSideTrees {};
   for (const auto &rightSideSystem : expression.rightSide)
   {
     std::filesystem::path fullPath
         = config.basePath / rightSideSystem.fullPath();
-    std::shared_ptr<Node> root = parseFile(fullPath, config.options.language);
-    rightSideTrees.push_back(root);
+    rightSideTrees.push_back(parseFile(fullPath, config.options.language));
+    if (config.options.debug)
+    {
+      std::cout << "Parsed file: " << fullPath << std::endl;
+      rightSideTrees.back()->render(0);
+    }
   }
   auto differenceResult { difference(leftSideTrees, rightSideTrees, config) };
-  return differenceResult;
+  SingleFileExpressionResult result { differenceResult,
+                                      std::move(leftSideTrees),
+                                      std::move(rightSideTrees) };
+  return result;
 }
 
 class EvaluateExpression
@@ -52,18 +59,18 @@ class EvaluateExpression
       differenceResult = evaluateExpression(expression, config);
     }
 
-    SingleFileExpression expression;
-    const Configuration &config;
-    DifferenceResult     differenceResult;
+    SingleFileExpression       expression;
+    const Configuration       &config;
+    SingleFileExpressionResult differenceResult;
 };
 
-std::vector<DifferenceResult> runExpression(ExpressionSystemName expression,
-                                            const Configuration &config)
+std::vector<SingleFileExpressionResult>
+    runExpression(ExpressionSystemName expression, const Configuration &config)
 {
   ExpressionAllFiles expressionFiles = getExpressionFiles(expression, config);
   std::vector<SingleFileExpression> subexpressions
       = buildFileBasedSubExpressions(expressionFiles);
-  std::vector<DifferenceResult> differenceResults {};
+  std::vector<SingleFileExpressionResult> singleFileResults {};
 
   // Print the expression being processed
   std::cout << "Processing expression: " << expression.labels[0] << " ("
@@ -72,12 +79,12 @@ std::vector<DifferenceResult> runExpression(ExpressionSystemName expression,
   // Progress tracking variables
   int totalFiles = subexpressions.size();
 
-  std::vector<std::thread>                         threads {};
-  std::vector<std::shared_ptr<EvaluateExpression>> evaluateExpressions {};
+  std::vector<std::thread>          threads {};
+  std::vector<EvaluateExpression *> evaluateExpressions {};
   for (size_t i = 0; i < subexpressions.size(); ++i)
   {
     auto evaluateExpression
-        = std::make_shared<EvaluateExpression>(subexpressions[i], config);
+        = new EvaluateExpression(subexpressions[i], config);
     threads.push_back(
         std::thread(&EvaluateExpression::run, evaluateExpression));
     evaluateExpressions.push_back(evaluateExpression);
@@ -91,15 +98,21 @@ std::vector<DifferenceResult> runExpression(ExpressionSystemName expression,
               << std::endl;
     threads[i].join();
     std::cout << "Joined " << (i + 1) << "/" << totalFiles << std::endl;
-    auto differenceResult { evaluateExpressions[i]->differenceResult };
-    differenceResult.relativePath = subexpressions[i].leftSide[0].relative;
-    differenceResults.push_back(differenceResult);
+    auto &expressionResult { evaluateExpressions[i]->differenceResult };
+    expressionResult.differenceResult.relativePath
+        = subexpressions[i].leftSide[0].relative;
+    singleFileResults.push_back(std::move(evaluateExpressions[i]->differenceResult));
+  }
+
+  for (auto &evaluateExpression : evaluateExpressions)
+  {
+    delete evaluateExpression;
   }
 
   // Print completed message
   std::cout << "\nProcessing expressions done." << std::endl;
 
-  return differenceResults;
+  return singleFileResults;
 }
 
 bool hasOnlySingleFileSystems(ExpressionAllFiles expression)

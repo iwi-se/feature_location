@@ -10,10 +10,10 @@
 
 double calculateEnvironmentSimilarity(const Match &match)
 {
-  std::vector<std::vector<std::shared_ptr<Node>>> environments;
+  std::vector<std::vector<Node *>> environments;
   for (const auto &node : match)
   {
-    std::vector<std::shared_ptr<Node>> environment;
+    std::vector<Node *> environment;
     for (const auto &sibling : node->getParent()->getChildren())
     {
       environment.push_back(sibling);
@@ -144,12 +144,12 @@ void removeOverlappingPairs(MatchList &matches)
   matches = result;
 }
 
-MatchList matchNodeInTrees(const std::shared_ptr<Node>       &node,
-                           std::vector<std::shared_ptr<Node>> trees,
-                           const Configuration               &config)
+MatchList matchNodeInTrees(Node                *node,
+                           std::vector<Node *>  trees,
+                           const Configuration &config)
 {
   MatchList                         matches;
-  std::stack<std::shared_ptr<Node>> stack {};
+  std::stack<Node *> stack {};
   if (trees.size() > 0)
   {
     stack.push(trees[0]);
@@ -190,11 +190,10 @@ MatchList matchNodeInTrees(const std::shared_ptr<Node>       &node,
   return matches;
 }
 
-MatchList matchTrees(std::vector<std::shared_ptr<Node>> trees,
-                     const Configuration               &config)
+MatchList matchTrees(std::vector<Node *> trees, const Configuration &config)
 {
-  std::vector<std::vector<std::shared_ptr<Node>>> matches;
-  std::stack<std::shared_ptr<Node>>               stack { { trees[0] } };
+  std::vector<std::vector<Node *>> matches;
+  std::stack<Node *>               stack { { trees[0] } };
   while (!stack.empty())
   {
     auto currentNode = stack.top();
@@ -205,8 +204,7 @@ MatchList matchTrees(std::vector<std::shared_ptr<Node>> trees,
         && currentNode->getConnectedLeafWeight()
                >= config.options.minimumTraceWeight)
     {
-      std::vector<std::shared_ptr<Node>> remainingTrees { trees.begin() + 1,
-                                                          trees.end() };
+      std::vector<Node *> remainingTrees { trees.begin() + 1, trees.end() };
       nodeMatches = matchNodeInTrees(currentNode, remainingTrees, config);
     }
 
@@ -241,8 +239,8 @@ void debugOutputMatches(const MatchList &matches)
   }
 }
 
-MatchList intersection(const std::vector<std::shared_ptr<Node>> &nodes,
-                       const Configuration                      &config)
+MatchList intersection(const std::vector<Node *> &nodes,
+                       const Configuration       &config)
 {
   if (nodes.size() == 1)
   {
@@ -268,11 +266,16 @@ MatchList intersection(const std::vector<std::shared_ptr<Node>> &nodes,
 }
 
 DifferenceResult
-    difference(const std::vector<std::shared_ptr<Node>> &leftFiles,
-               const std::vector<std::shared_ptr<Node>> &rightFiles,
+    difference(const std::vector<std::unique_ptr<Node>> &leftFiles,
+               const std::vector<std::unique_ptr<Node>> &rightFiles,
                const Configuration                      &config)
 {
-  auto leftSideIntersection = intersection(leftFiles, config);
+  std::vector<Node *> leftSideNodes;
+  for (const auto &node : leftFiles)
+  {
+    leftSideNodes.push_back(node.get());
+  }
+  auto leftSideIntersection = intersection(leftSideNodes, config);
 
   // For now do a cartesian product of the left and right files
   DifferenceResult differenceResult;
@@ -284,7 +287,8 @@ DifferenceResult
 
     for (const auto &rightFile : rightFiles)
     {
-      auto subtraction = intersection({ leftFiles[index], rightFile }, config);
+      auto subtraction
+          = intersection({ leftSideNodes[index], rightFile.get() }, config);
       auto subtractionLeftSide = extractMatchesPerFile(subtraction, 0);
       fileDifferenceResult.subtraction.insert(
           fileDifferenceResult.subtraction.end(),

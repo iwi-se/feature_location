@@ -9,7 +9,8 @@
 
 using json = nlohmann::json;
 
-std::vector<std::string> getSupertypes(const json &nodeTypes, const std::string &type)
+std::vector<std::string> getSupertypes(const json        &nodeTypes,
+                                       const std::string &type)
 {
   std::vector<std::string> supertypes;
 
@@ -41,8 +42,7 @@ std::vector<std::string> getSupertypes(const json &nodeTypes, const std::string 
   return supertypes;
 }
 
-bool isIncludedNodeType(const std::shared_ptr<Node> &node,
-                        const Configuration         &config)
+bool isIncludedNodeType(Node *node, const Configuration &config)
 {
   if (!config.options.onlySpecificNodes)
   {

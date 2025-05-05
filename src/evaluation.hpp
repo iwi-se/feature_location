@@ -7,7 +7,14 @@
 #include <string>
 #include <vector>
 
-std::vector<DifferenceResult> runExpression(ExpressionSystemName expression,
+struct SingleFileExpressionResult
+{
+    DifferenceResult differenceResult;
+    std::vector<std::unique_ptr<Node>> leftSideTrees;
+    std::vector<std::unique_ptr<Node>> rightSideTrees;
+};
+
+std::vector<SingleFileExpressionResult> runExpression(ExpressionSystemName expression,
                                             const Configuration        &config);
 
 ExpressionAllFiles getExpressionFiles(ExpressionSystemName expression,

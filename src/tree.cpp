@@ -100,7 +100,7 @@ int Node::getConnectedLeafWeight()
     }
     else
     {
-      for (auto child : children)
+      for (auto &child : children)
       {
         connectedLeafWeight += child->getConnectedLeafWeight();
       }
@@ -109,13 +109,13 @@ int Node::getConnectedLeafWeight()
   return connectedLeafWeight;
 }
 
-void Node::addChild(const std::shared_ptr<Node> &child)
+void Node::addChild(Node *child)
 {
-  children.push_back(child);
-  child->setParent(shared_from_this());
+  children.push_back(std::unique_ptr<Node>(child));
+  child->setParent(this);
 }
 
-void Node::setParent(const std::shared_ptr<Node> &parent)
+void Node::setParent(Node *parent)
 {
   this->parent = parent;
 }
@@ -132,7 +132,7 @@ void Node::render(const int &whitespace) const
     std::cout << ": \"" << tsText << "\"";
   }
   std::cout << std::endl;
-  for (auto child : children)
+  for (auto &child : children)
   {
     child->render(whitespace + 2);
   }
@@ -143,11 +143,11 @@ bool Node::isLeaf() const
   return children.empty();
 }
 
-std::vector<std::shared_ptr<Node>> Node::getPointerToEveryNode()
+std::vector<Node *> Node::getPointerToEveryNode()
 {
-  std::vector<std::shared_ptr<Node>> nodes;
-  std::stack<std::shared_ptr<Node>>  stack;
-  stack.push(shared_from_this());
+  std::vector<Node *> nodes;
+  std::stack<Node *>  stack;
+  stack.push(this);
 
   while (!stack.empty())
   {
@@ -158,7 +158,7 @@ std::vector<std::shared_ptr<Node>> Node::getPointerToEveryNode()
     for (auto it = current->children.rbegin(); it != current->children.rend();
          ++it)
     {
-      stack.push(*it);
+      stack.push(it->get());
     }
   }
 
@@ -174,7 +174,7 @@ const std::string& Node::getSubtreeHash()
     {
       subtreeHash += tsText;
     }
-    for (auto child : children)
+    for (auto &child : children)
     {
       subtreeHash += child->getSubtreeHash();
     }
@@ -182,29 +182,29 @@ const std::string& Node::getSubtreeHash()
   return subtreeHash;
 }
 
-std::shared_ptr<Node> Node::getChildByTag(const std::string &tag)
+Node *Node::getChildByTag(const std::string &tag)
 {
-  for (auto child : children)
+  for (const auto &child : children)
   {
     if (child->getTag() == tag)
     {
-      return child;
+      return child.get();
     }
   }
   return nullptr;
 }
 
-std::shared_ptr<Node> Node::getParent()
+Node *Node::getParent()
 {
   return parent;
 }
 
-bool Node::isDescendant(const std::shared_ptr<Node> &node)
+bool Node::isDescendant(Node *node)
 {
   auto current = node;
   while (current->parent != nullptr)
   {
-    if ((current->parent).get() == this)
+    if (current->parent == this)
     {
       return true;
     }
@@ -216,30 +216,34 @@ bool Node::isDescendant(const std::shared_ptr<Node> &node)
   return false;
 }
 
-std::vector<std::shared_ptr<Node>> Node::getChildren()
+std::vector<Node *> Node::getChildren()
 {
-  return children;
+  std::vector<Node *> childs;
+  for (const auto &child : children)
+  {
+    childs.push_back(child.get());
+  }
+  return childs;
 }
 
-Node::RelativePosition
-    Node::getRelativePosition(const std::shared_ptr<Node> &other)
+Node::RelativePosition Node::getRelativePosition(Node *other)
 {
-  if (other.get() == this)
+  if (other == this)
   {
     return RelativePosition::overlapping;
   }
-  if (isDescendant(other) || other->isDescendant(shared_from_this()))
+  if (isDescendant(other) || other->isDescendant(this))
   {
     return RelativePosition::overlapping;
   }
   else
   {
     int compareValue1, compareValue2;
-    if (shared_from_this()->sourcePosition.getStartPosition().first
+    if (sourcePosition.getStartPosition().first
         == other->sourcePosition.getStartPosition().first)
     {
       compareValue1
-          = shared_from_this()->sourcePosition.getStartPosition().second;
+          = sourcePosition.getStartPosition().second;
       compareValue2 = other->sourcePosition.getStartPosition().second;
     }
     else
@@ -269,7 +273,7 @@ void Node::setNodeTypes(const std::vector<std::string> &types)
   allTypes = types;
 }
 
-std::vector<std::string> Node::getNodeTypes()
+std::vector<std::string> Node::getNodeTypes() const
 {
   return allTypes;
 }

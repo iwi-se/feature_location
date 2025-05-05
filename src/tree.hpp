@@ -33,7 +33,7 @@ class SourcePosition
     std::pair<size_t, size_t> endPosition;
 };
 
-class Node: public std::enable_shared_from_this<Node>
+class Node
 {
   public:
     Node(const std::string    &tag,
@@ -44,17 +44,17 @@ class Node: public std::enable_shared_from_this<Node>
 
     std::string getTag() const;
     std::string getTsText() const;
-    void        addChild(const std::shared_ptr<Node> &child);
+    void        addChild(Node *child);
     void        render(const int &whitespace) const;
     bool        isLeaf() const;
-    std::vector<std::shared_ptr<Node>> getPointerToEveryNode();
-    const std::string&                        getSubtreeHash();
+    std::vector<Node*> getPointerToEveryNode();
+    const std::string                 &getSubtreeHash();
     int                                getConnectedLeafWeight();
-    bool                 isDescendant(const std::shared_ptr<Node> &node);
+    bool                 isDescendant(Node *node);
     const SourcePosition getSourcePosition() const;
-    std::vector<std::shared_ptr<Node>> getChildren();
-    std::shared_ptr<Node>              getChildByTag(const std::string &tag);
-    std::shared_ptr<Node>              getParent();
+    std::vector<Node*> getChildren();
+    Node*              getChildByTag(const std::string &tag);
+    Node*              getParent();
 
     enum class RelativePosition
     {
@@ -63,13 +63,13 @@ class Node: public std::enable_shared_from_this<Node>
       overlapping,
     };
 
-    RelativePosition getRelativePosition(const std::shared_ptr<Node> &other);
+    RelativePosition getRelativePosition(Node *other);
 
     void setNodeTypes(const std::vector<std::string> &types);
-    std::vector<std::string> getNodeTypes();
+    std::vector<std::string> getNodeTypes() const;
   private:
-    std::shared_ptr<Node>              parent { nullptr };
-    std::vector<std::shared_ptr<Node>> children {};
+    Node                              *parent { nullptr };
+    std::vector<std::unique_ptr<Node>> children {};
     std::string                        tag;
     std::string                        tsText;
     std::string                        tsType;
@@ -79,7 +79,7 @@ class Node: public std::enable_shared_from_this<Node>
     SourcePosition                     sourcePosition;
     std::vector<std::string>           allTypes {};
 
-    void setParent(const std::shared_ptr<Node> &parent);
+    void setParent(Node *parent);
 };
 
 #endif // TREE_HPP

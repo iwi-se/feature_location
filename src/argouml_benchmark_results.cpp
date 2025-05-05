@@ -13,13 +13,12 @@ enum class TraceExtent
   full
 };
 
-TraceExtent isTrace(const std::shared_ptr<Node>              &node,
-                    const std::vector<std::shared_ptr<Node>> &otherNodes)
+TraceExtent isTrace(Node *node, const std::vector<Node *> &otherNodes)
 {
   auto result { TraceExtent::full };
   for (const auto &otherNode : otherNodes)
   {
-    if (node.get() == otherNode.get())
+    if (node == otherNode)
     {
       return TraceExtent::none;
     }
@@ -35,18 +34,18 @@ TraceExtent isTrace(const std::shared_ptr<Node>              &node,
   return result;
 }
 
-bool isMethodDeclaration(const std::shared_ptr<Node> &node)
+bool isMethodDeclaration(Node *node)
 {
   return node->getTag() == "method_declaration"
          || node->getTag() == "constructor_declaration";
 }
 
-bool isClassDeclaration(const std::shared_ptr<Node> &node)
+bool isClassDeclaration(Node *node)
 {
   return node->getTag() == "class_declaration";
 }
 
-std::string getIdentifier(const std::shared_ptr<Node> &node)
+std::string getIdentifier(Node *node)
 {
   auto identifier { node->getChildByTag("identifier") };
   if (identifier == nullptr)
@@ -56,7 +55,7 @@ std::string getIdentifier(const std::shared_ptr<Node> &node)
   return identifier->getTsText();
 }
 
-std::string getClassOrMethodIdentifier(std::shared_ptr<Node> node)
+std::string getClassOrMethodIdentifier(Node *node)
 {
   while (node != nullptr && !isClassDeclaration(node)
          && !isMethodDeclaration(node))
@@ -70,7 +69,7 @@ std::string getClassOrMethodIdentifier(std::shared_ptr<Node> node)
   return getIdentifier(node);
 }
 
-std::string getClassFqn(std::shared_ptr<Node> node)
+std::string getClassFqn(Node *node)
 {
   if (!isClassDeclaration(node))
   {
@@ -137,7 +136,7 @@ std::string getClassFqn(std::shared_ptr<Node> node)
  * @return The fully qualified method name including class and parameters, or
  * empty string if not a method_declaration
  */
-std::string getMethodFqn(std::shared_ptr<Node> node)
+std::string getMethodFqn(Node *node)
 {
   if (!isMethodDeclaration(node))
   {
@@ -175,7 +174,9 @@ std::string getMethodFqn(std::shared_ptr<Node> node)
         auto typeIdentifier = child->getChildren()[0];
         if (typeIdentifier->getTag() == "modifiers")
         {
-          typeIdentifier = child->getChildren()[1]; // index 0 might be modifiers, then type identifier is index 1
+          typeIdentifier
+              = child->getChildren()[1]; // index 0 might be modifiers, then
+                                         // type identifier is index 1
         }
         if (typeIdentifier != nullptr)
         {
@@ -200,7 +201,7 @@ std::string getMethodFqn(std::shared_ptr<Node> node)
   return methodFqn;
 }
 
-std::string getFqn(std::shared_ptr<Node> node)
+std::string getFqn(Node *node)
 {
   auto current = node;
   while (current != nullptr)
@@ -267,9 +268,8 @@ class OutputLines
     std::vector<OutputLine> lines;
 };
 
-OutputLines
-    findFullTraces(const std::vector<std::shared_ptr<Node>> &nodes,
-                   const std::vector<std::shared_ptr<Node>> &subtractionNodes)
+OutputLines findFullTraces(const std::vector<Node *> &nodes,
+                           const std::vector<Node *> &subtractionNodes)
 {
   OutputLines outputLines;
   for (const auto &node : nodes)
@@ -305,9 +305,8 @@ OutputLines
   return outputLines;
 }
 
-OutputLines findRefinementTraces(
-    const std::vector<std::shared_ptr<Node>> &nodes,
-    const std::vector<std::shared_ptr<Node>> &subtractionNodes)
+OutputLines findRefinementTraces(const std::vector<Node *> &nodes,
+                                 const std::vector<Node *> &subtractionNodes)
 {
   OutputLines outputLines;
   for (const auto &node : nodes)
@@ -334,7 +333,7 @@ OutputLines findRefinementTraces(
 }
 
 std::string
-    buildArgoumlBenchmarkOutputForFile(DifferenceResult differenceResult,
+    buildArgoumlBenchmarkOutputForFile(DifferenceResult     differenceResult,
                                        const Configuration &config)
 {
   if (config.options.language != "java")
@@ -359,7 +358,7 @@ std::string
 // wrong
 std::string
     buildArgoumlBenchmarkOutput(std::vector<DifferenceResult> differenceResults,
-                                const Configuration                 &config)
+                                const Configuration          &config)
 {
   std::string output;
   for (const auto &differenceResult : differenceResults)

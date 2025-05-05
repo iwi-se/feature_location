@@ -198,8 +198,8 @@ void debugPrintMarkedCharacters(
 
 std::string renderFile(std::filesystem::path              file,
                        const Configuration               &config,
-                       std::vector<std::shared_ptr<Node>> greenNodes,
-                       std::vector<std::shared_ptr<Node>> redNodes)
+                       std::vector<Node *> greenNodes,
+                       std::vector<Node *> redNodes)
 {
   std::vector<SourcePosition> greenPositions;
   std::vector<SourcePosition> redPositions;

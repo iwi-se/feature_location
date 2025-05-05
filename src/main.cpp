@@ -102,7 +102,12 @@ int main(int argc, char *argv[])
 
   for (const auto &expression : expressions)
   {
-    auto differenceResults = runExpression(expression, config);
+    auto singleFileExpressionResults = runExpression(expression, config);
+    std::vector<DifferenceResult> differenceResults;
+    for (const auto &singleFileExpressionResult : singleFileExpressionResults)
+    {
+      differenceResults.push_back(singleFileExpressionResult.differenceResult);
+    }
     renderResultsToFiles(differenceResults, config, expression.labels[0]);
     if (config.options.language == "java")
     {
