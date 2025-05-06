@@ -99,7 +99,7 @@ std::string getClassFqn(Node *node)
   auto                     current = packageDeclaration;
   while (current != nullptr)
   {
-    auto children { current->getChildren() };
+    auto &children { current->getChildren() };
     std::vector<std::string>
         thisLevelParts; // use intermediate vector, because of the order
     for (const auto &child : children)
@@ -171,11 +171,11 @@ std::string getMethodFqn(Node *node)
     {
       if (child->getTag() == "formal_parameter")
       {
-        auto typeIdentifier = child->getChildren()[0];
+        auto typeIdentifier = child->getChildren()[0].get();
         if (typeIdentifier->getTag() == "modifiers")
         {
           typeIdentifier
-              = child->getChildren()[1]; // index 0 might be modifiers, then
+              = child->getChildren()[1].get(); // index 0 might be modifiers, then
                                          // type identifier is index 1
         }
         if (typeIdentifier != nullptr)
@@ -297,7 +297,12 @@ OutputLines findFullTraces(const std::vector<Node *> &nodes,
     // Recursively check children
     else
     {
-      auto childTraces = findFullTraces(node->getChildren(), subtractionNodes);
+      std::vector<Node *> childs(node->getChildren().size());
+      for (size_t i = 0; i < node->getChildren().size(); i++)
+      {
+        childs[i] = node->getChildren()[i].get();
+      }
+      auto childTraces = findFullTraces(childs, subtractionNodes);
       // Merge child traces into output lines
       outputLines.insertMany(childTraces);
     }

@@ -42,19 +42,19 @@ class Node
          const bool           &tsIsNamed,
          const SourcePosition &sourcePosition);
 
-    std::string getTag() const;
-    std::string getTsText() const;
-    void        addChild(Node *child);
-    void        render(const int &whitespace) const;
-    bool        isLeaf() const;
-    std::vector<Node*> getPointerToEveryNode();
-    const std::string                 &getSubtreeHash();
-    int                                getConnectedLeafWeight();
+    const std::string   &getTag() const;
+    const std::string   &getTsText() const;
+    void                 addChild(Node *child);
+    void                 render(const int &whitespace) const;
+    bool                 isLeaf() const;
+    std::vector<Node *>  getPointerToEveryNode();
+    const std::size_t   &getSubtreeHash();
+    const int           &getConnectedLeafWeight();
     bool                 isDescendant(Node *node);
     const SourcePosition getSourcePosition() const;
-    std::vector<Node*> getChildren();
-    Node*              getChildByTag(const std::string &tag);
-    Node*              getParent();
+    const std::vector<std::unique_ptr<Node>> &getChildren();
+    Node *getChildByTag(const std::string &tag);
+    Node *getParent();
 
     enum class RelativePosition
     {
@@ -66,7 +66,7 @@ class Node
     RelativePosition getRelativePosition(Node *other);
 
     void setNodeTypes(const std::vector<std::string> &types);
-    std::vector<std::string> getNodeTypes() const;
+    const std::vector<std::string> &getNodeTypes() const;
   private:
     Node                              *parent { nullptr };
     std::vector<std::unique_ptr<Node>> children {};
@@ -75,7 +75,7 @@ class Node
     std::string                        tsType;
     bool                               tsIsNamed;
     int                                connectedLeafWeight {};
-    std::string                        subtreeHash {};
+    std::size_t                        subtreeHash {};
     SourcePosition                     sourcePosition;
     std::vector<std::string>           allTypes {};
 

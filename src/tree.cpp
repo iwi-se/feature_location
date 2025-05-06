@@ -69,17 +69,17 @@ Node::Node(const std::string    &tag,
     , sourcePosition(sourcePosition)
 { }
 
-std::string Node::getTag() const
+const std::string &Node::getTag() const
 {
   return tag;
 }
 
-std::string Node::getTsText() const
+const std::string &Node::getTsText() const
 {
   return tsText;
 }
 
-int Node::getConnectedLeafWeight()
+const int& Node::getConnectedLeafWeight()
 {
   if (connectedLeafWeight == 0)
   {
@@ -165,18 +165,24 @@ std::vector<Node *> Node::getPointerToEveryNode()
   return nodes;
 }
 
-const std::string& Node::getSubtreeHash()
+const std::size_t& Node::getSubtreeHash()
 {
-  if (subtreeHash.empty())
+  if (subtreeHash == 0)
   {
-    subtreeHash = tag;
+    std::string temp_hash;
+    temp_hash = tag;
     if (isLeaf())
     {
-      subtreeHash += tsText;
+      temp_hash += tsText;
     }
     for (auto &child : children)
     {
-      subtreeHash += child->getSubtreeHash();
+      temp_hash += child->getSubtreeHash();
+    }
+    subtreeHash = std::hash<std::string>{}(temp_hash);
+    if (subtreeHash == 0) // for the very rare case that the hash is 0
+    {
+      subtreeHash = 1;
     }
   }
   return subtreeHash;
@@ -216,14 +222,9 @@ bool Node::isDescendant(Node *node)
   return false;
 }
 
-std::vector<Node *> Node::getChildren()
+const std::vector<std::unique_ptr<Node>> &Node::getChildren()
 {
-  std::vector<Node *> childs;
-  for (const auto &child : children)
-  {
-    childs.push_back(child.get());
-  }
-  return childs;
+  return children;
 }
 
 Node::RelativePosition Node::getRelativePosition(Node *other)
@@ -273,7 +274,7 @@ void Node::setNodeTypes(const std::vector<std::string> &types)
   allTypes = types;
 }
 
-std::vector<std::string> Node::getNodeTypes() const
+const std::vector<std::string> &Node::getNodeTypes() const
 {
   return allTypes;
 }

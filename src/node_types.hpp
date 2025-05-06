@@ -42,20 +42,32 @@ std::vector<std::string> getSupertypes(const json        &nodeTypes,
   return supertypes;
 }
 
-bool isIncludedNodeType(Node *node, const Configuration &config)
+bool isIncludedNodeType(Node *node, Configuration &config)
 {
   if (!config.options.onlySpecificNodes)
   {
     return true;
   }
 
-  auto supertypes = node->getNodeTypes();
-  if (supertypes.empty())
+  if (std::find(config.options.dynamicIncludedTypes.begin(),
+                config.options.dynamicIncludedTypes.end(),
+                node->getTag())
+      != config.options.dynamicIncludedTypes.end())
   {
-    supertypes = getSupertypes(config.options.nodeTypes, node->getTag());
-    supertypes.push_back(node->getTag());
-    node->setNodeTypes(supertypes);
+    return true;
   }
+
+  if (std::find(config.options.dynamicExcludedTypes.begin(),
+                config.options.dynamicExcludedTypes.end(),
+                node->getTag())
+      != config.options.dynamicExcludedTypes.end())
+  {
+    return false;
+  }
+
+  std::vector<std::string> supertypes
+      = getSupertypes(config.options.nodeTypes, node->getTag());
+  supertypes.push_back(node->getTag());
 
   // check if one of the supertypes is in the
   // config.onlySpecificNodes.nodeTypes list
@@ -69,6 +81,7 @@ bool isIncludedNodeType(Node *node, const Configuration &config)
       {
         std::cout << "Type " << node->getTag() << " is included" << std::endl;
       }
+      config.options.dynamicIncludedTypes.push_back(node->getTag());
       return true;
     }
   }
@@ -76,6 +89,7 @@ bool isIncludedNodeType(Node *node, const Configuration &config)
   {
     std::cout << "Type " << node->getTag() << " is not included" << std::endl;
   }
+  config.options.dynamicExcludedTypes.push_back(node->getTag());
   return false;
 }
 

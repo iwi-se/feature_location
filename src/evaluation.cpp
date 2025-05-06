@@ -12,7 +12,7 @@
 #include <thread>
 
 SingleFileExpressionResult evaluateExpression(SingleFileExpression expression,
-                                              const Configuration &config)
+                                              Configuration &config)
 {
   std::vector<std::unique_ptr<Node>> leftSideTrees {};
   for (const auto &leftSideSystem : expression.leftSide)
@@ -49,7 +49,7 @@ class EvaluateExpression
 {
   public:
     EvaluateExpression(SingleFileExpression expression,
-                       const Configuration &config)
+                       Configuration &config)
         : expression(expression)
         , config(config)
     { }
@@ -60,12 +60,12 @@ class EvaluateExpression
     }
 
     SingleFileExpression       expression;
-    const Configuration       &config;
+    Configuration       &config;
     SingleFileExpressionResult differenceResult;
 };
 
 std::vector<SingleFileExpressionResult>
-    runExpression(ExpressionSystemName expression, const Configuration &config)
+    runExpression(ExpressionSystemName expression, Configuration &config)
 {
   ExpressionAllFiles expressionFiles = getExpressionFiles(expression, config);
   std::vector<SingleFileExpression> subexpressions

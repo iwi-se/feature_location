@@ -15,7 +15,7 @@ struct SingleFileExpressionResult
 };
 
 std::vector<SingleFileExpressionResult> runExpression(ExpressionSystemName expression,
-                                            const Configuration        &config);
+                                            Configuration        &config);
 
 ExpressionAllFiles getExpressionFiles(ExpressionSystemName expression,
                                       const Configuration        &config);
