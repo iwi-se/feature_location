@@ -55,6 +55,7 @@ class Node
     const std::vector<std::unique_ptr<Node>> &getChildren();
     Node *getChildByTag(const std::string &tag);
     Node *getParent();
+    Node *getRoot();
 
     enum class RelativePosition
     {

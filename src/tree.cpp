@@ -205,6 +205,15 @@ Node *Node::getParent()
   return parent;
 }
 
+Node *Node::getRoot()
+{
+  if (parent == nullptr)
+  {
+    return this;
+  }
+  return parent->getRoot();
+}
+
 bool Node::isDescendant(Node *node)
 {
   auto current = node;

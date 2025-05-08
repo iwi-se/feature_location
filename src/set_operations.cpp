@@ -77,6 +77,28 @@ MatchesPerFile extractMatchesPerFile(const MatchList &matches, const int &index)
   return matchesPerFile;
 }
 
+double calculatePositionSimilarity(const Match &match)
+{
+  std::vector<double> positionMetrics;
+  for (const auto &node : match)
+  {
+    positionMetrics.push_back(node->getSourcePosition().getStartLine() * 1000
+                              + node->getSourcePosition().getStartColumn());
+  }
+  // get min and max
+  double cumulativePosition { 0 };
+  for (const auto &pos : positionMetrics)
+  {
+    cumulativePosition += pos;
+  }
+  cumulativePosition /= positionMetrics.size();
+  auto root           = match[0]->getRoot();
+  double lastPosition   = root->getSourcePosition().getEndLine() * 1000
+                      + root->getSourcePosition().getEndColumn();
+  // return the difference between the min and max
+  return 1 - (cumulativePosition / lastPosition);
+}
+
 void sortByDecisionRatio(MatchList &matches, const Configuration &config)
 {
   std::vector<std::pair<Match, double>> matchesWithRatio;
@@ -87,8 +109,10 @@ void sortByDecisionRatio(MatchList &matches, const Configuration &config)
     // pair.second);
     double environmentSimilarity = calculateEnvironmentSimilarity(match);
     int    size                  = match[0]->getConnectedLeafWeight();
+    double positionSimilarity    = calculatePositionSimilarity(match);
 
-    double decisionRatio = 0.2 * environmentSimilarity + 0.8 * size;
+    double decisionRatio
+        = 0.18 * environmentSimilarity + 0.8 * size + 0.02 * positionSimilarity;
 
     matchesWithRatio.push_back(std::make_pair(match, decisionRatio));
   }
@@ -195,12 +219,15 @@ MatchList
   {
     if (index.first.getNodes(node->getSubtreeHash()).empty())
     {
-      return MatchList {}; // If there is even one tree that does not contain the node, there are no matches
+      return MatchList {}; // If there is even one tree that does not contain
+                           // the node, there are no matches
     }
     else
     {
       std::unique_ptr<MatchList> newMatches { std::make_unique<MatchList>() };
-      newMatches->reserve(matches->size() * index.first.getNodes(node->getSubtreeHash()).size());
+      newMatches->reserve(
+          matches->size()
+          * index.first.getNodes(node->getSubtreeHash()).size());
       for (const auto &node : index.first.getNodes(node->getSubtreeHash()))
       {
         for (const auto &match : *matches)
@@ -258,13 +285,17 @@ MatchList matchTrees(const std::vector<std::pair<TreeIndex, Node *>> &indices,
       }
     }
 
-    if (config.options.debug) { 
-      std::cout << "Current potential matches: " << nodeMatches.size() << std::endl;
-      for (const auto &match : nodeMatches) {
+    if (config.options.debug)
+    {
+      std::cout << "Current potential matches: " << nodeMatches.size()
+                << std::endl;
+      for (const auto &match : nodeMatches)
+      {
         std::cout << "Match: ";
-        for (const auto &node : match) {
-        std::cout << node->getTag() << " ";
-      }
+        for (const auto &node : match)
+        {
+          std::cout << node->getTag() << " ";
+        }
         std::cout << std::endl;
       }
     }
