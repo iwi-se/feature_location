@@ -45,23 +45,26 @@ SingleFileExpressionResult evaluateExpression(SingleFileExpression expression,
   return result;
 }
 
-class EvaluateExpression
+class EvaluateExpressionThread
 {
   public:
-    EvaluateExpression(SingleFileExpression expression,
+    EvaluateExpressionThread(std::vector<SingleFileExpression> expressions,
                        Configuration &config)
-        : expression(expression)
+        : expressions(expressions)
         , config(config)
     { }
 
     void run()
     {
-      differenceResult = evaluateExpression(expression, config);
+      for (const auto &expression : expressions)
+      {
+        differenceResults.push_back(evaluateExpression(expression, config));
+      }
     }
 
-    SingleFileExpression       expression;
+    std::vector<SingleFileExpression>       expressions;
     Configuration       &config;
-    SingleFileExpressionResult differenceResult;
+    std::vector<SingleFileExpressionResult> differenceResults;
 };
 
 std::vector<SingleFileExpressionResult>
@@ -77,31 +80,42 @@ std::vector<SingleFileExpressionResult>
             << subexpressions.size() << " files) " << std::endl;
 
   // Progress tracking variables
-  int totalFiles = subexpressions.size();
+  size_t totalFiles { subexpressions.size() };
 
+  size_t filesPerThread { totalFiles / 16 };
   std::vector<std::thread>          threads {};
-  std::vector<EvaluateExpression *> evaluateExpressions {};
+  std::vector<EvaluateExpressionThread *> evaluateExpressions {};
+  std::vector<SingleFileExpression>  expressionsForThread {};
   for (size_t i = 0; i < subexpressions.size(); ++i)
   {
-    auto evaluateExpression
-        = new EvaluateExpression(subexpressions[i], config);
-    threads.push_back(
-        std::thread(&EvaluateExpression::run, evaluateExpression));
-    evaluateExpressions.push_back(evaluateExpression);
+    expressionsForThread.push_back(subexpressions[i]);
+    if (expressionsForThread.size() >= filesPerThread)
+    {
+      auto evaluateExpression
+          = new EvaluateExpressionThread(expressionsForThread, config);
+      threads.push_back(
+          std::thread(&EvaluateExpressionThread::run, evaluateExpression));
+      evaluateExpressions.push_back(evaluateExpression);
+      expressionsForThread.clear();
+    }
   }
+
+  std::cout << "Running " << threads.size() << " threads" << std::endl;
 
   for (size_t i = 0; i < threads.size(); ++i)
   {
-    std::cout << "Waiting for " << expression.labels[0] << " ("
-              << subexpressions.size() << " files) " << (i + 1) << "/"
-              << totalFiles << " " << subexpressions[i].leftSide[0].relative
-              << std::endl;
+    std::cout << "Waiting for thread " << i << "/"
+              << threads.size() << "( thread processes " << evaluateExpressions[i]->expressions.size()
+              << " files)" << std::endl;
     threads[i].join();
-    std::cout << "Joined " << (i + 1) << "/" << totalFiles << std::endl;
-    auto &expressionResult { evaluateExpressions[i]->differenceResult };
-    expressionResult.differenceResult.relativePath
-        = subexpressions[i].leftSide[0].relative;
-    singleFileResults.push_back(std::move(evaluateExpressions[i]->differenceResult));
+    std::cout << "Joined " << i << "/" << threads.size() << std::endl;
+    auto &expressionResults { evaluateExpressions[i]->differenceResults };
+    for (size_t j = 0; j < expressionResults.size(); ++j)
+    {
+      expressionResults[j].differenceResult.relativePath
+          = evaluateExpressions[i]->expressions[j].leftSide[0].relative;
+      singleFileResults.push_back(std::move(expressionResults[j]));
+    }
   }
 
   for (auto &evaluateExpression : evaluateExpressions)

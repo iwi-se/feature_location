@@ -177,7 +177,7 @@ const std::size_t& Node::getSubtreeHash()
     }
     for (auto &child : children)
     {
-      temp_hash += child->getSubtreeHash();
+      temp_hash.append(std::to_string(child->getSubtreeHash()));
     }
     subtreeHash = std::hash<std::string>{}(temp_hash);
     if (subtreeHash == 0) // for the very rare case that the hash is 0

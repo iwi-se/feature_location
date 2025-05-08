@@ -149,12 +149,13 @@ class TreeIndex
   public:
     TreeIndex(Node *node)
     {
-      addNode(node->getSubtreeHash(), node);
-      for (const auto &child : node->getChildren())
+      const auto &allNodes { node->getPointerToEveryNode() };
+      for (const auto &child : allNodes)
       {
-        addNode(child->getSubtreeHash(), child.get());
+        addNode(child->getSubtreeHash(), child);
       }
     }
+
     const std::vector<Node *> getNodes(const std::size_t &hash) const
     {
       if (index.contains(hash))
@@ -166,6 +167,7 @@ class TreeIndex
         return std::move(std::vector<Node *> {});
       }
     }
+
     void addNode(const std::size_t &hash, Node *node)
     {
       if (index.contains(hash))
@@ -181,39 +183,47 @@ class TreeIndex
     std::unordered_map<std::size_t, std::vector<Node *>> index;
 };
 
-MatchList matchNodeInTrees(Node                *node,
-                           const std::vector<std::pair<TreeIndex, Node *>> &indices,
-                           const Configuration       &config)
+MatchList
+    matchNodeInTrees(Node                                            *node,
+                     const std::vector<std::pair<TreeIndex, Node *>> &indices,
+                     const Configuration                             &config)
 {
-  MatchList                         matches;
-
+  std::unique_ptr<MatchList> matches { std::make_unique<MatchList>() };
+  matches->reserve(indices.size());
+  matches->push_back({ node });
   for (const auto &index : indices)
   {
     if (index.first.getNodes(node->getSubtreeHash()).empty())
     {
-      return matches;
+      return MatchList {}; // If there is even one tree that does not contain the node, there are no matches
     }
     else
     {
-      for (auto node : index.first.getNodes(node->getSubtreeHash()))
+      std::unique_ptr<MatchList> newMatches { std::make_unique<MatchList>() };
+      newMatches->reserve(matches->size() * index.first.getNodes(node->getSubtreeHash()).size());
+      for (const auto &node : index.first.getNodes(node->getSubtreeHash()))
       {
-        MatchList newMatches;
-        for (const auto &match : matches)
+        for (const auto &match : *matches)
         {
-          Match newMatch {match};
+          Match newMatch { match };
           newMatch.push_back(node);
-          newMatches.push_back(newMatch);
+          newMatches->push_back(std::move(newMatch));
         }
-        matches = newMatches;
       }
+      matches = std::move(newMatches);
+    }
+    if (matches->size() > 2000)
+    {
+      sortByDecisionRatio(*matches, config);
+      removeOverlappingPairs(*matches);
     }
   }
 
-  return matches;
+  return *matches;
 }
 
 MatchList matchTrees(const std::vector<std::pair<TreeIndex, Node *>> &indices,
-                     Configuration &config)
+                     Configuration                                   &config)
 {
   std::vector<std::vector<Node *>> matches;
   std::stack<Node *>               stack { { indices[0].second } };
@@ -227,7 +237,9 @@ MatchList matchTrees(const std::vector<std::pair<TreeIndex, Node *>> &indices,
         && currentNode->getConnectedLeafWeight()
                >= config.options.minimumTraceWeight)
     {
-      std::vector<std::pair<TreeIndex, Node *>> remainingIndices { indices.begin() + 1, indices.end() };
+      std::vector<std::pair<TreeIndex, Node *>> remainingIndices {
+        indices.begin() + 1, indices.end()
+      };
       nodeMatches = matchNodeInTrees(currentNode, remainingIndices, config);
     }
 
@@ -243,6 +255,17 @@ MatchList matchTrees(const std::vector<std::pair<TreeIndex, Node *>> &indices,
       for (const auto &match : nodeMatches)
       {
         matches.push_back(match);
+      }
+    }
+
+    if (config.options.debug) { 
+      std::cout << "Current potential matches: " << nodeMatches.size() << std::endl;
+      for (const auto &match : nodeMatches) {
+        std::cout << "Match: ";
+        for (const auto &node : match) {
+        std::cout << node->getTag() << " ";
+      }
+        std::cout << std::endl;
       }
     }
   }
@@ -263,7 +286,7 @@ void debugOutputMatches(const MatchList &matches)
 }
 
 MatchList intersection(const std::vector<std::pair<TreeIndex, Node *>> &indices,
-                       Configuration       &config)
+                       Configuration                                   &config)
 {
   if (indices.size() == 1)
   {
@@ -291,12 +314,13 @@ MatchList intersection(const std::vector<std::pair<TreeIndex, Node *>> &indices,
 DifferenceResult
     difference(const std::vector<std::unique_ptr<Node>> &leftFiles,
                const std::vector<std::unique_ptr<Node>> &rightFiles,
-               Configuration                      &config)
+               Configuration                            &config)
 {
   std::vector<std::pair<TreeIndex, Node *>> leftSideIndices;
   for (const auto &node : leftFiles)
   {
-    leftSideIndices.push_back(std::make_pair(TreeIndex(node.get()), node.get()));
+    leftSideIndices.push_back(
+        std::make_pair(TreeIndex(node.get()), node.get()));
   }
   auto leftSideIntersection = intersection(leftSideIndices, config);
 
@@ -311,8 +335,10 @@ DifferenceResult
     for (const auto &rightFile : rightFiles)
     {
       TreeIndex rightSideIndex(rightFile.get());
-      auto subtraction
-          = intersection({ leftSideIndices[index], std::make_pair(rightSideIndex, rightFile.get()) }, config);
+      auto      subtraction
+          = intersection({ leftSideIndices[index],
+                           std::make_pair(rightSideIndex, rightFile.get()) },
+                         config);
       auto subtractionLeftSide = extractMatchesPerFile(subtraction, 0);
       fileDifferenceResult.subtraction.insert(
           fileDifferenceResult.subtraction.end(),
