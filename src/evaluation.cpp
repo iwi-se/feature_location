@@ -1,3 +1,4 @@
+#include <vector>
 #include "evaluation.hpp"
 #include "parser.hpp"
 #include "render.hpp"
@@ -8,68 +9,124 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <thread>
 
-DifferenceResult evaluateExpression(SingleFileExpression expression,
-                                    Configuration        config)
+SingleFileExpressionResult evaluateExpression(SingleFileExpression expression,
+                                              Configuration &config)
 {
-  std::vector<std::shared_ptr<Node>> leftSideTrees {};
+  std::vector<std::unique_ptr<Node>> leftSideTrees {};
   for (const auto &leftSideSystem : expression.leftSide)
   {
     std::filesystem::path fullPath
         = config.basePath / leftSideSystem.fullPath();
-    std::shared_ptr<Node> root = parseFile(fullPath, config.options.language);
+    leftSideTrees.push_back(parseFile(fullPath, config.options.language));
     if (config.options.debug)
     {
       std::cout << "Parsed file: " << fullPath << std::endl;
-      root->render(0);
+      leftSideTrees.back()->render(0);
     }
-    leftSideTrees.push_back(root);
   }
-  std::vector<std::shared_ptr<Node>> rightSideTrees {};
+  std::vector<std::unique_ptr<Node>> rightSideTrees {};
   for (const auto &rightSideSystem : expression.rightSide)
   {
     std::filesystem::path fullPath
         = config.basePath / rightSideSystem.fullPath();
-    std::shared_ptr<Node> root = parseFile(fullPath, config.options.language);
-    rightSideTrees.push_back(root);
+    rightSideTrees.push_back(parseFile(fullPath, config.options.language));
+    if (config.options.debug)
+    {
+      std::cout << "Parsed file: " << fullPath << std::endl;
+      rightSideTrees.back()->render(0);
+    }
   }
   auto differenceResult { difference(leftSideTrees, rightSideTrees, config) };
-  return differenceResult;
+  SingleFileExpressionResult result { differenceResult,
+                                      std::move(leftSideTrees),
+                                      std::move(rightSideTrees) };
+  return result;
 }
 
-std::vector<DifferenceResult> runExpression(ExpressionSystemName expression,
-                                            Configuration        config)
+class EvaluateExpressionThread
+{
+  public:
+    EvaluateExpressionThread(std::vector<SingleFileExpression> expressions,
+                       Configuration &config)
+        : expressions(expressions)
+        , config(config)
+    { }
+
+    void run()
+    {
+      for (const auto &expression : expressions)
+      {
+        differenceResults.push_back(evaluateExpression(expression, config));
+      }
+    }
+
+    std::vector<SingleFileExpression>       expressions;
+    Configuration       &config;
+    std::vector<SingleFileExpressionResult> differenceResults;
+};
+
+std::vector<SingleFileExpressionResult>
+    runExpression(ExpressionSystemName expression, Configuration &config)
 {
   ExpressionAllFiles expressionFiles = getExpressionFiles(expression, config);
   std::vector<SingleFileExpression> subexpressions
       = buildFileBasedSubExpressions(expressionFiles);
-  std::vector<DifferenceResult> differenceResults {};
+  std::vector<SingleFileExpressionResult> singleFileResults {};
 
   // Print the expression being processed
   std::cout << "Processing expression: " << expression.labels[0] << " ("
-            << subexpressions.size() << " files) ";
-  std::cout.flush();
+            << subexpressions.size() << " files) " << std::endl;
 
   // Progress tracking variables
-  int totalFiles = subexpressions.size();
+  size_t totalFiles { subexpressions.size() };
 
+  size_t filesPerThread { totalFiles / 16 };
+  std::vector<std::thread>          threads {};
+  std::vector<EvaluateExpressionThread *> evaluateExpressions {};
+  std::vector<SingleFileExpression>  expressionsForThread {};
   for (size_t i = 0; i < subexpressions.size(); ++i)
   {
-    // Update file counter for every file
-    std::cout << "\rProcessing expression: " << expression.labels[0] << " ("
-              << subexpressions.size() << " files) " << (i + 1) << "/"
-              << totalFiles << " " << subexpressions[i].leftSide[0].relative << std::string(50, ' ');
-    std::cout.flush();
+    expressionsForThread.push_back(subexpressions[i]);
+    if (expressionsForThread.size() >= filesPerThread)
+    {
+      auto evaluateExpression
+          = new EvaluateExpressionThread(expressionsForThread, config);
+      threads.push_back(
+          std::thread(&EvaluateExpressionThread::run, evaluateExpression));
+      evaluateExpressions.push_back(evaluateExpression);
+      expressionsForThread.clear();
+    }
+  }
 
-    auto differenceResult { evaluateExpression(subexpressions[i], config) };
-    differenceResult.relativePath = subexpressions[i].leftSide[0].relative;
-    differenceResults.push_back(differenceResult);
+  std::cout << "Running " << threads.size() << " threads" << std::endl;
+
+  for (size_t i = 0; i < threads.size(); ++i)
+  {
+    std::cout << "Waiting for thread " << i << "/"
+              << threads.size() << "( thread processes " << evaluateExpressions[i]->expressions.size()
+              << " files)" << std::endl;
+    threads[i].join();
+    std::cout << "Joined " << i << "/" << threads.size() << std::endl;
+    auto &expressionResults { evaluateExpressions[i]->differenceResults };
+    for (size_t j = 0; j < expressionResults.size(); ++j)
+    {
+      expressionResults[j].differenceResult.relativePath
+          = evaluateExpressions[i]->expressions[j].leftSide[0].relative;
+      singleFileResults.push_back(std::move(expressionResults[j]));
+    }
+  }
+
+  for (auto &evaluateExpression : evaluateExpressions)
+  {
+    delete evaluateExpression;
   }
 
   // Print completed message
   std::cout << "\nProcessing expressions done." << std::endl;
 
-  return differenceResults;
+  return singleFileResults;
 }
 
 bool hasOnlySingleFileSystems(ExpressionAllFiles expression)
@@ -92,8 +149,8 @@ bool hasOnlySingleFileSystems(ExpressionAllFiles expression)
   return lengthIsOne;
 }
 
-std::vector<BasePlusRelativePath> getFilesForSystem(std::string   systemName,
-                                                    Configuration config)
+std::vector<BasePlusRelativePath> getFilesForSystem(std::string systemName,
+                                                    const Configuration &config)
 {
   std::vector<std::string> paths = config.getPathsForSystem(systemName);
   std::vector<BasePlusRelativePath> allFiles {};
@@ -122,7 +179,7 @@ std::vector<BasePlusRelativePath> getFilesForSystem(std::string   systemName,
 }
 
 ExpressionAllFiles getExpressionFiles(ExpressionSystemName expression,
-                                      Configuration        config)
+                                      const Configuration &config)
 {
   ExpressionAllFiles expressionAllFiles {};
   for (const auto &systemName : expression.leftSide)

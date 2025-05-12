@@ -23,9 +23,9 @@ std::string getNodeText(const TSNode &tsNode, const std::string &fileContents)
   return fileContents.substr(startByte, endByte - startByte);
 }
 
-std::shared_ptr<Node> convertTsNodeToNode(TSNode                       tsNode,
-                                          const std::filesystem::path &filepath,
-                                          const std::string &fileContents)
+Node *convertTsNodeToNode(TSNode                       tsNode,
+                          const std::filesystem::path &filepath,
+                          const std::string           &fileContents)
 {
   // Extract node data
   const char *type    = ts_node_type(tsNode);
@@ -40,7 +40,7 @@ std::shared_ptr<Node> convertTsNodeToNode(TSNode                       tsNode,
   std::string text = getNodeText(tsNode, fileContents);
 
   // Create the Node
-  auto node = std::make_shared<Node>(type, text, type, isNamed, sourcePosition);
+  auto node = new Node(type, text, type, isNamed, sourcePosition);
 
   // Recursively add children
   uint32_t childCount = ts_node_child_count(tsNode);
@@ -56,7 +56,7 @@ std::shared_ptr<Node> convertTsNodeToNode(TSNode                       tsNode,
 
 // Assuming you have a function to initialize the parser with the correct
 // language
-std::shared_ptr<Node> parseFile(const std::filesystem::path &filename,
+std::unique_ptr<Node> parseFile(const std::filesystem::path &filename,
                                 const std::string           &language)
 {
   // Initialize the parser
@@ -80,13 +80,17 @@ std::shared_ptr<Node> parseFile(const std::filesystem::path &filename,
   std::string   code((std::istreambuf_iterator<char>(file)),
                    std::istreambuf_iterator<char>());
 
+  if (code.empty()) {
+    throw std::runtime_error("File is empty or does not exist: " + filename.string());
+  }
+
   // Parse the code
   TSTree *tree
       = ts_parser_parse_string(parser, nullptr, code.c_str(), code.size());
   TSNode rootNode = ts_tree_root_node(tree);
 
   // Convert the root TSNode to our Node structure
-  std::shared_ptr<Node> root = convertTsNodeToNode(rootNode, filename, code);
+  Node *root = convertTsNodeToNode(rootNode, filename, code);
 
   // Clean up
   ts_tree_delete(tree);
@@ -94,5 +98,5 @@ std::shared_ptr<Node> parseFile(const std::filesystem::path &filename,
   ts_language_delete(tree_sitter_cpp());
   ts_language_delete(tree_sitter_java());
 
-  return root;
+  return std::unique_ptr<Node>(root);
 }

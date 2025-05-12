@@ -5,11 +5,12 @@
 #include "set_operations.hpp"
 #include "tree.hpp"
 
-std::string renderDifference(DifferenceResult difference, Configuration config);
+std::string renderDifference(DifferenceResult     difference,
+                             const Configuration &config);
 
 std::string renderFile(std::filesystem::path              file,
-                       Configuration                      config,
-                       std::vector<std::shared_ptr<Node>> greenNodes,
-                       std::vector<std::shared_ptr<Node>> redNodes = {});
+                       const Configuration               &config,
+                       std::vector<Node *> greenNodes,
+                       std::vector<Node *> redNodes = {});
 
 #endif

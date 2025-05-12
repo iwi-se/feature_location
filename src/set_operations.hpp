@@ -6,22 +6,22 @@
 #include <memory>
 #include <vector>
 
-using Match = std::vector<std::shared_ptr<Node>>;
+using Match = std::vector<Node *>;
 
 using MatchList = std::vector<Match>;
 
-using MatchesPerFile = std::vector<std::shared_ptr<Node>>;
+using MatchesPerFile = std::vector<Node *>;
 
 MatchesPerFile extractMatchesPerFile(const MatchList &matches,
                                      const int       &index);
 
-MatchList intersection(const std::vector<std::shared_ptr<Node>> &nodes1,
-                       const Configuration                      &config);
+MatchList intersection(const std::vector<Node *> &nodes1,
+                       Configuration       &config);
 
 struct FileDifferenceResult
 {
-    std::vector<std::shared_ptr<Node>> intersection;
-    std::vector<std::shared_ptr<Node>> subtraction;
+    std::vector<Node *> intersection;
+    std::vector<Node *> subtraction;
 };
 
 struct DifferenceResult
@@ -31,8 +31,8 @@ struct DifferenceResult
 };
 
 DifferenceResult
-    difference(const std::vector<std::shared_ptr<Node>> &leftFiles,
-               const std::vector<std::shared_ptr<Node>> &rightFiles,
-               const Configuration                      &config);
+    difference(const std::vector<std::unique_ptr<Node>> &leftFiles,
+               const std::vector<std::unique_ptr<Node>> &rightFiles,
+               Configuration                      &config);
 
 #endif

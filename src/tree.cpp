@@ -69,17 +69,17 @@ Node::Node(const std::string    &tag,
     , sourcePosition(sourcePosition)
 { }
 
-std::string Node::getTag() const
+const std::string &Node::getTag() const
 {
   return tag;
 }
 
-std::string Node::getTsText() const
+const std::string &Node::getTsText() const
 {
   return tsText;
 }
 
-int Node::getConnectedLeafWeight()
+const int& Node::getConnectedLeafWeight()
 {
   if (connectedLeafWeight == 0)
   {
@@ -100,7 +100,7 @@ int Node::getConnectedLeafWeight()
     }
     else
     {
-      for (auto child : children)
+      for (auto &child : children)
       {
         connectedLeafWeight += child->getConnectedLeafWeight();
       }
@@ -109,13 +109,13 @@ int Node::getConnectedLeafWeight()
   return connectedLeafWeight;
 }
 
-void Node::addChild(const std::shared_ptr<Node> &child)
+void Node::addChild(Node *child)
 {
-  children.push_back(child);
-  child->setParent(shared_from_this());
+  children.push_back(std::unique_ptr<Node>(child));
+  child->setParent(this);
 }
 
-void Node::setParent(const std::shared_ptr<Node> &parent)
+void Node::setParent(Node *parent)
 {
   this->parent = parent;
 }
@@ -132,7 +132,7 @@ void Node::render(const int &whitespace) const
     std::cout << ": \"" << tsText << "\"";
   }
   std::cout << std::endl;
-  for (auto child : children)
+  for (auto &child : children)
   {
     child->render(whitespace + 2);
   }
@@ -143,11 +143,11 @@ bool Node::isLeaf() const
   return children.empty();
 }
 
-std::vector<std::shared_ptr<Node>> Node::getPointerToEveryNode()
+std::vector<Node *> Node::getPointerToEveryNode()
 {
-  std::vector<std::shared_ptr<Node>> nodes;
-  std::stack<std::shared_ptr<Node>>  stack;
-  stack.push(shared_from_this());
+  std::vector<Node *> nodes;
+  std::stack<Node *>  stack;
+  stack.push(this);
 
   while (!stack.empty())
   {
@@ -158,53 +158,68 @@ std::vector<std::shared_ptr<Node>> Node::getPointerToEveryNode()
     for (auto it = current->children.rbegin(); it != current->children.rend();
          ++it)
     {
-      stack.push(*it);
+      stack.push(it->get());
     }
   }
 
   return nodes;
 }
 
-std::string Node::getSubtreeHash()
+const std::size_t& Node::getSubtreeHash()
 {
-  if (subtreeHash.empty())
+  if (subtreeHash == 0)
   {
-    subtreeHash = tag;
+    std::string temp_hash;
+    temp_hash = tag;
     if (isLeaf())
     {
-      subtreeHash += tsText;
+      temp_hash += tsText;
     }
-    for (auto child : children)
+    for (auto &child : children)
     {
-      subtreeHash += child->getSubtreeHash();
+      temp_hash.append(std::to_string(child->getSubtreeHash()));
+    }
+    subtreeHash = std::hash<std::string>{}(temp_hash);
+    if (subtreeHash == 0) // for the very rare case that the hash is 0
+    {
+      subtreeHash = 1;
     }
   }
   return subtreeHash;
 }
 
-std::shared_ptr<Node> Node::getChildByTag(const std::string &tag)
+Node *Node::getChildByTag(const std::string &tag)
 {
-  for (auto child : children)
+  for (const auto &child : children)
   {
     if (child->getTag() == tag)
     {
-      return child;
+      return child.get();
     }
   }
   return nullptr;
 }
 
-std::shared_ptr<Node> Node::getParent()
+Node *Node::getParent()
 {
   return parent;
 }
 
-bool Node::isDescendant(const std::shared_ptr<Node> &node)
+Node *Node::getRoot()
+{
+  if (parent == nullptr)
+  {
+    return this;
+  }
+  return parent->getRoot();
+}
+
+bool Node::isDescendant(Node *node)
 {
   auto current = node;
   while (current->parent != nullptr)
   {
-    if ((current->parent).get() == this)
+    if (current->parent == this)
     {
       return true;
     }
@@ -216,30 +231,29 @@ bool Node::isDescendant(const std::shared_ptr<Node> &node)
   return false;
 }
 
-std::vector<std::shared_ptr<Node>> Node::getChildren()
+const std::vector<std::unique_ptr<Node>> &Node::getChildren()
 {
   return children;
 }
 
-Node::RelativePosition
-    Node::getRelativePosition(const std::shared_ptr<Node> &other)
+Node::RelativePosition Node::getRelativePosition(Node *other)
 {
-  if (other.get() == this)
+  if (other == this)
   {
     return RelativePosition::overlapping;
   }
-  if (isDescendant(other) || other->isDescendant(shared_from_this()))
+  if (isDescendant(other) || other->isDescendant(this))
   {
     return RelativePosition::overlapping;
   }
   else
   {
     int compareValue1, compareValue2;
-    if (shared_from_this()->sourcePosition.getStartPosition().first
+    if (sourcePosition.getStartPosition().first
         == other->sourcePosition.getStartPosition().first)
     {
       compareValue1
-          = shared_from_this()->sourcePosition.getStartPosition().second;
+          = sourcePosition.getStartPosition().second;
       compareValue2 = other->sourcePosition.getStartPosition().second;
     }
     else
@@ -269,7 +283,7 @@ void Node::setNodeTypes(const std::vector<std::string> &types)
   allTypes = types;
 }
 
-std::vector<std::string> Node::getNodeTypes()
+const std::vector<std::string> &Node::getNodeTypes() const
 {
   return allTypes;
 }

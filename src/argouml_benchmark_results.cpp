@@ -1,5 +1,6 @@
 #include "argouml_benchmark_results.hpp"
 #include "configuration.hpp"
+#include "node_types.hpp"
 #include "set_operations.hpp"
 #include <filesystem>
 #include <vector>
@@ -13,13 +14,12 @@ enum class TraceExtent
   full
 };
 
-TraceExtent isTrace(const std::shared_ptr<Node>              &node,
-                    const std::vector<std::shared_ptr<Node>> &otherNodes)
+TraceExtent isTrace(Node *node, const std::vector<Node *> &otherNodes)
 {
   auto result { TraceExtent::full };
   for (const auto &otherNode : otherNodes)
   {
-    if (node.get() == otherNode.get())
+    if (node == otherNode)
     {
       return TraceExtent::none;
     }
@@ -35,18 +35,18 @@ TraceExtent isTrace(const std::shared_ptr<Node>              &node,
   return result;
 }
 
-bool isMethodDeclaration(const std::shared_ptr<Node> &node)
+bool isMethodDeclaration(Node *node)
 {
   return node->getTag() == "method_declaration"
          || node->getTag() == "constructor_declaration";
 }
 
-bool isClassDeclaration(const std::shared_ptr<Node> &node)
+bool isClassDeclaration(Node *node)
 {
   return node->getTag() == "class_declaration";
 }
 
-std::string getIdentifier(const std::shared_ptr<Node> &node)
+std::string getIdentifier(Node *node)
 {
   auto identifier { node->getChildByTag("identifier") };
   if (identifier == nullptr)
@@ -56,7 +56,7 @@ std::string getIdentifier(const std::shared_ptr<Node> &node)
   return identifier->getTsText();
 }
 
-std::string getClassOrMethodIdentifier(std::shared_ptr<Node> node)
+std::string getClassOrMethodIdentifier(Node *node)
 {
   while (node != nullptr && !isClassDeclaration(node)
          && !isMethodDeclaration(node))
@@ -70,18 +70,31 @@ std::string getClassOrMethodIdentifier(std::shared_ptr<Node> node)
   return getIdentifier(node);
 }
 
-std::string getClassFqn(std::shared_ptr<Node> node)
+std::string getClassFqn(Node *node)
 {
   if (!isClassDeclaration(node))
   {
     return "";
   }
-  auto identifier { getIdentifier(node) };
-
   // Get to the program node
+  std::vector<std::string> classFqns;
   while (node != nullptr && node->getTag() != "program")
   {
+    if (isClassDeclaration(node))
+    {
+      classFqns.push_back(getIdentifier(node));
+    }
     node = node->getParent();
+  }
+
+  std::string identifier {};
+  for (auto it = classFqns.rbegin(); it != classFqns.rend(); ++it)
+  {
+    if (it != classFqns.rbegin())
+    {
+      identifier += ".";
+    }
+    identifier += *it;
   }
   if (node == nullptr)
   {
@@ -100,7 +113,7 @@ std::string getClassFqn(std::shared_ptr<Node> node)
   auto                     current = packageDeclaration;
   while (current != nullptr)
   {
-    auto children { current->getChildren() };
+    auto &children { current->getChildren() };
     std::vector<std::string>
         thisLevelParts; // use intermediate vector, because of the order
     for (const auto &child : children)
@@ -137,7 +150,7 @@ std::string getClassFqn(std::shared_ptr<Node> node)
  * @return The fully qualified method name including class and parameters, or
  * empty string if not a method_declaration
  */
-std::string getMethodFqn(std::shared_ptr<Node> node)
+std::string getMethodFqn(Node *node)
 {
   if (!isMethodDeclaration(node))
   {
@@ -172,10 +185,12 @@ std::string getMethodFqn(std::shared_ptr<Node> node)
     {
       if (child->getTag() == "formal_parameter")
       {
-        auto typeIdentifier = child->getChildren()[0];
+        auto typeIdentifier = child->getChildren()[0].get();
         if (typeIdentifier->getTag() == "modifiers")
         {
-          typeIdentifier = child->getChildren()[1]; // index 0 might be modifiers, then type identifier is index 1
+          typeIdentifier = child->getChildren()[1]
+                               .get(); // index 0 might be modifiers, then
+                                       // type identifier is index 1
         }
         if (typeIdentifier != nullptr)
         {
@@ -193,14 +208,18 @@ std::string getMethodFqn(std::shared_ptr<Node> node)
     {
       methodFqn += ",";
     }
+    paramTypes[i].erase(
+        std::remove(paramTypes[i].begin(), paramTypes[i].end(), ' '),
+        paramTypes[i].end());
     methodFqn += paramTypes[i];
   }
   methodFqn += ")";
+  // Remove all spaces from the method FQN
 
   return methodFqn;
 }
 
-std::string getFqn(std::shared_ptr<Node> node)
+std::string getFqn(Node *node)
 {
   auto current = node;
   while (current != nullptr)
@@ -267,9 +286,8 @@ class OutputLines
     std::vector<OutputLine> lines;
 };
 
-OutputLines
-    findFullTraces(const std::vector<std::shared_ptr<Node>> &nodes,
-                   const std::vector<std::shared_ptr<Node>> &subtractionNodes)
+OutputLines findFullTraces(const std::vector<Node *> &nodes,
+                           const std::vector<Node *> &subtractionNodes)
 {
   OutputLines outputLines;
   for (const auto &node : nodes)
@@ -297,7 +315,12 @@ OutputLines
     // Recursively check children
     else
     {
-      auto childTraces = findFullTraces(node->getChildren(), subtractionNodes);
+      std::vector<Node *> childs(node->getChildren().size());
+      for (size_t i = 0; i < node->getChildren().size(); i++)
+      {
+        childs[i] = node->getChildren()[i].get();
+      }
+      auto childTraces = findFullTraces(childs, subtractionNodes);
       // Merge child traces into output lines
       outputLines.insertMany(childTraces);
     }
@@ -305,23 +328,24 @@ OutputLines
   return outputLines;
 }
 
-OutputLines findRefinementTraces(
-    const std::vector<std::shared_ptr<Node>> &nodes,
-    const std::vector<std::shared_ptr<Node>> &subtractionNodes)
+OutputLines findRefinementTraces(const std::vector<Node *> &nodes,
+                                 const std::vector<Node *> &subtractionNodes,
+                                 Configuration             &config)
 {
   OutputLines outputLines;
   for (const auto &node : nodes)
   {
-    for (const auto &maybeLeaf : node->getPointerToEveryNode())
+    for (auto &includedNode : node->getPointerToEveryNode())
     {
-      if (maybeLeaf->isLeaf())
+      if (isIncludedNodeType(includedNode, config)
+          && !isClassDeclaration(includedNode)
+          && !isMethodDeclaration(includedNode))
       {
-        const auto &leaf { maybeLeaf };
-        auto        traceExtent { isTrace(leaf, subtractionNodes) };
+        auto traceExtent { isTrace(includedNode, subtractionNodes) };
         if (traceExtent == TraceExtent::refinement
             || traceExtent == TraceExtent::full)
         {
-          auto ancestorIdentifier { getFqn(leaf) };
+          auto ancestorIdentifier { getFqn(includedNode) };
           if (!ancestorIdentifier.empty())
           {
             outputLines.insert({ ancestorIdentifier, true });
@@ -335,7 +359,7 @@ OutputLines findRefinementTraces(
 
 std::string
     buildArgoumlBenchmarkOutputForFile(DifferenceResult differenceResult,
-                                       Configuration    config)
+                                       Configuration   &config)
 {
   if (config.options.language != "java")
   {
@@ -348,7 +372,9 @@ std::string
       fileDifferenceResult.intersection, fileDifferenceResult.subtraction) };
 
   OutputLines refinementOutputLines { findRefinementTraces(
-      fileDifferenceResult.intersection, fileDifferenceResult.subtraction) };
+      fileDifferenceResult.intersection,
+      fileDifferenceResult.subtraction,
+      config) };
 
   fullTraceOutputLines.insertMany(refinementOutputLines);
 
@@ -359,7 +385,7 @@ std::string
 // wrong
 std::string
     buildArgoumlBenchmarkOutput(std::vector<DifferenceResult> differenceResults,
-                                Configuration                 config)
+                                Configuration                &config)
 {
   std::string output;
   for (const auto &differenceResult : differenceResults)

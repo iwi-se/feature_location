@@ -79,19 +79,19 @@ void markCharacterColor(
          currentColumnIndex < currentLine.size();
          currentColumnIndex++)
     {
-      SourcePosition currentSourcePosition {
-        sourcePositions[currentSourcePositionIndex]
+      SourcePosition* currentSourcePosition {
+        &sourcePositions[currentSourcePositionIndex]
       };
       while (getRelativePosition(
-                 currentSourcePosition, currentLineIndex, currentColumnIndex)
+                 *currentSourcePosition, currentLineIndex, currentColumnIndex)
                  == RelativePosition::AFTER
              && currentSourcePositionIndex < sourcePositions.size() - 1)
       {
         currentSourcePositionIndex++;
-        currentSourcePosition = sourcePositions[currentSourcePositionIndex];
+        currentSourcePosition = &sourcePositions[currentSourcePositionIndex];
       }
       if (getRelativePosition(
-              currentSourcePosition, currentLineIndex, currentColumnIndex)
+              *currentSourcePosition, currentLineIndex, currentColumnIndex)
           == RelativePosition::INSIDE)
       {
         currentLine[currentColumnIndex].color = color;
@@ -151,7 +151,8 @@ std::string renderCharacterLines(
   return result;
 }
 
-std::string renderDifference(DifferenceResult difference, Configuration config)
+std::string renderDifference(DifferenceResult     difference,
+                             const Configuration &config)
 {
   std::string result { "<html><body>" };
 
@@ -196,9 +197,9 @@ void debugPrintMarkedCharacters(
 }
 
 std::string renderFile(std::filesystem::path              file,
-                       Configuration                      config,
-                       std::vector<std::shared_ptr<Node>> greenNodes,
-                       std::vector<std::shared_ptr<Node>> redNodes)
+                       const Configuration               &config,
+                       std::vector<Node *> greenNodes,
+                       std::vector<Node *> redNodes)
 {
   std::vector<SourcePosition> greenPositions;
   std::vector<SourcePosition> redPositions;
@@ -252,9 +253,11 @@ std::string renderFile(std::filesystem::path              file,
   result += "<pre>";
 
   std::vector<std::vector<CharacterWithColor>> characterLines;
+  characterLines.reserve(lines.size());
   for (auto &line : lines)
   {
     std::vector<CharacterWithColor> characters;
+    characters.reserve(line.size());
     for (auto &character : line)
     {
       characters.push_back(makeCharacterWithColorFromCharacter(character));
