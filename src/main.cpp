@@ -63,7 +63,7 @@ void renderResultsToFiles(std::vector<DifferenceResult> differenceResults,
 
 void renderArgoumlBenchmarkResultsToFiles(
     std::vector<DifferenceResult> differenceResults,
-    const Configuration          &config)
+    Configuration          &config)
 {
   ensureResultsDirectoryExists();
 

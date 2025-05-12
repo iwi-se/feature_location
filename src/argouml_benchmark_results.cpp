@@ -1,5 +1,6 @@
 #include "argouml_benchmark_results.hpp"
 #include "configuration.hpp"
+#include "node_types.hpp"
 #include "set_operations.hpp"
 #include <filesystem>
 #include <vector>
@@ -75,12 +76,25 @@ std::string getClassFqn(Node *node)
   {
     return "";
   }
-  auto identifier { getIdentifier(node) };
-
   // Get to the program node
+  std::vector<std::string> classFqns;
   while (node != nullptr && node->getTag() != "program")
   {
+    if (isClassDeclaration(node))
+    {
+      classFqns.push_back(getIdentifier(node));
+    }
     node = node->getParent();
+  }
+
+  std::string identifier {};
+  for (auto it = classFqns.rbegin(); it != classFqns.rend(); ++it)
+  {
+    if (it != classFqns.rbegin())
+    {
+      identifier += ".";
+    }
+    identifier += *it;
   }
   if (node == nullptr)
   {
@@ -174,9 +188,9 @@ std::string getMethodFqn(Node *node)
         auto typeIdentifier = child->getChildren()[0].get();
         if (typeIdentifier->getTag() == "modifiers")
         {
-          typeIdentifier
-              = child->getChildren()[1].get(); // index 0 might be modifiers, then
-                                         // type identifier is index 1
+          typeIdentifier = child->getChildren()[1]
+                               .get(); // index 0 might be modifiers, then
+                                       // type identifier is index 1
         }
         if (typeIdentifier != nullptr)
         {
@@ -194,9 +208,13 @@ std::string getMethodFqn(Node *node)
     {
       methodFqn += ",";
     }
+    paramTypes[i].erase(
+        std::remove(paramTypes[i].begin(), paramTypes[i].end(), ' '),
+        paramTypes[i].end());
     methodFqn += paramTypes[i];
   }
   methodFqn += ")";
+  // Remove all spaces from the method FQN
 
   return methodFqn;
 }
@@ -311,21 +329,23 @@ OutputLines findFullTraces(const std::vector<Node *> &nodes,
 }
 
 OutputLines findRefinementTraces(const std::vector<Node *> &nodes,
-                                 const std::vector<Node *> &subtractionNodes)
+                                 const std::vector<Node *> &subtractionNodes,
+                                 Configuration             &config)
 {
   OutputLines outputLines;
   for (const auto &node : nodes)
   {
-    for (const auto &maybeLeaf : node->getPointerToEveryNode())
+    for (auto &includedNode : node->getPointerToEveryNode())
     {
-      if (maybeLeaf->isLeaf())
+      if (isIncludedNodeType(includedNode, config)
+          && !isClassDeclaration(includedNode)
+          && !isMethodDeclaration(includedNode))
       {
-        const auto &leaf { maybeLeaf };
-        auto        traceExtent { isTrace(leaf, subtractionNodes) };
+        auto traceExtent { isTrace(includedNode, subtractionNodes) };
         if (traceExtent == TraceExtent::refinement
             || traceExtent == TraceExtent::full)
         {
-          auto ancestorIdentifier { getFqn(leaf) };
+          auto ancestorIdentifier { getFqn(includedNode) };
           if (!ancestorIdentifier.empty())
           {
             outputLines.insert({ ancestorIdentifier, true });
@@ -338,8 +358,8 @@ OutputLines findRefinementTraces(const std::vector<Node *> &nodes,
 }
 
 std::string
-    buildArgoumlBenchmarkOutputForFile(DifferenceResult     differenceResult,
-                                       const Configuration &config)
+    buildArgoumlBenchmarkOutputForFile(DifferenceResult differenceResult,
+                                       Configuration   &config)
 {
   if (config.options.language != "java")
   {
@@ -352,7 +372,9 @@ std::string
       fileDifferenceResult.intersection, fileDifferenceResult.subtraction) };
 
   OutputLines refinementOutputLines { findRefinementTraces(
-      fileDifferenceResult.intersection, fileDifferenceResult.subtraction) };
+      fileDifferenceResult.intersection,
+      fileDifferenceResult.subtraction,
+      config) };
 
   fullTraceOutputLines.insertMany(refinementOutputLines);
 
@@ -363,7 +385,7 @@ std::string
 // wrong
 std::string
     buildArgoumlBenchmarkOutput(std::vector<DifferenceResult> differenceResults,
-                                const Configuration          &config)
+                                Configuration                &config)
 {
   std::string output;
   for (const auto &differenceResult : differenceResults)

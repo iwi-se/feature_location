@@ -14,9 +14,12 @@ double calculateEnvironmentSimilarity(const Match &match)
   for (const auto &node : match)
   {
     std::vector<Node *> environment;
-    for (const auto &sibling : node->getParent()->getChildren())
+    if (node->getParent() != nullptr)
     {
-      environment.push_back(sibling.get());
+      for (const auto &sibling : node->getParent()->getChildren())
+      {
+        environment.push_back(sibling.get());
+      }
     }
     environments.push_back(environment);
   }
@@ -60,7 +63,7 @@ double calculateEnvironmentSimilarity(const Match &match)
   // Normalize by the size of the first environment (or any environment since
   // they should be same size)
   double normalizedCount
-      = environments.empty()
+      = environments.empty() || environments[0].empty()
             ? 0.0
             : static_cast<double>(equalSiblingsCount) / environments[0].size();
 
@@ -91,10 +94,10 @@ double calculatePositionSimilarity(const Match &match)
   {
     cumulativePosition += pos;
   }
-  cumulativePosition /= positionMetrics.size();
-  auto root           = match[0]->getRoot();
-  double lastPosition   = root->getSourcePosition().getEndLine() * 1000
-                      + root->getSourcePosition().getEndColumn();
+  cumulativePosition  /= positionMetrics.size();
+  auto   root          = match[0]->getRoot();
+  double lastPosition  = root->getSourcePosition().getEndLine() * 1000
+                        + root->getSourcePosition().getEndColumn();
   // return the difference between the min and max
   return 1 - (cumulativePosition / lastPosition);
 }
@@ -260,9 +263,7 @@ MatchList matchTrees(const std::vector<std::pair<TreeIndex, Node *>> &indices,
     stack.pop();
     MatchList nodeMatches;
 
-    if (isIncludedNodeType(currentNode, config)
-        && currentNode->getConnectedLeafWeight()
-               >= config.options.minimumTraceWeight)
+    if (isIncludedNodeType(currentNode, config))
     {
       std::vector<std::pair<TreeIndex, Node *>> remainingIndices {
         indices.begin() + 1, indices.end()
