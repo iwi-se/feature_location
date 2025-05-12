@@ -50,7 +50,8 @@ void renderResultsToFiles(std::vector<DifferenceResult> differenceResults,
 
   for (const auto &differenceResult : differenceResults)
   {
-    threads.push_back(std::thread(renderResultToFile, differenceResult, config, expressionName));
+    threads.push_back(std::thread(
+        renderResultToFile, differenceResult, config, expressionName));
   }
 
   for (auto &thread : threads)
@@ -63,7 +64,8 @@ void renderResultsToFiles(std::vector<DifferenceResult> differenceResults,
 
 void renderArgoumlBenchmarkResultsToFiles(
     std::vector<DifferenceResult> differenceResults,
-    Configuration          &config)
+    Configuration                &config,
+    const std::string            &expressionName)
 {
   ensureResultsDirectoryExists();
 
@@ -71,7 +73,7 @@ void renderArgoumlBenchmarkResultsToFiles(
 
   std::string result { buildArgoumlBenchmarkOutput(differenceResults, config) };
   fs::path    outputFileName
-      = fs::path("results") / "argouml_benchmark_results.txt";
+      = fs::path("results") / ("benchmark_result_" + expressionName + ".txt");
   std::ofstream outputFile(outputFileName);
   outputFile << result;
   outputFile.close();
@@ -111,7 +113,8 @@ int main(int argc, char *argv[])
     renderResultsToFiles(differenceResults, config, expression.labels[0]);
     if (config.options.language == "java")
     {
-      renderArgoumlBenchmarkResultsToFiles(differenceResults, config);
+      renderArgoumlBenchmarkResultsToFiles(
+          differenceResults, config, expression.labels[0]);
     }
   }
 
