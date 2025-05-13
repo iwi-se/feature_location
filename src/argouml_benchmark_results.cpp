@@ -3,7 +3,9 @@
 #include "node_types.hpp"
 #include "set_operations.hpp"
 #include <filesystem>
+#include <set>
 #include <vector>
+#include <stack>
 
 const std::string refinementSuffix { "Refinement" };
 
@@ -37,13 +39,19 @@ TraceExtent isTrace(Node *node, const std::vector<Node *> &otherNodes)
 
 bool isMethodDeclaration(Node *node)
 {
-  return node->getTag() == "method_declaration"
-         || node->getTag() == "constructor_declaration";
+  return node != nullptr
+         && (node->getTag() == "method_declaration"
+             || node->getTag() == "constructor_declaration");
 }
 
 bool isClassDeclaration(Node *node)
 {
-  return node->getTag() == "class_declaration";
+  return node != nullptr && node->getTag() == "class_declaration";
+}
+
+bool isImportDeclaration(Node *node)
+{
+  return node != nullptr && node->getTag() == "import_declaration";
 }
 
 std::string getIdentifier(Node *node)
@@ -56,18 +64,46 @@ std::string getIdentifier(Node *node)
   return identifier->getTsText();
 }
 
-std::string getClassOrMethodIdentifier(Node *node)
+Node *getParentMethodNode(Node *node)
 {
-  while (node != nullptr && !isClassDeclaration(node)
-         && !isMethodDeclaration(node))
+  while (node != nullptr && !isMethodDeclaration(node))
   {
     node = node->getParent();
   }
-  if (node == nullptr)
+  return node;
+}
+
+Node *getParentClassNode(Node *node)
+{
+  while (node != nullptr && !isClassDeclaration(node))
   {
-    return "";
+    node = node->getParent();
   }
-  return getIdentifier(node);
+  return node;
+}
+
+std::vector<Node *> getClassNodes(Node *node)
+{
+  std::vector<Node *> result;
+  std::stack<Node *> stack;
+  stack.push(node);
+  while (!stack.empty())
+  {
+    auto current { stack.top() };
+    stack.pop();
+    if (isClassDeclaration(current))
+    {
+      result.push_back(current);
+    }
+    else
+    {
+      for (const auto &child : current->getChildren())
+      {
+        stack.push(child.get());
+      }
+    }
+  }
+  return result;
 }
 
 std::string getClassFqn(Node *node)
@@ -158,24 +194,6 @@ std::string getMethodFqn(Node *node)
   }
   auto identifier { getIdentifier(node) };
 
-  // Get to the class declaration
-  auto classNode = node;
-  while (classNode != nullptr && !isClassDeclaration(classNode))
-  {
-    classNode = classNode->getParent();
-  }
-  if (classNode == nullptr)
-  {
-    return "";
-  }
-
-  // Get the class FQN
-  std::string classFqn = getClassFqn(classNode);
-  if (classFqn.empty())
-  {
-    return "";
-  }
-
   // Get parameter types
   std::vector<std::string> paramTypes;
   auto formalParams = node->getChildByTag("formal_parameters");
@@ -201,7 +219,7 @@ std::string getMethodFqn(Node *node)
   }
 
   // Build the method FQN
-  std::string methodFqn = classFqn + " " + identifier + "(";
+  std::string methodFqn = identifier + "(";
   for (size_t i = 0; i < paramTypes.size(); ++i)
   {
     if (i > 0)
@@ -219,33 +237,33 @@ std::string getMethodFqn(Node *node)
   return methodFqn;
 }
 
-std::string getFqn(Node *node)
-{
-  auto current = node;
-  while (current != nullptr)
-  {
-    if (isMethodDeclaration(current))
-    {
-      return getMethodFqn(current);
-    }
-    if (isClassDeclaration(current))
-    {
-      return getClassFqn(current);
-    }
-    current = current->getParent();
-  }
-  return "";
-}
-
 struct OutputLine
 {
-    std::string identifier;
+    bool isClassLine() const
+    {
+      return methodFqn.empty() && !isRefinement;
+    }
+
+    bool isMethodLine() const
+    {
+      return !classFqn.empty() && !methodFqn.empty() && !isRefinement;
+    }
+
+    std::string classFqn;
+    std::string methodFqn;
     bool        isRefinement;
 };
 
-bool operator== (const OutputLine &lhs, const OutputLine &rhs)
+bool operator== (const OutputLine &a, const OutputLine &b)
 {
-  return lhs.identifier == rhs.identifier;
+  return a.classFqn == b.classFqn && a.methodFqn == b.methodFqn
+         && a.isRefinement == b.isRefinement;
+}
+
+bool operator< (const OutputLine &a, const OutputLine &b)
+{
+  return a.classFqn < b.classFqn
+         || (a.classFqn == b.classFqn && a.methodFqn < b.methodFqn);
 }
 
 class OutputLines
@@ -253,37 +271,84 @@ class OutputLines
   public:
     void insert(const OutputLine &line)
     {
-      if (std::find(lines.begin(), lines.end(), line) == lines.end())
+      if (line.isClassLine())
       {
-        lines.push_back(line);
+        classLines.insert(line);
+      }
+      else if (line.isMethodLine())
+      {
+        methodLines.insert(line);
+      }
+      else
+      {
+        refinementLines.insert(line);
       }
     }
 
     void insertMany(const OutputLines &other)
     {
-      for (const auto &line : other.getLines())
+      for (const auto &line : other.classLines)
+      {
+        insert(line);
+      }
+      for (const auto &line : other.methodLines)
+      {
+        insert(line);
+      }
+      for (const auto &line : other.refinementLines)
       {
         insert(line);
       }
     }
 
+    void removeSuperfluousLines()
+    {
+      for (const auto &classLine : classLines)
+      {
+        std::erase_if(methodLines,
+                      [&classLine](const OutputLine &line)
+                      { return line.classFqn == classLine.classFqn; });
+        std::erase_if(refinementLines,
+                      [&classLine](const OutputLine &line)
+                      { return line.classFqn == classLine.classFqn; });
+      }
+
+      for (const auto &methodLine : methodLines)
+      {
+        std::erase_if(refinementLines,
+                      [&methodLine](const OutputLine &line)
+                      {
+                        return line.classFqn == methodLine.classFqn
+                               && line.methodFqn == methodLine.methodFqn;
+                      });
+      }
+    }
+
     std::string render()
     {
+      removeSuperfluousLines();
       std::string output;
-      for (const auto &line : lines)
+      for (auto &line : classLines)
       {
-        output += line.identifier
-                  + (line.isRefinement ? " " + refinementSuffix : "") + "\n";
+        output += line.classFqn + "\n";
       }
+      for (const auto &line : methodLines)
+      {
+        output += line.classFqn + " " + line.methodFqn + "\n";
+      }
+      for (const auto &line : refinementLines)
+      {
+        output += line.classFqn
+                  + (line.methodFqn.empty() ? "" : " " + line.methodFqn) + " "
+                  + refinementSuffix + "\n";
+      }
+
       return output;
     }
 
-    const std::vector<OutputLine> &getLines() const
-    {
-      return lines;
-    }
-  private:
-    std::vector<OutputLine> lines;
+    std::set<OutputLine> classLines;
+    std::set<OutputLine> methodLines;
+    std::set<OutputLine> refinementLines;
 };
 
 OutputLines findFullTraces(const std::vector<Node *> &nodes,
@@ -296,20 +361,28 @@ OutputLines findFullTraces(const std::vector<Node *> &nodes,
     if (isClassDeclaration(node)
         && isTrace(node, subtractionNodes) == TraceExtent::full)
     {
-      std::string classIdentifier { getFqn(node) };
+      std::string classIdentifier { getClassFqn(node) };
       if (!classIdentifier.empty())
       {
-        outputLines.insert({ classIdentifier, false });
+        outputLines.insert({ classIdentifier, "", false });
       }
     }
     // Check if node is full method trace
     else if (isMethodDeclaration(node)
              && isTrace(node, subtractionNodes) == TraceExtent::full)
     {
-      std::string methodIdentifier { getFqn(node) };
-      if (!methodIdentifier.empty())
+      std::string methodIdentifier { getMethodFqn(node) };
+      // Get to the class declaration
+      auto classNode = node;
+      while (classNode != nullptr && !isClassDeclaration(classNode))
       {
-        outputLines.insert({ methodIdentifier, false });
+        classNode = classNode->getParent();
+      }
+      std::string classIdentifier { getClassFqn(classNode) };
+
+      if (!methodIdentifier.empty() && !classIdentifier.empty())
+      {
+        outputLines.insert({ classIdentifier, methodIdentifier, false });
       }
     }
     // Recursively check children
@@ -337,7 +410,21 @@ OutputLines findRefinementTraces(const std::vector<Node *> &nodes,
   {
     for (auto &includedNode : node->getPointerToEveryNode())
     {
-      if (isIncludedNodeType(includedNode, config)
+      if (isImportDeclaration(includedNode))
+      {
+        auto traceExtent { isTrace(includedNode, subtractionNodes) };
+        if (traceExtent == TraceExtent::refinement
+            || traceExtent == TraceExtent::full)
+        {
+          auto rootNode { includedNode->getRoot() };
+          auto classNodes { getClassNodes(rootNode) };
+          for (const auto &classNode : classNodes)
+          {
+            outputLines.insert({ getClassFqn(classNode), "", true });
+          }
+        }
+      }
+      else if (isIncludedNodeType(includedNode, config)
           && !isClassDeclaration(includedNode)
           && !isMethodDeclaration(includedNode))
       {
@@ -345,10 +432,18 @@ OutputLines findRefinementTraces(const std::vector<Node *> &nodes,
         if (traceExtent == TraceExtent::refinement
             || traceExtent == TraceExtent::full)
         {
-          auto ancestorIdentifier { getFqn(includedNode) };
-          if (!ancestorIdentifier.empty())
+          auto methodNode { getParentMethodNode(includedNode) };
+          auto classNode { getParentClassNode(includedNode) };
+
+          std::string methodIdentifier {};
+          if (methodNode != nullptr)
           {
-            outputLines.insert({ ancestorIdentifier, true });
+            methodIdentifier = getMethodFqn(methodNode);
+          }
+          std::string classIdentifier { getClassFqn(classNode) };
+          if (!classIdentifier.empty() || !methodIdentifier.empty())
+          {
+            outputLines.insert({ classIdentifier, methodIdentifier, true });
           }
         }
       }

@@ -198,6 +198,21 @@ ExpressionAllFiles getExpressionFiles(ExpressionSystemName expression,
   return expressionAllFiles;
 }
 
+std::vector<BasePlusRelativePath> getAllFiles(ExpressionAllFiles expression)
+{
+  std::vector<std::vector<BasePlusRelativePath>> allSystems {};
+  allSystems.insert(allSystems.end(), expression.leftSide.begin(), expression.leftSide.end());
+  allSystems.insert(allSystems.end(), expression.rightSide.begin(), expression.rightSide.end());
+  std::vector<BasePlusRelativePath> allFiles {};
+  for (const auto &system : allSystems)
+  {
+    allFiles.insert(allFiles.end(), system.begin(), system.end());
+  }
+  std::sort(allFiles.begin(), allFiles.end());
+  allFiles.erase(std::unique(allFiles.begin(), allFiles.end()), allFiles.end());
+  return allFiles;
+}
+
 std::vector<SingleFileExpression>
     buildFileBasedSubExpressions(ExpressionAllFiles expression)
 {
@@ -218,20 +233,18 @@ std::vector<SingleFileExpression>
   }
   else
   {
-    std::vector<BasePlusRelativePath> firstLeftSideSystem
-        = expression.leftSide[0];
-    for (const auto &file : firstLeftSideSystem)
+    std::vector<BasePlusRelativePath> allFiles {getAllFiles(expression)};
+    for (const auto &fileName : allFiles)
     {
       SingleFileExpression singleFileExpression {};
-      singleFileExpression.leftSide.push_back(file);
-      for (size_t i = 1; i < expression.leftSide.size(); i++)
+      for (size_t i = 0; i < expression.leftSide.size(); i++)
       {
         const std::vector<BasePlusRelativePath> otherLeftSideSystem {
           expression.leftSide[i]
         };
         for (const auto &otherFile : otherLeftSideSystem)
         {
-          if (file.relative == otherFile.relative)
+          if (fileName.relative == otherFile.relative)
           {
             singleFileExpression.leftSide.push_back(otherFile);
             singleFileExpression.labels = expression.labels;
@@ -243,7 +256,7 @@ std::vector<SingleFileExpression>
       {
         for (const auto &rightSideFile : rightSideSystem)
         {
-          if (file.relative == rightSideFile.relative)
+          if (fileName.relative == rightSideFile.relative)
           {
             singleFileExpression.rightSide.push_back(rightSideFile);
             singleFileExpression.labels = expression.labels;
@@ -252,10 +265,11 @@ std::vector<SingleFileExpression>
         }
       }
 
-      if (singleFileExpression.leftSide.size() == expression.leftSide.size())
+      while (singleFileExpression.leftSide.size() < expression.leftSide.size())
       {
-        subexpressions.push_back(singleFileExpression);
+        singleFileExpression.leftSide.insert(singleFileExpression.leftSide.begin(), BasePlusRelativePath { "/dev/null", "" });
       }
+      subexpressions.push_back(singleFileExpression);
     }
   }
   return subexpressions;

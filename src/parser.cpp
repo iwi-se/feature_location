@@ -80,10 +80,6 @@ std::unique_ptr<Node> parseFile(const std::filesystem::path &filename,
   std::string   code((std::istreambuf_iterator<char>(file)),
                    std::istreambuf_iterator<char>());
 
-  if (code.empty()) {
-    throw std::runtime_error("File is empty or does not exist: " + filename.string());
-  }
-
   // Parse the code
   TSTree *tree
       = ts_parser_parse_string(parser, nullptr, code.c_str(), code.size());

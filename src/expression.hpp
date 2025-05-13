@@ -17,6 +17,10 @@ struct BasePlusRelativePath
     }
 };
 
+bool operator==(const BasePlusRelativePath &lhs, const BasePlusRelativePath &rhs);
+
+bool operator<(const BasePlusRelativePath &lhs, const BasePlusRelativePath &rhs);
+
 template<typename T> class Expression
 {
   public:
