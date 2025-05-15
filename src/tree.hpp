@@ -50,7 +50,7 @@ class Node
     std::vector<Node *>  getPointerToEveryNode();
     const std::size_t   &getSubtreeHash();
     const int           &getConnectedLeafWeight();
-    bool                 isDescendant(Node *node);
+    bool                 isAncestorOf(Node *node);
     const SourcePosition getSourcePosition() const;
     const std::vector<std::unique_ptr<Node>> &getChildren();
     Node *getChildByTag(const std::string &tag);

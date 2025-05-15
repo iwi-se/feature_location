@@ -4,8 +4,8 @@
 #include "set_operations.hpp"
 #include <filesystem>
 #include <set>
-#include <vector>
 #include <stack>
+#include <vector>
 
 const std::string refinementSuffix { "Refinement" };
 
@@ -25,11 +25,11 @@ TraceExtent isTrace(Node *node, const std::vector<Node *> &otherNodes)
     {
       return TraceExtent::none;
     }
-    if (otherNode->isDescendant(node))
+    if (otherNode->isAncestorOf(node))
     {
       return TraceExtent::none;
     }
-    if (node->isDescendant(otherNode))
+    if (node->isAncestorOf(otherNode))
     {
       result = TraceExtent::refinement;
     }
@@ -46,7 +46,9 @@ bool isMethodDeclaration(Node *node)
 
 bool isClassDeclaration(Node *node)
 {
-  return node != nullptr && node->getTag() == "class_declaration";
+  return node != nullptr
+         && (node->getTag() == "class_declaration"
+             || node->getTag() == "interface_declaration");
 }
 
 bool isImportDeclaration(Node *node)
@@ -85,7 +87,7 @@ Node *getParentClassNode(Node *node)
 std::vector<Node *> getClassNodes(Node *node)
 {
   std::vector<Node *> result;
-  std::stack<Node *> stack;
+  std::stack<Node *>  stack;
   stack.push(node);
   while (!stack.empty())
   {
@@ -401,6 +403,73 @@ OutputLines findFullTraces(const std::vector<Node *> &nodes,
   return outputLines;
 }
 
+std::vector<Node *> findAllClassNodes(Node *root)
+{
+  std::vector<Node *> classNodes;
+  std::stack<Node *>  stack;
+  stack.push(root);
+  while (!stack.empty())
+  {
+    auto current { stack.top() };
+    stack.pop();
+    if (isClassDeclaration(current))
+    {
+      classNodes.push_back(current);
+    }
+    for (const auto &child : current->getChildren())
+    {
+      stack.push(child.get());
+    }
+  }
+  return classNodes;
+}
+
+void checkForImpreciseClassTraces(const std::vector<Node *> &nodes,
+                                  const std::vector<Node *> &subtractionNodes,
+                                  OutputLines               &outputLines)
+{
+  std::vector<Node *> leftClassNodes {};
+  std::vector<Node *> rightClassNodes {};
+  if (!nodes.empty())
+  {
+    leftClassNodes = findAllClassNodes(nodes[0]->getRoot());
+  }
+  if (!subtractionNodes.empty())
+  {
+    rightClassNodes = findAllClassNodes(subtractionNodes[0]->getRoot());
+  }
+  // Find all class names
+
+  for (const auto &leftClassNode : leftClassNodes)
+  {
+    bool hasTraceInClass { false };
+    for (const auto &node : nodes)
+    {
+      if (leftClassNode->isAncestorOf(node))
+      {
+        hasTraceInClass = true;
+        break;
+      }
+    }
+    if (hasTraceInClass)
+    {
+      bool isClassNameInSubtraction { false };
+      for (const auto &rightClassNode : rightClassNodes)
+      {
+        if (getClassFqn(rightClassNode) == getClassFqn(leftClassNode))
+        {
+          isClassNameInSubtraction = true;
+          break;
+        }
+      }
+      if (!isClassNameInSubtraction)
+      {
+        outputLines.insert({ getClassFqn(leftClassNode), "", false });
+      }
+    }
+  }
+}
+
 OutputLines findRefinementTraces(const std::vector<Node *> &nodes,
                                  const std::vector<Node *> &subtractionNodes,
                                  Configuration             &config)
@@ -425,8 +494,8 @@ OutputLines findRefinementTraces(const std::vector<Node *> &nodes,
         }
       }
       else if (isIncludedNodeType(includedNode, config)
-          && !isClassDeclaration(includedNode)
-          && !isMethodDeclaration(includedNode))
+               && !isClassDeclaration(includedNode)
+               && !isMethodDeclaration(includedNode))
       {
         auto traceExtent { isTrace(includedNode, subtractionNodes) };
         if (traceExtent == TraceExtent::refinement
@@ -449,6 +518,7 @@ OutputLines findRefinementTraces(const std::vector<Node *> &nodes,
       }
     }
   }
+  checkForImpreciseClassTraces(nodes, subtractionNodes, outputLines);
   return outputLines;
 }
 

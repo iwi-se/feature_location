@@ -214,7 +214,7 @@ Node *Node::getRoot()
   return parent->getRoot();
 }
 
-bool Node::isDescendant(Node *node)
+bool Node::isAncestorOf(Node *node)
 {
   auto current = node;
   while (current->parent != nullptr)
@@ -242,7 +242,7 @@ Node::RelativePosition Node::getRelativePosition(Node *other)
   {
     return RelativePosition::overlapping;
   }
-  if (isDescendant(other) || other->isDescendant(this))
+  if (isAncestorOf(other) || other->isAncestorOf(this))
   {
     return RelativePosition::overlapping;
   }
