@@ -242,7 +242,7 @@ MatchList
       }
       matches = std::move(newMatches);
     }
-    if (matches->size() > 2000)
+    if (matches->size() > 10)
     {
       sortByDecisionRatio(*matches, config);
       removeOverlappingPairs(*matches);
