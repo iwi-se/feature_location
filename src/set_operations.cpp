@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <ranges>
+#include <span>
 #include <stack>
 #include <utility>
 #include <vector>
@@ -129,7 +130,7 @@ void sortByDecisionRatio(MatchList &matches, const Configuration &config)
   matches.clear();
   for (const auto &pair : matchesWithRatio)
   {
-    if (std::get<1>(pair) > config.options.minimumTraceWeight)
+    if (std::get<1>(pair) >= config.options.minimumTraceWeight)
     {
       matches.push_back(std::get<0>(pair));
     }
@@ -211,9 +212,9 @@ class TreeIndex
 };
 
 MatchList
-    matchNodeInTrees(Node                                            *node,
-                     const std::vector<std::pair<TreeIndex, Node *>> &indices,
-                     const Configuration                             &config)
+    matchNodeInTrees(Node                                          *node,
+                     std::span<const std::pair<TreeIndex, Node *>> &indices,
+                     const Configuration                           &config)
 {
   std::unique_ptr<MatchList> matches { std::make_unique<MatchList>() };
   matches->reserve(indices.size());
@@ -242,11 +243,8 @@ MatchList
       }
       matches = std::move(newMatches);
     }
-    if (matches->size() > 10)
-    {
-      sortByDecisionRatio(*matches, config);
-      removeOverlappingPairs(*matches);
-    }
+    sortByDecisionRatio(*matches, config);
+    removeOverlappingPairs(*matches);
   }
 
   return *matches;
@@ -265,9 +263,8 @@ MatchList matchTrees(const std::vector<std::pair<TreeIndex, Node *>> &indices,
 
     if (isIncludedNodeType(currentNode, config))
     {
-      std::vector<std::pair<TreeIndex, Node *>> remainingIndices {
-        indices.begin() + 1, indices.end()
-      };
+      std::span<const std::pair<TreeIndex, Node *>> remainingIndices(indices);
+      remainingIndices = remainingIndices.subspan(1);
       nodeMatches = matchNodeInTrees(currentNode, remainingIndices, config);
     }
 

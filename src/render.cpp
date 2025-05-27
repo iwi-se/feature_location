@@ -92,7 +92,8 @@ void markCharacterColor(
       }
       if (getRelativePosition(
               *currentSourcePosition, currentLineIndex, currentColumnIndex)
-          == RelativePosition::INSIDE)
+          == RelativePosition::INSIDE
+          && currentLine[currentColumnIndex].character != " ")
       {
         currentLine[currentColumnIndex].color = color;
       }

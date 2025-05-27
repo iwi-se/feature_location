@@ -273,7 +273,7 @@ Node::RelativePosition Node::getRelativePosition(Node *other)
   }
 }
 
-const SourcePosition Node::getSourcePosition() const
+const SourcePosition& Node::getSourcePosition() const
 {
   return sourcePosition;
 }
