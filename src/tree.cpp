@@ -79,7 +79,7 @@ const std::string &Node::getTsText() const
   return tsText;
 }
 
-const int& Node::getConnectedLeafWeight()
+const int &Node::getConnectedLeafWeight()
 {
   if (connectedLeafWeight == 0)
   {
@@ -165,7 +165,7 @@ std::vector<Node *> Node::getPointerToEveryNode()
   return nodes;
 }
 
-const std::size_t& Node::getSubtreeHash()
+const std::size_t &Node::getSubtreeHash()
 {
   if (subtreeHash == 0)
   {
@@ -179,7 +179,7 @@ const std::size_t& Node::getSubtreeHash()
     {
       temp_hash.append(std::to_string(child->getSubtreeHash()));
     }
-    subtreeHash = std::hash<std::string>{}(temp_hash);
+    subtreeHash = std::hash<std::string> {}(temp_hash);
     if (subtreeHash == 0) // for the very rare case that the hash is 0
     {
       subtreeHash = 1;
@@ -252,8 +252,7 @@ Node::RelativePosition Node::getRelativePosition(Node *other)
     if (sourcePosition.getStartPosition().first
         == other->sourcePosition.getStartPosition().first)
     {
-      compareValue1
-          = sourcePosition.getStartPosition().second;
+      compareValue1 = sourcePosition.getStartPosition().second;
       compareValue2 = other->sourcePosition.getStartPosition().second;
     }
     else
@@ -273,7 +272,7 @@ Node::RelativePosition Node::getRelativePosition(Node *other)
   }
 }
 
-const SourcePosition& Node::getSourcePosition() const
+const SourcePosition &Node::getSourcePosition() const
 {
   return sourcePosition;
 }
@@ -286,4 +285,25 @@ void Node::setNodeTypes(const std::vector<std::string> &types)
 const std::vector<std::string> &Node::getNodeTypes() const
 {
   return allTypes;
+}
+
+std::vector<Node *> &Node::getLeaves()
+{
+  if (connectedLeaves.empty())
+  {
+    if (this->isLeaf())
+    {
+      connectedLeaves.push_back(this);
+    }
+    else
+    {
+      for (auto &child : this->children)
+      {
+        auto childResult { child->getLeaves() };
+        connectedLeaves.insert(
+            connectedLeaves.end(), childResult.begin(), childResult.end());
+      }
+    }
+  }
+  return connectedLeaves;
 }

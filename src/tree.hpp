@@ -42,20 +42,21 @@ class Node
          const bool           &tsIsNamed,
          const SourcePosition &sourcePosition);
 
-    const std::string   &getTag() const;
-    const std::string   &getTsText() const;
-    void                 addChild(Node *child);
-    void                 render(const int &whitespace) const;
-    bool                 isLeaf() const;
-    std::vector<Node *>  getPointerToEveryNode();
-    const std::size_t   &getSubtreeHash();
-    const int           &getConnectedLeafWeight();
-    bool                 isAncestorOf(Node *node);
-    const SourcePosition& getSourcePosition() const;
+    const std::string    &getTag() const;
+    const std::string    &getTsText() const;
+    void                  addChild(Node *child);
+    void                  render(const int &whitespace) const;
+    bool                  isLeaf() const;
+    std::vector<Node *>   getPointerToEveryNode();
+    const std::size_t    &getSubtreeHash();
+    const int            &getConnectedLeafWeight();
+    bool                  isAncestorOf(Node *node);
+    const SourcePosition &getSourcePosition() const;
     const std::vector<std::unique_ptr<Node>> &getChildren();
-    Node *getChildByTag(const std::string &tag);
-    Node *getParent();
-    Node *getRoot();
+    Node                *getChildByTag(const std::string &tag);
+    Node                *getParent();
+    Node                *getRoot();
+    std::vector<Node *> &getLeaves();
 
     enum class RelativePosition
     {
@@ -79,6 +80,7 @@ class Node
     std::size_t                        subtreeHash {};
     SourcePosition                     sourcePosition;
     std::vector<std::string>           allTypes {};
+    std::vector<Node *>                connectedLeaves {};
 
     void setParent(Node *parent);
 };
