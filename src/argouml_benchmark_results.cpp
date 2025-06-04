@@ -2,7 +2,6 @@
 #include "configuration.hpp"
 #include "node_types.hpp"
 #include "set_operations.hpp"
-#include <filesystem>
 #include <set>
 #include <stack>
 #include <vector>
@@ -309,12 +308,18 @@ class OutputLines
       {
         std::erase_if(methodLines,
                       [&classLine](const OutputLine &line)
-                      { return line.classFqn.starts_with(classLine.classFqn + ".")
-                          || line.classFqn == classLine.classFqn; });
+                      {
+                        return line.classFqn.starts_with(classLine.classFqn
+                                                         + ".")
+                               || line.classFqn == classLine.classFqn;
+                      });
         std::erase_if(refinementLines,
                       [&classLine](const OutputLine &line)
-                      { return line.classFqn.starts_with(classLine.classFqn + ".")
-                          || line.classFqn == classLine.classFqn; });
+                      {
+                        return line.classFqn.starts_with(classLine.classFqn
+                                                         + ".")
+                               || line.classFqn == classLine.classFqn;
+                      });
       }
 
       for (const auto &methodLine : methodLines)

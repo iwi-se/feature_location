@@ -79,7 +79,7 @@ void markCharacterColor(
          currentColumnIndex < currentLine.size();
          currentColumnIndex++)
     {
-      SourcePosition* currentSourcePosition {
+      SourcePosition *currentSourcePosition {
         &sourcePositions[currentSourcePositionIndex]
       };
       while (getRelativePosition(
@@ -92,7 +92,7 @@ void markCharacterColor(
       }
       if (getRelativePosition(
               *currentSourcePosition, currentLineIndex, currentColumnIndex)
-          == RelativePosition::INSIDE
+              == RelativePosition::INSIDE
           && currentLine[currentColumnIndex].character != " ")
       {
         currentLine[currentColumnIndex].color = color;
@@ -122,34 +122,38 @@ void escapeHtml(std::vector<std::vector<CharacterWithColor>> &characterLines)
 std::string renderCharacterLines(
     std::vector<std::vector<CharacterWithColor>> &characterLines)
 {
-  std::string    result {};
-  CharacterColor currentColor { CharacterColor::TRANSPARENT };
+  std::stringstream result {};
+  CharacterColor    currentColor { CharacterColor::TRANSPARENT };
+  size_t            lineCount { 1 };
   for (auto &line : characterLines)
   {
+    result << "<span style=\"background: lightgray;\">" << lineCount
+           << "</span>";
     for (auto &character : line)
     {
       if (character.color != currentColor)
       {
         if (currentColor != CharacterColor::TRANSPARENT)
         {
-          result += "</span>";
+          result << "</span>";
         }
         currentColor = character.color;
         if (currentColor == CharacterColor::GREEN)
         {
-          result += "<span style=\"background-color:rgb(121, 233, 155);\">";
+          result << "<span style=\"background-color:rgb(121, 233, 155);\">";
         }
         else if (currentColor == CharacterColor::RED)
         {
-          result += "<span style=\"background-color:rgb(233, 121, 155);\">";
+          result << "<span style=\"background-color:rgb(233, 121, 155);\">";
         }
       }
-      result += character.character;
+      result << character.character;
     }
-    result += "<br>";
+    result << "<br>";
+    lineCount++;
   }
-  result += "</span>";
-  return result;
+  result << "</span>";
+  return result.str();
 }
 
 std::string renderDifference(DifferenceResult     difference,
@@ -197,10 +201,10 @@ void debugPrintMarkedCharacters(
   }
 }
 
-std::string renderFile(std::filesystem::path              file,
-                       const Configuration               &config,
-                       std::vector<Node *> greenNodes,
-                       std::vector<Node *> redNodes)
+std::string renderFile(std::filesystem::path file,
+                       const Configuration  &config,
+                       std::vector<Node *>   greenNodes,
+                       std::vector<Node *>   redNodes)
 {
   std::vector<SourcePosition> greenPositions;
   std::vector<SourcePosition> redPositions;
