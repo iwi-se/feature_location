@@ -5,8 +5,6 @@
 #include <stdexcept>
 #include <string>
 
-using namespace std::string_literals;
-
 auto unsigned_checked_product(const std::unsigned_integral auto& a,
                               const std::unsigned_integral auto& b)
 {

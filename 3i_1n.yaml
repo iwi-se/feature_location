@@ -509,10 +509,10 @@ expressions:
       -  3i_1n_L_OR_C_md04
 
   # Iterative Or Logging Or Checking, 1 minimal difference
-  #- left-side: [S2, S3, S4, S5, S6, S7, S8]
-  #  right-side: []
-  #  labels:
-  #    - 3i_1n_I_OR_L_OR_C_md01
+  - left-side: [S2, S3, S4, S5, S6, S7, S8]
+    right-side: []
+    labels:
+      -  3i_1n_I_OR_L_OR_C_md01
 
   # Not Iterative And Not Logging, 4 minimal differences
   - left-side: [S1, S5]
@@ -629,10 +629,10 @@ expressions:
       - 3i_1n_NOT_L_OR_NOT_C_md04
 
   # Not Iterative Or Not Logging Or Not Checking, 1 minimal difference
-  #- left-side: [S1, S2, S3, S4, S5, S6, S7]
-  #  right-side: []
-  #  labels:
-  #    - 3i_1n_NOT_I_OR_NOT_L_OR_NOT_C_md01
+  - left-side: [S1, S2, S3, S4, S5, S6, S7]
+    right-side: []
+    labels:
+      - 3i_1n_NOT_I_OR_NOT_L_OR_NOT_C_md01
 
   # Iterative And Not Logging And Not Checking, 3 minimal differences
   - left-side: [S2]
@@ -924,7 +924,7 @@ run:
 
   # Iterative Or Logging Or Checking
 
-  # - 3i_1n_I_OR_L_OR_C_md01
+  - 3i_1n_I_OR_L_OR_C_md01
 
   # Not Iterative And Not Logging
 
@@ -974,7 +974,7 @@ run:
 
   # Not Iterative Or Not Logging Or Not Checking
 
-  # - 3i_1n_NOT_I_OR_NOT_L_OR_NOT_C_md01
+  - 3i_1n_NOT_I_OR_NOT_L_OR_NOT_C_md01
 
   # Iterative And Not Logging And Not Checking
 
