@@ -40,7 +40,7 @@ class Logger
 
 auto factorial(std::unsigned_integral auto n)
 {
-  Logger      log { std::to_string(n) };
+  Logger log { std::to_string(n) };
   decltype(n) result { 1 };
   while (n > 1)
   {
