@@ -3,8 +3,6 @@
 #include <source_location>
 #include <string>
 
-using namespace std::string_literals;
-
 class Logger
 {
   public:
