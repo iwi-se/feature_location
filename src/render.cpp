@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <utility>
 
 enum class CharacterColor
 {
@@ -17,6 +18,7 @@ struct CharacterWithColor
 {
     std::string    character; // Needed for HTML escape sequences
     CharacterColor color;
+    size_t         weight { 0 }; // Weight for the character, default is 1
 };
 
 enum class RelativePosition
@@ -55,9 +57,9 @@ RelativePosition getRelativePosition(const SourcePosition &sourcePosition,
 }
 
 void markCharacterColor(
-    std::vector<std::vector<CharacterWithColor>> &characterLines,
-    std::vector<SourcePosition>                  &sourcePositions,
-    const CharacterColor                         &color)
+    std::vector<std::vector<CharacterWithColor>>   &characterLines,
+    std::vector<std::pair<SourcePosition, size_t>> &sourcePositions,
+    const CharacterColor                           &color)
 {
   if (sourcePositions.size() == 0)
   {
@@ -79,23 +81,26 @@ void markCharacterColor(
          currentColumnIndex < currentLine.size();
          currentColumnIndex++)
     {
-      SourcePosition *currentSourcePosition {
+      auto *currentSourcePosition {
         &sourcePositions[currentSourcePositionIndex]
       };
-      while (getRelativePosition(
-                 *currentSourcePosition, currentLineIndex, currentColumnIndex)
+      while (getRelativePosition(currentSourcePosition->first,
+                                 currentLineIndex,
+                                 currentColumnIndex)
                  == RelativePosition::AFTER
              && currentSourcePositionIndex < sourcePositions.size() - 1)
       {
         currentSourcePositionIndex++;
         currentSourcePosition = &sourcePositions[currentSourcePositionIndex];
       }
-      if (getRelativePosition(
-              *currentSourcePosition, currentLineIndex, currentColumnIndex)
+      if (getRelativePosition(currentSourcePosition->first,
+                              currentLineIndex,
+                              currentColumnIndex)
               == RelativePosition::INSIDE
           && currentLine[currentColumnIndex].character != " ")
       {
-        currentLine[currentColumnIndex].color = color;
+        currentLine[currentColumnIndex].color  = color;
+        currentLine[currentColumnIndex].weight = currentSourcePosition->second;
       }
     }
   }
@@ -125,34 +130,43 @@ std::string renderCharacterLines(
   std::stringstream result {};
   CharacterColor    currentColor { CharacterColor::TRANSPARENT };
   size_t            lineCount { 1 };
+  std::stringstream lineNumberDiv {};
+  lineNumberDiv << "<div style=\"margin-right: 3px; background-color: "
+                   "lightgray; padding: 0 5px; text-align: right;\">";
+  std::stringstream codeDiv {};
+  codeDiv << "<div>";
   for (auto &line : characterLines)
   {
-    result << "<span style=\"background: lightgray;\">" << lineCount
-           << "</span>";
+    lineNumberDiv << "<span>" << lineCount << "</span><br>";
     for (auto &character : line)
     {
       if (character.color != currentColor)
       {
         if (currentColor != CharacterColor::TRANSPARENT)
         {
-          result << "</span>";
+          codeDiv << "</span>";
         }
         currentColor = character.color;
         if (currentColor == CharacterColor::GREEN)
         {
-          result << "<span style=\"background-color:rgb(121, 233, 155);\">";
+          codeDiv
+              << "<span style=\"background-color:rgb(121, 233, 155);\" title=\""
+              << character.weight << "\">";
         }
         else if (currentColor == CharacterColor::RED)
         {
-          result << "<span style=\"background-color:rgb(233, 121, 155);\">";
+          codeDiv << "<span style=\"background-color:rgb(233, 121, 155);\">";
         }
       }
-      result << character.character;
+      codeDiv << character.character;
     }
-    result << "<br>";
+    codeDiv << "<br>";
     lineCount++;
   }
-  result << "</span>";
+  lineNumberDiv << "</div>";
+  codeDiv << "</span></div>";
+  result << "<div style=\"display: flex;\">";
+  result << lineNumberDiv.str() << codeDiv.str() << "</div>";
   return result.str();
 }
 
@@ -206,17 +220,18 @@ std::string renderFile(std::filesystem::path file,
                        std::vector<Node *>   greenNodes,
                        std::vector<Node *>   redNodes)
 {
-  std::vector<SourcePosition> greenPositions;
-  std::vector<SourcePosition> redPositions;
+  std::vector<std::pair<SourcePosition, size_t>> greenPositions;
+  std::vector<std::pair<SourcePosition, size_t>> redPositions;
 
   for (auto &node : greenNodes)
   {
-    greenPositions.push_back(node->getSourcePosition());
+    greenPositions.push_back(
+        std::make_pair(node->getSourcePosition(), node->structuralSimilarity));
   }
 
   for (auto &node : redNodes)
   {
-    redPositions.push_back(node->getSourcePosition());
+    redPositions.push_back(std::make_pair(node->getSourcePosition(), 0));
   }
 
   if (config.options.debug)
@@ -224,16 +239,18 @@ std::string renderFile(std::filesystem::path file,
     std::cout << "Green positions: " << std::endl;
     for (auto &position : greenPositions)
     {
-      std::cout << position.getStartLine() << ":" << position.getStartColumn()
-                << " - " << position.getEndLine() << ":"
-                << position.getEndColumn() << std::endl;
+      std::cout << position.first.getStartLine() << ":"
+                << position.first.getStartColumn() << " - "
+                << position.first.getEndLine() << ":"
+                << position.first.getEndColumn() << std::endl;
     }
     std::cout << "Red positions: " << std::endl;
     for (auto &position : redPositions)
     {
-      std::cout << position.getStartLine() << ":" << position.getStartColumn()
-                << " - " << position.getEndLine() << ":"
-                << position.getEndColumn() << std::endl;
+      std::cout << position.first.getStartLine() << ":"
+                << position.first.getStartColumn() << " - "
+                << position.first.getEndLine() << ":"
+                << position.first.getEndColumn() << std::endl;
     }
   }
 

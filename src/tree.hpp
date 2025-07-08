@@ -51,12 +51,16 @@ class Node
     const std::size_t    &getSubtreeHash();
     const int            &getConnectedLeafWeight();
     bool                  isAncestorOf(Node *node);
+    std::vector<Node *>   getAncestors();
     const SourcePosition &getSourcePosition() const;
     const std::vector<std::unique_ptr<Node>> &getChildren();
     Node                *getChildByTag(const std::string &tag);
     Node                *getParent();
     Node                *getRoot();
     std::vector<Node *> &getLeaves();
+    bool                 getIsInIntersection();
+    void                 setIsInIntersection();
+    std::vector<Node *>  subtreesNotInIntersection();
 
     enum class RelativePosition
     {
@@ -69,6 +73,7 @@ class Node
 
     void setNodeTypes(const std::vector<std::string> &types);
     const std::vector<std::string> &getNodeTypes() const;
+    size_t                          structuralSimilarity {};
   private:
     Node                              *parent { nullptr };
     std::vector<std::unique_ptr<Node>> children {};
@@ -81,6 +86,7 @@ class Node
     SourcePosition                     sourcePosition;
     std::vector<std::string>           allTypes {};
     std::vector<Node *>                connectedLeaves {};
+    bool                               isInIntersection { false };
 
     void setParent(Node *parent);
 };

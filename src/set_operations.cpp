@@ -1,13 +1,16 @@
 #include "set_operations.hpp"
 #include "node_types.hpp"
+#include "utility.hpp"
 #include <algorithm>
 #include <cstddef>
 #include <iostream>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <ranges>
 #include <span>
 #include <stack>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -658,6 +661,10 @@ std::vector<LCS> allLCS(const std::vector<LCSToken> &a,
   std::function<void(size_t, size_t, LCS &)> backtrack
       = [&](size_t i, size_t j, LCS &current)
   {
+    if (!resultSet.empty())
+    {
+      return;
+    }
     if (i == 0 || j == 0)
     {
       LCS lcs = current;
@@ -742,178 +749,362 @@ std::vector<std::vector<LCSToken>>
   return currentResult;
 }
 
-std::tuple<bool, LCS, LCS> allLeavesInLCS(const LCS &lcs, Node *subtree)
+size_t calculateCommonAncestorProximity(Node *node1, Node *node2)
 {
-  auto leaves { subtree->getLeaves() };
-
-  std::vector<size_t> lcsIndexes;
-  for (size_t i { 0 }; i < lcs.size(); ++i)
+  size_t distance { 0 };
+  while (node1 != nullptr)
   {
-    if (lcs[i] == leaves[0]->getTsText())
+    node1 = node1->getParent();
+    size_t innerDistance { 0 };
+    auto   tempNode2 { node2 };
+    while (tempNode2 != nullptr)
     {
-      lcsIndexes.push_back(i);
+      tempNode2 = tempNode2->getParent();
+      if (node1 == tempNode2)
+      {
+        auto numberOfAncestors = node1->getAncestors().size();
+        // auto temp { (distance + innerDistance < numberOfAncestors
+        //                  ? 0
+        //                  : distance + innerDistance - numberOfAncestors) };
+        // return temp;
+        //
+        // return distance + innerDistance; // return the minimum distance
+        //
+        return innerDistance;
+      }
+      innerDistance++;
     }
+    distance++;
   }
-  for (auto lcsIndex : lcsIndexes)
-  {
-    auto   oldIndex { lcsIndex };
-    size_t leavesIndex { 0 };
-    bool   foundMismatch { false };
-    while (lcsIndex < lcs.size() && leavesIndex < leaves.size())
-    {
-      if (lcs[lcsIndex] != leaves[leavesIndex]->getTsText())
-      {
-        foundMismatch = true;
-        break;
-      }
-      lcsIndex++;
-      leavesIndex++;
-    }
-    if (!foundMismatch)
-    {
-      LCS before {};
-      if (oldIndex != 0)
-      {
-        before.insert(before.begin(), lcs.begin(), lcs.begin() + oldIndex - 1);
-      }
-      LCS after {};
-      if (lcsIndex < lcs.size() - 2)
-      {
-        after.insert(after.begin(), lcs.begin() + lcsIndex, lcs.end());
-      }
-      return std::make_tuple<bool, LCS, LCS>(
-          true, std::move(before), std::move(after));
-    }
-  }
-  return std::make_tuple<bool, LCS, LCS>(false, {}, {});
+  throw std::logic_error("Nodes have no common ancestor");
 }
 
-bool notPartOfResult(Node *node, std::vector<Node *> result)
+size_t calculateWeight(size_t                            i,
+                       size_t                            j,
+                       std::vector<std::vector<size_t>> &matrix,
+                       std::vector<Node *>              &tokenTable,
+                       LCS                              &lcs)
 {
-  for (auto &resultNode : result)
+  auto  &token { tokenTable[j - 1] };
+  size_t result { 0 };
+  i--; // go one row up
+  auto jBackwards { j };
+  jBackwards--; // go one column left
+  while (j > 0)
   {
-    if (node == resultNode || node->isAncestorOf(resultNode))
+    if (i < 1 || jBackwards < 1)
     {
-      return false;
+      break;
     }
+    if (tokenTable[jBackwards - 1]->getTsText() == lcs[i - 1])
+    {
+      size_t base { matrix[i][jBackwards] };
+      auto   cap { calculateCommonAncestorProximity(tokenTable[jBackwards - 1],
+                                                  token) };
+
+      auto result_temp = base + 1 + (20ul > cap ? (20ul - cap) : 0ul);
+      if (result_temp > result)
+      {
+        result = result_temp;
+      }
+    }
+    jBackwards--;
+  }
+
+  // also go one row down
+  i = i + 2;
+  j++;
+  size_t highestValue { 0 };
+  while (j > 0)
+  {
+    if (tokenTable.size() < j || i >= matrix.size())
+    {
+      break;
+    }
+    if (tokenTable[j - 1]->getTsText() == lcs[i - 1])
+    {
+      auto   cap { calculateCommonAncestorProximity(token, tokenTable[j - 1]) };
+      size_t highestValue_temp { 20ul > cap ? 20ul - cap : 0ul };
+      if (highestValue_temp > highestValue)
+      {
+        highestValue = highestValue_temp;
+      }
+      break;
+    }
+    j++;
+  }
+  result += highestValue;
+  return result;
+}
+
+[[nodiscard]] std::vector<Node *>
+    matchLCSWithTree(LCS &lcs, const std::unique_ptr<Node> &file)
+{
+  auto                            &tokenTable { file->getLeaves() };
+  std::vector<std::vector<size_t>> matrix(
+      lcs.size() + 1, std::vector<size_t>(tokenTable.size() + 1, 0));
+
+  // print tokentable size and lcs size
+  printDebug(true,
+             "TokenTable size: ",
+             tokenTable.size(),
+             ", LCS size: ",
+             lcs.size(),
+             "\n");
+  for (size_t i = 0; i < lcs.size(); ++i)
+  {
+    auto &token { lcs[i] };
+    printDebug(true, std::setw(30), token);
+    for (size_t j = 0; j < tokenTable.size(); ++j)
+    {
+      if (tokenTable[j]->getTsText() == token)
+      {
+        size_t weight { calculateWeight(
+            i + 1, j + 1, matrix, tokenTable, lcs) };
+        matrix[i + 1][j + 1] = weight;
+        // print weight always with the same number of places, e.g. 5
+        printDebug(true, std::setw(5), weight, " ");
+      }
+      else
+      {
+        matrix[i + 1][j + 1] = matrix[i + 1][j];
+        printDebug(true, std::setw(5), matrix[i + 1][j], " ");
+      }
+    }
+    printDebug(true, "\n");
+  }
+
+  std::vector<Node *> result;
+  size_t              i { lcs.size() };
+  size_t              max_j { tokenTable.size() };
+  while (i > 0)
+  {
+    size_t j { max_j };
+    size_t current_best_j { max_j };
+    size_t current_best_weight { 0 };
+
+    while (j > 0)
+    {
+      if (lcs[i - 1] == tokenTable[j - 1]->getTsText()
+          && matrix[i][j] > current_best_weight)
+      {
+        current_best_j      = j;
+        current_best_weight = matrix[i][j];
+      }
+      j--;
+    }
+
+    auto tokenNode { tokenTable[current_best_j - 1] };
+    tokenNode->structuralSimilarity = current_best_weight;
+    result.insert(result.begin(), tokenNode);
+    --i;
+    max_j = current_best_j - 1;
+  }
+
+  return result;
+}
+
+bool checkTokenMappingStillPossible(
+    const size_t                                                 &nodeIndex,
+    const size_t                                                 &globalIndex,
+    std::vector<std::vector<std::tuple<Node *, size_t, size_t>>> &mapping,
+    size_t                                                        mappingIndex)
+{
+  if ((globalIndex >= nodeIndex && globalIndex != 0))
+  {
+    return false;
+  }
+
+  mappingIndex++;
+  size_t currentIndex { nodeIndex };
+  while (mappingIndex < mapping.size())
+  {
+    auto   currentMappingOptions { mapping[mappingIndex] };
+    size_t smallestPossibleFileIndex { std::numeric_limits<size_t>::max() };
+    for (auto &currentMappingOption : currentMappingOptions)
+    {
+      size_t fileIndex { std::get<1>(currentMappingOption) };
+      if (fileIndex > currentIndex && fileIndex < smallestPossibleFileIndex)
+      {
+        smallestPossibleFileIndex = fileIndex;
+      }
+    }
+    if (smallestPossibleFileIndex == std::numeric_limits<size_t>::max())
+    {
+      return false; // no possible mapping found
+    }
+    else
+    {
+      currentIndex = smallestPossibleFileIndex;
+    }
+    ++mappingIndex;
   }
   return true;
 }
 
-std::tuple<Node *, LCS, LCS> biggestSubtree(LCS lcs, std::vector<Node *> trees)
+[[nodiscard]] std::vector<Node *>
+    matchLCSWithTree2(LCS &lcs, const std::unique_ptr<Node> &file)
 {
-  std::vector<Node *> allSubtrees {};
-  for (auto &tree : trees)
+  // get all Subtress larger than 1
+  auto subtrees = file->getPointerToEveryNode();
+  for (auto it { subtrees.begin() }; it != subtrees.end();)
   {
-    auto subtrees { tree->getPointerToEveryNode() };
-    allSubtrees.insert(allSubtrees.end(), subtrees.begin(), subtrees.end());
-  }
-  std::sort(
-      allSubtrees.begin(),
-      allSubtrees.end(),
-      [](Node *a, Node *b)
-      { return a->getConnectedLeafWeight() > b->getConnectedLeafWeight(); });
-  for (auto &subtree : allSubtrees)
-  {
-    auto isAllLeavesInLCS { allLeavesInLCS(
-        lcs, subtree) }; // Check if all leaves of
-                         // the LCS are in the subtree
-    if (std::get<0>(isAllLeavesInLCS))
+    if ((*it)->isLeaf())
     {
-      return std::make_tuple(subtree,
-                             std::get<1>(isAllLeavesInLCS),
-                             std::get<2>(isAllLeavesInLCS));
+      it = subtrees.erase(it);
+    }
+    else
+    {
+      ++it;
     }
   }
-  return std::make_tuple<Node *, LCS, LCS>(nullptr, {}, {});
-}
 
-std::vector<Node *> matchLCSToNodesFile(LCS lcs, std::vector<Node *> trees)
-{
-  auto result { biggestSubtree(lcs, trees) };
-  auto biggest { std::get<0>(result) };
-  auto lcsBefore { std::get<1>(result) };
-  auto lcsAfter { std::get<2>(result) };
-
-  std::cerr << lcs.size() << " " << lcsBefore.size() << " " << lcsAfter.size()
-            << std::endl;
-
-  if (lcsBefore.size() != 0 || lcsAfter.size() != 0)
+  // build a mapping from LCS tokens to file tokens
+  std::vector<std::vector<std::tuple<Node *, size_t, size_t>>> mapping(
+      lcs.size());
+  auto fileTokens { file->getLeaves() };
+  for (size_t i { 0 }; i < lcs.size(); ++i)
   {
-    std::vector<Node *> subtreesBefore {};
-    std::vector<Node *> subtreesAfter {};
-    auto                current { biggest };
-    while (current->getParent() != nullptr)
+    auto &lcsToken { lcs[i] };
+    for (size_t j { 0 }; j < fileTokens.size(); ++j)
     {
-      bool after { false };
-      for (auto &sibling : current->getParent()->getChildren())
+      if (fileTokens[j]->getTsText() == lcsToken)
       {
-        if (sibling.get() == current)
+        mapping[i].push_back({ fileTokens[j], j, 0 });
+      }
+    }
+  }
+
+  // Iterate over subtrees. If all tokens of subtree are in order and directly
+  // besides each other in lcs, set the weight to subtrees size, if higher than
+  // current weight
+  for (auto &subtree : subtrees)
+  {
+    auto                     subtreeLeaves { subtree->getLeaves() };
+    std::vector<std::string> subtreeTokens {};
+    for (auto &leaf : subtreeLeaves)
+    {
+      subtreeTokens.push_back(leaf->getTsText());
+    }
+
+    auto it { std::search(
+        lcs.begin(), lcs.end(), subtreeTokens.begin(), subtreeTokens.end()) };
+    while (it != lcs.end())
+    {
+      auto first_index { it - lcs.begin() };
+      for (auto index { first_index };
+           index < (first_index + subtreeTokens.size());
+           index++)
+      {
+        for (auto &tuple : mapping[index])
         {
-          after = true;
-          continue;
+          if (std::get<0>(tuple) == subtreeLeaves[index - first_index])
+          {
+            if (std::get<2>(tuple) < subtreeLeaves.size())
+            {
+              std::get<2>(tuple) = subtreeLeaves.size();
+            }
+            break;
+          }
         }
-        if (after)
+      }
+      it = { std::search(
+          it + 1, lcs.end(), subtreeTokens.begin(), subtreeTokens.end()) };
+    }
+  }
+
+  // Iterate through the mapping and always select the Node with the highest
+  // weight
+  std::vector<Node *> result {};
+  size_t              fileTokenIndex { 0 };
+  for (auto &tokenMapping : mapping)
+  {
+    size_t              currentHighestWeight { 0 };
+    std::vector<Node *> currentHighestNodes {};
+    for (auto &possibleFileTokenWithWeight : tokenMapping)
+    {
+      auto &node { std::get<0>(possibleFileTokenWithWeight) };
+      auto &tokenIndex { std::get<1>(possibleFileTokenWithWeight) };
+      auto &weight { std::get<2>(possibleFileTokenWithWeight) };
+      printDebug(false,
+                 "Token: ",
+                 node->getTsText(),
+                 ", Weight: ",
+                 weight,
+                 ", Index: ",
+                 tokenIndex,
+                 "\n");
+      if (weight >= currentHighestWeight
+          && (checkTokenMappingStillPossible(
+              tokenIndex,
+              fileTokenIndex,
+              mapping,
+              result.size()))) // tokenIndex > fileTokenIndex || fileTokenIndex
+                               // == 0))
+      {
+        if (weight == currentHighestWeight)
         {
-          subtreesAfter.push_back(sibling.get());
+          currentHighestNodes.push_back(node);
         }
         else
         {
-          subtreesBefore.push_back(sibling.get());
+          currentHighestNodes.clear();
+          currentHighestNodes.push_back(node);
+          currentHighestWeight = weight;
+        }
+        fileTokenIndex = tokenIndex;
+      }
+    }
+    printDebug(false,
+               currentHighestNodes.size(),
+               " nodes with highest weight: ",
+               currentHighestWeight,
+               "\n");
+    if (currentHighestNodes.size() > 1)
+    {
+      size_t currentLowestDistance { std::numeric_limits<size_t>::max() };
+      Node  *currentLowestDistanceNode {};
+      for (auto &node : currentHighestNodes)
+      {
+        auto dist { calculateCommonAncestorProximity(*(result.end() - 1),
+                                                     node) };
+        if (dist < currentLowestDistance)
+        {
+          currentLowestDistance     = dist;
+          currentLowestDistanceNode = node;
         }
       }
-      current = current->getParent();
+      result.push_back(currentLowestDistanceNode);
     }
-    auto biggestSubtreesBefore { matchLCSToNodesFile(lcsBefore,
-                                                     subtreesBefore) };
-    auto biggestSubtreesAfter { matchLCSToNodesFile(lcsAfter, subtreesAfter) };
-
-    auto result { biggestSubtreesBefore };
-    result.push_back(biggest);
-    result.insert(
-        result.end(), biggestSubtreesAfter.begin(), biggestSubtreesAfter.end());
-    return result;
+    else
+    {
+      result.push_back(currentHighestNodes[0]);
+    }
   }
-  if (biggest != nullptr)
-  {
-    return { biggest }; // If there are no leaves before or after the LCS,
-  }
-  else
-  {
-    return {};
-  }
+  printDebug(false, "\n\n");
+  return result;
 }
 
-MatchList matchLCSToNodes(LCS                                      &lcs,
-                          const std::vector<std::unique_ptr<Node>> &files)
+MatchList matchLCSWithTrees(LCS                                      &lcs,
+                            const std::vector<std::unique_ptr<Node>> &files)
 {
-  std::vector<std::vector<Node *>> leaveNodesPerFile;
-  for (auto &file : files)
+  std::vector<std::vector<Node *>> results;
+  for (const auto &file : files)
   {
-    std::vector<Node *> nodes { matchLCSToNodesFile(lcs, { file.get() }) };
-    std::vector<Node *> leaveNodes {};
-    for (auto &node : nodes)
-    {
-      for (auto &leave : node->getLeaves())
-      {
-        leaveNodes.push_back(leave);
-      }
-    }
-    leaveNodesPerFile.push_back(std::move(leaveNodes));
+    results.push_back(matchLCSWithTree2(lcs, file));
   }
-  std::cout << lcs.size() << "|" << leaveNodesPerFile[0].size() << "|"
-            << leaveNodesPerFile[1].size() << std::endl;
-  MatchList matchList;
-  for (size_t i { 0 }; i < leaveNodesPerFile[0].size(); ++i)
+
+  MatchList matches;
+  for (size_t i = 0; i < results[0].size(); ++i)
   {
     Match match;
-    for (size_t j { 0 }; j < leaveNodesPerFile.size(); ++j)
+    for (size_t j = 0; j < results.size(); ++j)
     {
-      match.push_back(leaveNodesPerFile[j][i]);
+      match.push_back(results[j][i]);
     }
-    matchList.push_back(std::move(match));
+    matches.push_back(match);
   }
-  return matchList;
+  return matches;
 }
 
 MatchList intersection2(const std::vector<std::unique_ptr<Node>> &files,
@@ -929,7 +1120,7 @@ MatchList intersection2(const std::vector<std::unique_ptr<Node>> &files,
   }
 
   auto      result { runLCSRecursively(lcsTables) };
-  MatchList resultMatches { matchLCSToNodes(result[0], files) };
+  MatchList resultMatches { matchLCSWithTrees(result[0], files) };
   // for (size_t i = 0; i < resultMatches.size(); ++i)
   // {
   //   std::cout << resultMatches[i].size() << " "

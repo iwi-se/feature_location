@@ -1,4 +1,5 @@
 #include "tree.hpp"
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <stack>
@@ -306,4 +307,60 @@ std::vector<Node *> &Node::getLeaves()
     }
   }
   return connectedLeaves;
+}
+
+std::vector<Node *> Node::getAncestors()
+{
+  std::vector<Node *> ancestors;
+  Node               *current = this;
+  while (current->parent != nullptr)
+  {
+    ancestors.push_back(current->parent);
+    current = current->parent;
+  }
+  return ancestors;
+}
+
+bool Node::getIsInIntersection()
+{
+  if (isInIntersection)
+  {
+    return true;
+  }
+  for (auto ancestor : this->getAncestors())
+  {
+    if (ancestor->getIsInIntersection())
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+void Node::setIsInIntersection()
+{
+  isInIntersection = true;
+  for (auto &child : children)
+  {
+    child->setIsInIntersection();
+  }
+}
+
+std::vector<Node *> Node::subtreesNotInIntersection()
+{
+  std::vector<Node *> result;
+  std::vector<Node *> descendants { this->getPointerToEveryNode() };
+  if (std::none_of(descendants.begin(),
+                   descendants.end(),
+                   [](Node *&node) { return node->getIsInIntersection(); }))
+  {
+    result.push_back(this);
+    return result;
+  }
+  for (auto &child : children)
+  {
+    auto childResult { child->subtreesNotInIntersection() };
+    result.insert(result.end(), childResult.begin(), childResult.end());
+  }
+  return result;
 }
