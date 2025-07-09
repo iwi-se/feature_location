@@ -904,11 +904,18 @@ size_t calculateWeight(size_t                            i,
   return result;
 }
 
+struct MappingEntry
+{
+    Node  *node;
+    size_t fileIndex;
+    size_t weight;
+};
+
 bool checkTokenMappingStillPossible(
-    const size_t                                                 &nodeIndex,
-    const size_t                                                 &globalIndex,
-    std::vector<std::vector<std::tuple<Node *, size_t, size_t>>> &mapping,
-    size_t                                                        mappingIndex)
+    const size_t                           &nodeIndex,
+    const size_t                           &globalIndex,
+    std::vector<std::vector<MappingEntry>> &mapping,
+    size_t                                  mappingIndex)
 {
   if ((globalIndex >= nodeIndex && globalIndex != 0))
   {
@@ -919,23 +926,21 @@ bool checkTokenMappingStillPossible(
   size_t currentIndex { nodeIndex };
   while (mappingIndex < mapping.size())
   {
-    auto   currentMappingOptions { mapping[mappingIndex] };
-    size_t smallestPossibleFileIndex { std::numeric_limits<size_t>::max() };
-    for (auto &currentMappingOption : currentMappingOptions)
+    const auto &currentMappingOptions { mapping[mappingIndex] };
+    bool        foundIndex { false };
+    for (const auto &currentMappingOption : currentMappingOptions)
     {
-      size_t fileIndex { std::get<1>(currentMappingOption) };
-      if (fileIndex > currentIndex && fileIndex < smallestPossibleFileIndex)
+      const size_t &fileIndex { currentMappingOption.fileIndex };
+      if (fileIndex > currentIndex)
       {
-        smallestPossibleFileIndex = fileIndex;
+        currentIndex = fileIndex;
+        foundIndex   = true;
+        break;
       }
     }
-    if (smallestPossibleFileIndex == std::numeric_limits<size_t>::max())
+    if (!foundIndex)
     {
-      return false; // no possible mapping found
-    }
-    else
-    {
-      currentIndex = smallestPossibleFileIndex;
+      return false; // no valid mapping found
     }
     ++mappingIndex;
   }
@@ -959,9 +964,8 @@ bool checkTokenMappingStillPossible(
   }
 
   // build a mapping from LCS tokens to file tokens
-  std::vector<std::vector<std::tuple<Node *, size_t, size_t>>> mapping(
-      lcs.size());
-  auto fileTokens { file->getLeaves() };
+  std::vector<std::vector<MappingEntry>> mapping(lcs.size());
+  auto                                   fileTokens { file->getLeaves() };
   for (size_t i { 0 }; i < lcs.size(); ++i)
   {
     auto &lcsToken { lcs[i] };
@@ -969,6 +973,8 @@ bool checkTokenMappingStillPossible(
     {
       if (fileTokens[j]->getTsText() == lcsToken)
       {
+        // NOTE: Do not change order, checkTokenMappingStillPossible relies on
+        // order for performance reasons
         mapping[i].push_back({ fileTokens[j], j, 0 });
       }
     }
@@ -997,11 +1003,11 @@ bool checkTokenMappingStillPossible(
       {
         for (auto &tuple : mapping[index])
         {
-          if (std::get<0>(tuple) == subtreeLeaves[index - first_index])
+          if (tuple.node == subtreeLeaves[index - first_index])
           {
-            if (std::get<2>(tuple) < subtreeLeaves.size())
+            if (tuple.weight < subtreeLeaves.size())
             {
-              std::get<2>(tuple) = subtreeLeaves.size();
+              tuple.weight = subtreeLeaves.size();
             }
             break;
           }
@@ -1022,9 +1028,9 @@ bool checkTokenMappingStillPossible(
     std::vector<Node *> currentHighestNodes {};
     for (auto &possibleFileTokenWithWeight : tokenMapping)
     {
-      auto &node { std::get<0>(possibleFileTokenWithWeight) };
-      auto &tokenIndex { std::get<1>(possibleFileTokenWithWeight) };
-      auto &weight { std::get<2>(possibleFileTokenWithWeight) };
+      auto &node { possibleFileTokenWithWeight.node };
+      auto &tokenIndex { possibleFileTokenWithWeight.fileIndex };
+      auto &weight { possibleFileTokenWithWeight.weight };
       printDebug(false,
                  "Token: ",
                  node->getTsText(),
