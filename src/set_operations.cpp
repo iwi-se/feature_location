@@ -7,6 +7,7 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <queue>
 #include <ranges>
 #include <span>
 #include <stack>
@@ -738,10 +739,9 @@ std::vector<std::vector<LCSToken>>
   while (currentResult.size() > 1)
   {
     std::vector<std::vector<LCSToken>> newResult {};
-    for (size_t i = 0; i < lcsTables.size() - 1; ++i)
+    for (size_t i = 0; i < currentResult.size() - 1; ++i)
     {
-      auto result { allLCS(lcsTables[i], lcsTables[i + 1]) };
-      std::cout << result.size() << " LCS found" << std::endl;
+      auto result { allLCS(currentResult[i], currentResult[i + 1]) };
       newResult.push_back(result[0]);
     }
     currentResult = std::move(newResult);
@@ -922,6 +922,12 @@ bool checkTokenMappingStillPossible(
     return false;
   }
 
+  if (nodeIndex - globalIndex
+      == 1) // if file token is the direct next token, it must be possible
+  {
+    return true;
+  }
+
   mappingIndex++;
   size_t currentIndex { nodeIndex };
   while (mappingIndex < mapping.size())
@@ -981,8 +987,8 @@ bool checkTokenMappingStillPossible(
   }
 
   // Iterate over subtrees. If all tokens of subtree are in order and directly
-  // besides each other in lcs, set the weight to subtrees size, if higher than
-  // current weight
+  // besides each other in lcs, set the weight to subtrees size, if higher
+  // than current weight
   for (auto &subtree : subtrees)
   {
     auto                     subtreeLeaves { subtree->getLeaves() };
@@ -1024,8 +1030,8 @@ bool checkTokenMappingStillPossible(
   size_t              fileTokenIndex { 0 };
   for (auto &tokenMapping : mapping)
   {
-    size_t              currentHighestWeight { 0 };
-    std::vector<Node *> currentHighestNodes {};
+    size_t                    currentHighestWeight { 0 };
+    std::vector<MappingEntry> currentHighestMapping {};
     for (auto &possibleFileTokenWithWeight : tokenMapping)
     {
       auto &node { possibleFileTokenWithWeight.node };
@@ -1049,41 +1055,42 @@ bool checkTokenMappingStillPossible(
       {
         if (weight == currentHighestWeight)
         {
-          currentHighestNodes.push_back(node);
+          currentHighestMapping.push_back(possibleFileTokenWithWeight);
         }
         else
         {
-          currentHighestNodes.clear();
-          currentHighestNodes.push_back(node);
+          currentHighestMapping.clear();
+          currentHighestMapping.push_back(possibleFileTokenWithWeight);
           currentHighestWeight = weight;
         }
-        fileTokenIndex = tokenIndex;
       }
     }
     printDebug(false,
-               currentHighestNodes.size(),
+               currentHighestMapping.size(),
                " nodes with highest weight: ",
                currentHighestWeight,
                "\n");
-    if (currentHighestNodes.size() > 1)
+    if (currentHighestMapping.size() > 1)
     {
-      size_t currentLowestDistance { std::numeric_limits<size_t>::max() };
-      Node  *currentLowestDistanceNode {};
-      for (auto &node : currentHighestNodes)
+      size_t       currentLowestDistance { std::numeric_limits<size_t>::max() };
+      MappingEntry currentLowestDistanceMapping {};
+      for (auto &mappingEntry : currentHighestMapping)
       {
         auto dist { calculateCommonAncestorProximity(*(result.end() - 1),
-                                                     node) };
+                                                     mappingEntry.node) };
         if (dist < currentLowestDistance)
         {
-          currentLowestDistance     = dist;
-          currentLowestDistanceNode = node;
+          currentLowestDistance        = dist;
+          currentLowestDistanceMapping = mappingEntry;
         }
       }
-      result.push_back(currentLowestDistanceNode);
+      result.push_back(currentLowestDistanceMapping.node);
+      fileTokenIndex = currentLowestDistanceMapping.fileIndex;
     }
     else
     {
-      result.push_back(currentHighestNodes[0]);
+      result.push_back(currentHighestMapping[0].node);
+      fileTokenIndex = currentHighestMapping[0].fileIndex;
     }
   }
   printDebug(false, "\n\n");
