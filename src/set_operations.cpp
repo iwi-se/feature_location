@@ -942,8 +942,7 @@ bool checkTokenMappingStillPossible(
   return true;
 }
 
-[[nodiscard]] std::vector<Node *>
-    matchLCSWithTree2(LCS &lcs, const std::unique_ptr<Node> &file)
+[[nodiscard]] std::vector<Node *> matchLCSWithTree2(LCS &lcs, Node *&file)
 {
   // get all Subtress larger than 1
   auto subtrees = file->getPointerToEveryNode();
@@ -1085,11 +1084,10 @@ bool checkTokenMappingStillPossible(
   return result;
 }
 
-MatchList matchLCSWithTrees(LCS                                      &lcs,
-                            const std::vector<std::unique_ptr<Node>> &files)
+MatchList matchLCSWithTrees(LCS &lcs, std::vector<Node *> &files)
 {
   std::vector<std::vector<Node *>> results;
-  for (const auto &file : files)
+  for (auto &file : files)
   {
     results.push_back(matchLCSWithTree2(lcs, file));
   }
@@ -1107,8 +1105,7 @@ MatchList matchLCSWithTrees(LCS                                      &lcs,
   return matches;
 }
 
-MatchList intersection2(const std::vector<std::unique_ptr<Node>> &files,
-                        Configuration                            &config)
+MatchList intersection2(std::vector<Node *> &files, Configuration &config)
 {
   std::vector<std::vector<Node *>>   tokenTables {};
   std::vector<std::vector<LCSToken>> lcsTables;
@@ -1167,7 +1164,14 @@ DifferenceResult
     leftSideIndices.push_back(
         std::make_pair(TreeIndex(node.get()), node.get()));
   }
-  auto leftSideIntersection = intersection2(leftFiles, config);
+
+  std::vector<Node *> leftFilesRaw {};
+  for (auto &node : leftFiles)
+  {
+    leftFilesRaw.push_back(node.get());
+  }
+
+  auto leftSideIntersection = intersection2(leftFilesRaw, config);
 
   // For now do a cartesian product of the left and right files
   DifferenceResult differenceResult;
@@ -1179,12 +1183,10 @@ DifferenceResult
 
     for (const auto &rightFile : rightFiles)
     {
-      TreeIndex rightSideIndex(rightFile.get());
-      auto      subtraction
-          = intersection({ leftSideIndices[index],
-                           std::make_pair(rightSideIndex, rightFile.get()) },
-                         config);
-      auto subtractionLeftSide = extractMatchesPerFile(subtraction, 0);
+      TreeIndex           rightSideIndex(rightFile.get());
+      std::vector<Node *> param { leftFiles[index].get(), rightFile.get() };
+      auto                subtraction = intersection2(param, config);
+      auto subtractionLeftSide        = extractMatchesPerFile(subtraction, 0);
       fileDifferenceResult.subtraction.insert(
           fileDifferenceResult.subtraction.end(),
           subtractionLeftSide.begin(),
