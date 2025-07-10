@@ -83,7 +83,7 @@ Node *getParentClassNode(Node *node)
   return node;
 }
 
-std::vector<Node *> getClassNodes(Node *node)
+std::vector<Node *> getTopLevelClassNodes(Node *node)
 {
   std::vector<Node *> result;
   std::stack<Node *>  stack;
@@ -360,56 +360,6 @@ class OutputLines
     std::set<OutputLine> refinementLines;
 };
 
-OutputLines findFullTraces(const std::vector<Node *> &nodes,
-                           const std::vector<Node *> &subtractionNodes)
-{
-  OutputLines outputLines;
-  for (const auto &node : nodes)
-  {
-    // Check if node is full class trace
-    if (isClassDeclaration(node)
-        && isTrace(node, subtractionNodes) == TraceExtent::full)
-    {
-      std::string classIdentifier { getClassFqn(node) };
-      if (!classIdentifier.empty())
-      {
-        outputLines.insert({ classIdentifier, "", false });
-      }
-    }
-    // Check if node is full method trace
-    else if (isMethodDeclaration(node)
-             && isTrace(node, subtractionNodes) == TraceExtent::full)
-    {
-      std::string methodIdentifier { getMethodFqn(node) };
-      // Get to the class declaration
-      auto classNode = node;
-      while (classNode != nullptr && !isClassDeclaration(classNode))
-      {
-        classNode = classNode->getParent();
-      }
-      std::string classIdentifier { getClassFqn(classNode) };
-
-      if (!methodIdentifier.empty() && !classIdentifier.empty())
-      {
-        outputLines.insert({ classIdentifier, methodIdentifier, false });
-      }
-    }
-    // Recursively check children
-    else
-    {
-      std::vector<Node *> childs(node->getChildren().size());
-      for (size_t i = 0; i < node->getChildren().size(); i++)
-      {
-        childs[i] = node->getChildren()[i].get();
-      }
-      auto childTraces = findFullTraces(childs, subtractionNodes);
-      // Merge child traces into output lines
-      outputLines.insertMany(childTraces);
-    }
-  }
-  return outputLines;
-}
-
 std::vector<Node *> findAllClassNodes(Node *root)
 {
   std::vector<Node *> classNodes;
@@ -429,6 +379,97 @@ std::vector<Node *> findAllClassNodes(Node *root)
     }
   }
   return classNodes;
+}
+
+std::vector<Node *> findAllMethodNodes(Node *root)
+{
+  std::vector<Node *> classNodes;
+  std::stack<Node *>  stack;
+  stack.push(root);
+  while (!stack.empty())
+  {
+    auto current { stack.top() };
+    stack.pop();
+    if (isMethodDeclaration(current))
+    {
+      classNodes.push_back(current);
+    }
+    for (const auto &child : current->getChildren())
+    {
+      stack.push(child.get());
+    }
+  }
+  return classNodes;
+}
+
+std::vector<Node *> findAllImportNodes(Node *root)
+{
+  std::vector<Node *> classNodes;
+  std::stack<Node *>  stack;
+  stack.push(root);
+  while (!stack.empty())
+  {
+    auto current { stack.top() };
+    stack.pop();
+    if (isImportDeclaration(current))
+    {
+      classNodes.push_back(current);
+    }
+    for (const auto &child : current->getChildren())
+    {
+      stack.push(child.get());
+    }
+  }
+  return classNodes;
+}
+
+OutputLines findFullTraces(const std::vector<Node *> &nodes,
+                           const std::vector<Node *> &subtractionNodes)
+{
+  OutputLines outputLines;
+  // Check if node is full class trace
+  auto classNodes { findAllClassNodes(nodes[0]->getRoot()) };
+
+  for (const auto &classNode : classNodes)
+  {
+    bool allLeavesFullTrace { true };
+    for (auto leave : classNode->getLeaves())
+    {
+      if (isTrace(leave, subtractionNodes) != TraceExtent::full)
+      {
+        allLeavesFullTrace = false;
+        break;
+      }
+    }
+    if (allLeavesFullTrace)
+    {
+      auto classIdentifier { getClassFqn(classNode) };
+      outputLines.insert({ classIdentifier, "", false });
+    }
+  }
+
+  auto methodNodes { findAllMethodNodes(nodes[0]->getRoot()) };
+
+  for (const auto &methodNode : methodNodes)
+  {
+    bool allLeavesFullTrace { true };
+    for (auto leave : methodNode->getLeaves())
+    {
+      if (isTrace(leave, subtractionNodes) != TraceExtent::full)
+      {
+        allLeavesFullTrace = false;
+        break;
+      }
+    }
+    if (allLeavesFullTrace)
+    {
+      auto classIdentifier { getClassFqn(getParentClassNode(methodNode)) };
+      auto methodIdentifier { getMethodFqn(methodNode) };
+      outputLines.insert({ classIdentifier, methodIdentifier, false });
+    }
+  }
+
+  return outputLines;
 }
 
 void checkForImpreciseClassTraces(const std::vector<Node *> &nodes,
@@ -482,27 +523,39 @@ OutputLines findRefinementTraces(const std::vector<Node *> &nodes,
                                  Configuration             &config)
 {
   OutputLines outputLines;
+
+  auto importDeclarations { findAllImportNodes(nodes[0]->getRoot()) };
+  for (auto &importDeclaration : importDeclarations)
+  {
+    auto leaves { importDeclaration->getLeaves() };
+    bool isTraceL { false };
+    for (auto &leave : leaves)
+    {
+      if (isTrace(leave, subtractionNodes) != TraceExtent::none)
+      {
+        isTraceL = true;
+        break;
+      }
+    }
+    if (isTraceL)
+    {
+      auto classNodes { getTopLevelClassNodes(nodes[0]->getRoot()) };
+
+      for (const auto &classNode : classNodes)
+      {
+        outputLines.insert({ getClassFqn(classNode), "", true });
+      }
+      break;
+    }
+  }
+
   for (const auto &node : nodes)
   {
     for (auto &includedNode : node->getPointerToEveryNode())
     {
-      if (isImportDeclaration(includedNode))
-      {
-        auto traceExtent { isTrace(includedNode, subtractionNodes) };
-        if (traceExtent == TraceExtent::refinement
-            || traceExtent == TraceExtent::full)
-        {
-          auto rootNode { includedNode->getRoot() };
-          auto classNodes { getClassNodes(rootNode) };
-          for (const auto &classNode : classNodes)
-          {
-            outputLines.insert({ getClassFqn(classNode), "", true });
-          }
-        }
-      }
-      else if (isIncludedNodeType(includedNode, config)
-               && !isClassDeclaration(includedNode)
-               && !isMethodDeclaration(includedNode))
+      if (isIncludedNodeType(includedNode, config)
+          && !isClassDeclaration(includedNode)
+          && !isMethodDeclaration(includedNode))
       {
         auto traceExtent { isTrace(includedNode, subtractionNodes) };
         if (traceExtent == TraceExtent::refinement
@@ -540,6 +593,12 @@ std::string
 
   const auto &fileDifferenceResult { differenceResult.result[0] };
 
+  if (fileDifferenceResult.intersection.empty()
+      && fileDifferenceResult.subtraction.empty())
+  {
+    return "";
+  }
+
   OutputLines fullTraceOutputLines { findFullTraces(
       fileDifferenceResult.intersection, fileDifferenceResult.subtraction) };
 
@@ -566,3 +625,9 @@ std::string
   }
   return output;
 }
+
+// Full class trace:
+// -> get root, get all class nodes, check for each class nodes if every
+// leave/token is in result Full method trace:
+// -> get root, get all method nodes, check for each method node if every
+// leave/token is in result

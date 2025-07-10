@@ -77,12 +77,42 @@ class EvaluateExpressionThread
     std::vector<SingleFileExpressionResult> differenceResults;
 };
 
+void sortSingleFileExpressions(std::vector<SingleFileExpression> &expressions)
+{
+  std::vector<std::pair<SingleFileExpression, size_t>> expressionsWithSize {};
+  for (auto &expression : expressions)
+  {
+    size_t                i { 0 };
+    std::filesystem::path fp;
+    do
+    {
+      fp = expression.leftSide[i].fullPath();
+      ++i;
+    }
+    while (fp == "/dev/null");
+
+    size_t size { std::filesystem::file_size(fp) };
+    expressionsWithSize.push_back(std::make_pair(expression, size));
+  }
+  std::sort(expressionsWithSize.begin(),
+            expressionsWithSize.end(),
+            [](const std::pair<SingleFileExpression, size_t> &a,
+               const std::pair<SingleFileExpression, size_t> &b)
+            { return a.second > b.second; });
+  expressions.clear();
+  for (size_t i = 0; i < expressionsWithSize.size(); ++i)
+  {
+    expressions.push_back(expressionsWithSize[i].first);
+  }
+}
+
 std::vector<SingleFileExpressionResult>
     runExpression(ExpressionSystemName expression, Configuration &config)
 {
   ExpressionAllFiles expressionFiles = getExpressionFiles(expression, config);
   std::vector<SingleFileExpression> subexpressions
       = buildFileBasedSubExpressions(expressionFiles);
+  sortSingleFileExpressions(subexpressions);
   std::vector<SingleFileExpressionResult> singleFileResults {};
 
   // Print the expression being processed
@@ -92,21 +122,35 @@ std::vector<SingleFileExpressionResult>
   // Progress tracking variables
   size_t totalFiles { subexpressions.size() };
 
-  size_t                                  filesPerThread { totalFiles / 16 };
-  std::vector<std::thread>                threads {};
-  std::vector<EvaluateExpressionThread *> evaluateExpressions {};
-  std::vector<SingleFileExpression>       expressionsForThread {};
+  size_t                                         numberOfThreads { 7 };
+  std::vector<std::thread>                       threads {};
+  std::vector<EvaluateExpressionThread *>        evaluateExpressions {};
+  std::vector<std::vector<SingleFileExpression>> expressionsForThread {
+    numberOfThreads
+  };
+  size_t currentThread { 0 };
   for (size_t i = 0; i < subexpressions.size(); ++i)
   {
-    expressionsForThread.push_back(subexpressions[i]);
-    if (expressionsForThread.size() >= filesPerThread)
+    expressionsForThread[currentThread].push_back(subexpressions[i]);
+    if (currentThread == numberOfThreads - 1)
+    {
+      currentThread = 0;
+    }
+    else
+    {
+      ++currentThread;
+    }
+  }
+
+  for (auto threadExpressions : expressionsForThread)
+  {
+    if (!threadExpressions.empty())
     {
       auto evaluateExpression
-          = new EvaluateExpressionThread(expressionsForThread, config);
+          = new EvaluateExpressionThread(threadExpressions, config);
       threads.push_back(
           std::thread(&EvaluateExpressionThread::run, evaluateExpression));
       evaluateExpressions.push_back(evaluateExpression);
-      expressionsForThread.clear();
     }
   }
 

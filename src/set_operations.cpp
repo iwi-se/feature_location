@@ -640,6 +640,11 @@ bool operator< (const LCS &a, const LCS &b)
 std::vector<LCS> allLCS(const std::vector<LCSToken> &a,
                         const std::vector<LCSToken> &b)
 {
+  if (a == b)
+  {
+    return { a };
+  }
+
   size_t n = a.size(), m = b.size();
   // DP table
   std::vector<std::vector<int>> dp(n + 1, std::vector<int>(m + 1, 0));
@@ -912,24 +917,31 @@ struct MappingEntry
 };
 
 bool checkTokenMappingStillPossible(
-    const size_t                           &nodeIndex,
-    const size_t                           &globalIndex,
+    const size_t                           &fileTokenIndex,
+    const size_t                           &globalFileTokenIndex,
+    const size_t                           &fileTokensAmount,
     std::vector<std::vector<MappingEntry>> &mapping,
     size_t                                  mappingIndex)
 {
-  if ((globalIndex >= nodeIndex && globalIndex != 0))
+  if ((globalFileTokenIndex >= fileTokenIndex && globalFileTokenIndex != 0))
   {
     return false;
   }
 
-  if (nodeIndex - globalIndex
+  if (fileTokenIndex - globalFileTokenIndex
       == 1) // if file token is the direct next token, it must be possible
   {
     return true;
   }
 
+  // if there are less tokens in the file than in the lcs, it is not possible
+  if (fileTokensAmount - fileTokenIndex < mapping.size() - mappingIndex)
+  {
+    return false;
+  }
+
   mappingIndex++;
-  size_t currentIndex { nodeIndex };
+  size_t currentIndex { fileTokenIndex };
   while (mappingIndex < mapping.size())
   {
     const auto &currentMappingOptions { mapping[mappingIndex] };
@@ -955,6 +967,14 @@ bool checkTokenMappingStillPossible(
 
 [[nodiscard]] std::vector<Node *> matchLCSWithTree2(LCS &lcs, Node *&file)
 {
+  // check if lcs and file are the same
+  auto fileTokens { file->getLeaves() };
+  if (fileTokens.size() == lcs.size())
+  {
+    // Must be equal, because lcs was done with the same file
+    return fileTokens;
+  }
+
   // get all Subtress larger than 1
   auto subtrees = file->getPointerToEveryNode();
   for (auto it { subtrees.begin() }; it != subtrees.end();)
@@ -971,7 +991,6 @@ bool checkTokenMappingStillPossible(
 
   // build a mapping from LCS tokens to file tokens
   std::vector<std::vector<MappingEntry>> mapping(lcs.size());
-  auto                                   fileTokens { file->getLeaves() };
   for (size_t i { 0 }; i < lcs.size(); ++i)
   {
     auto &lcsToken { lcs[i] };
@@ -1027,7 +1046,7 @@ bool checkTokenMappingStillPossible(
   // Iterate through the mapping and always select the Node with the highest
   // weight
   std::vector<Node *> result {};
-  size_t              fileTokenIndex { 0 };
+  size_t              globalFileTokenIndex { 0 };
   for (auto &tokenMapping : mapping)
   {
     size_t                    currentHighestWeight { 0 };
@@ -1035,7 +1054,7 @@ bool checkTokenMappingStillPossible(
     for (auto &possibleFileTokenWithWeight : tokenMapping)
     {
       auto &node { possibleFileTokenWithWeight.node };
-      auto &tokenIndex { possibleFileTokenWithWeight.fileIndex };
+      auto &fileTokenIndex { possibleFileTokenWithWeight.fileIndex };
       auto &weight { possibleFileTokenWithWeight.weight };
       printDebug(false,
                  "Token: ",
@@ -1043,12 +1062,13 @@ bool checkTokenMappingStillPossible(
                  ", Weight: ",
                  weight,
                  ", Index: ",
-                 tokenIndex,
+                 fileTokenIndex,
                  "\n");
       if (weight >= currentHighestWeight
           && (checkTokenMappingStillPossible(
-              tokenIndex,
               fileTokenIndex,
+              globalFileTokenIndex,
+              fileTokens.size(),
               mapping,
               result.size()))) // tokenIndex > fileTokenIndex || fileTokenIndex
                                // == 0))
@@ -1085,12 +1105,12 @@ bool checkTokenMappingStillPossible(
         }
       }
       result.push_back(currentLowestDistanceMapping.node);
-      fileTokenIndex = currentLowestDistanceMapping.fileIndex;
+      globalFileTokenIndex = currentLowestDistanceMapping.fileIndex;
     }
     else
     {
       result.push_back(currentHighestMapping[0].node);
-      fileTokenIndex = currentHighestMapping[0].fileIndex;
+      globalFileTokenIndex = currentHighestMapping[0].fileIndex;
     }
   }
   printDebug(false, "\n\n");
@@ -1118,7 +1138,8 @@ MatchList matchLCSWithTrees(LCS &lcs, std::vector<Node *> &files)
   return matches;
 }
 
-MatchList intersection2(std::vector<Node *> &files, Configuration &config)
+std::pair<MatchList, LCS> intersection2(std::vector<Node *> &files,
+                                        Configuration       &config)
 {
   std::vector<std::vector<Node *>>   tokenTables {};
   std::vector<std::vector<LCSToken>> lcsTables;
@@ -1137,7 +1158,7 @@ MatchList intersection2(std::vector<Node *> &files, Configuration &config)
   //             << resultMatches[i][0]->getTsText() << " "
   //             << resultMatches[i][1]->getTsText() << std::endl;
   // }
-  return resultMatches;
+  return { resultMatches, result[0] };
 }
 
 MatchList intersection(const std::vector<std::pair<TreeIndex, Node *>> &indices,
@@ -1184,7 +1205,9 @@ DifferenceResult
     leftFilesRaw.push_back(node.get());
   }
 
-  auto leftSideIntersection = intersection2(leftFilesRaw, config);
+  auto  intersectionResult = intersection2(leftFilesRaw, config);
+  auto &leftSideIntersection { intersectionResult.first };
+  auto &leftSideLCS { intersectionResult.second };
 
   // For now do a cartesian product of the left and right files
   DifferenceResult differenceResult;
@@ -1199,7 +1222,7 @@ DifferenceResult
       TreeIndex           rightSideIndex(rightFile.get());
       std::vector<Node *> param { leftFiles[index].get(), rightFile.get() };
       auto                subtraction = intersection2(param, config);
-      auto subtractionLeftSide        = extractMatchesPerFile(subtraction, 0);
+      auto subtractionLeftSide = extractMatchesPerFile(subtraction.first, 0);
       fileDifferenceResult.subtraction.insert(
           fileDifferenceResult.subtraction.end(),
           subtractionLeftSide.begin(),
