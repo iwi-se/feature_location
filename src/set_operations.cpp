@@ -628,7 +628,7 @@ struct LCSTokenIndex
 
 using LCSIndex = std::vector<LCSTokenIndex>;
 
-using LCSToken = std::string;
+using LCSToken = size_t;
 
 using LCS = std::vector<LCSToken>;
 
@@ -722,7 +722,7 @@ void printLCSs(const std::vector<LCSIndex> &lcss)
 
 LCSToken nodeToLCSToken(Node *node, size_t index)
 {
-  LCSToken token { node->getTsText() };
+  LCSToken token { node->getSubtreeHash() };
   return token;
 }
 
@@ -801,7 +801,7 @@ size_t calculateWeight(size_t                            i,
     {
       break;
     }
-    if (tokenTable[jBackwards - 1]->getTsText() == lcs[i - 1])
+    if (tokenTable[jBackwards - 1]->getSubtreeHash() == lcs[i - 1])
     {
       size_t base { matrix[i][jBackwards] };
       auto   cap { calculateCommonAncestorProximity(tokenTable[jBackwards - 1],
@@ -826,7 +826,7 @@ size_t calculateWeight(size_t                            i,
     {
       break;
     }
-    if (tokenTable[j - 1]->getTsText() == lcs[i - 1])
+    if (tokenTable[j - 1]->getSubtreeHash() == lcs[i - 1])
     {
       auto   cap { calculateCommonAncestorProximity(token, tokenTable[j - 1]) };
       size_t highestValue_temp { 20ul > cap ? 20ul - cap : 0ul };
@@ -862,7 +862,7 @@ size_t calculateWeight(size_t                            i,
     printDebug(true, std::setw(30), token);
     for (size_t j = 0; j < tokenTable.size(); ++j)
     {
-      if (tokenTable[j]->getTsText() == token)
+      if (tokenTable[j]->getSubtreeHash() == token)
       {
         size_t weight { calculateWeight(
             i + 1, j + 1, matrix, tokenTable, lcs) };
@@ -890,7 +890,7 @@ size_t calculateWeight(size_t                            i,
 
     while (j > 0)
     {
-      if (lcs[i - 1] == tokenTable[j - 1]->getTsText()
+      if (lcs[i - 1] == tokenTable[j - 1]->getSubtreeHash()
           && matrix[i][j] > current_best_weight)
       {
         current_best_j      = j;
@@ -965,6 +965,64 @@ bool checkTokenMappingStillPossible(
   return true;
 }
 
+void calculateMappingWeights(Node                                  *&root,
+                             std::vector<std::vector<MappingEntry>> &mapping,
+                             const LCS                              &lcs)
+{
+  // Iterate over subtrees. If all tokens of subtree are in order and directly
+  // besides each other in lcs, set the weight to subtrees size, if higher
+  // than current weight
+  std::stack<Node *> subtrees {};
+  subtrees.push(root);
+  while (!subtrees.empty())
+  {
+    auto subtree { subtrees.top() };
+    subtrees.pop();
+    auto                subtreeLeaves { subtree->getLeaves() };
+    std::vector<size_t> subtreeTokens {};
+    for (auto &leaf : subtreeLeaves)
+    {
+      subtreeTokens.push_back(leaf->getSubtreeHash());
+    }
+
+    auto it { std::search(
+        lcs.begin(), lcs.end(), subtreeTokens.begin(), subtreeTokens.end()) };
+
+    if (it == lcs.end())
+    {
+      // No match found, continue with next subtree
+      for (auto &child : subtree->getChildren())
+      {
+        subtrees.push(child.get());
+      }
+      continue;
+    }
+
+    while (it != lcs.end())
+    {
+      auto first_index { it - lcs.begin() };
+      for (auto index { first_index };
+           index < (first_index + subtreeTokens.size());
+           index++)
+      {
+        for (auto &tuple : mapping[index])
+        {
+          if (tuple.node == subtreeLeaves[index - first_index])
+          {
+            if (tuple.weight < subtreeLeaves.size())
+            {
+              tuple.weight = subtreeLeaves.size();
+            }
+            break;
+          }
+        }
+      }
+      it = { std::search(
+          it + 1, lcs.end(), subtreeTokens.begin(), subtreeTokens.end()) };
+    }
+  }
+}
+
 [[nodiscard]] std::vector<Node *> matchLCSWithTree2(LCS &lcs, Node *&file)
 {
   // check if lcs and file are the same
@@ -996,7 +1054,7 @@ bool checkTokenMappingStillPossible(
     auto &lcsToken { lcs[i] };
     for (size_t j { 0 }; j < fileTokens.size(); ++j)
     {
-      if (fileTokens[j]->getTsText() == lcsToken)
+      if (fileTokens[j]->getSubtreeHash() == lcsToken)
       {
         // NOTE: Do not change order, checkTokenMappingStillPossible relies on
         // order for performance reasons
@@ -1005,43 +1063,7 @@ bool checkTokenMappingStillPossible(
     }
   }
 
-  // Iterate over subtrees. If all tokens of subtree are in order and directly
-  // besides each other in lcs, set the weight to subtrees size, if higher
-  // than current weight
-  for (auto &subtree : subtrees)
-  {
-    auto                     subtreeLeaves { subtree->getLeaves() };
-    std::vector<std::string> subtreeTokens {};
-    for (auto &leaf : subtreeLeaves)
-    {
-      subtreeTokens.push_back(leaf->getTsText());
-    }
-
-    auto it { std::search(
-        lcs.begin(), lcs.end(), subtreeTokens.begin(), subtreeTokens.end()) };
-    while (it != lcs.end())
-    {
-      auto first_index { it - lcs.begin() };
-      for (auto index { first_index };
-           index < (first_index + subtreeTokens.size());
-           index++)
-      {
-        for (auto &tuple : mapping[index])
-        {
-          if (tuple.node == subtreeLeaves[index - first_index])
-          {
-            if (tuple.weight < subtreeLeaves.size())
-            {
-              tuple.weight = subtreeLeaves.size();
-            }
-            break;
-          }
-        }
-      }
-      it = { std::search(
-          it + 1, lcs.end(), subtreeTokens.begin(), subtreeTokens.end()) };
-    }
-  }
+  calculateMappingWeights(file, mapping, lcs);
 
   // Iterate through the mapping and always select the Node with the highest
   // weight
