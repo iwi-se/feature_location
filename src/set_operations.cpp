@@ -1146,22 +1146,10 @@ MatchList matchLCSWithTrees(LCS &lcs, std::vector<Node *> &files)
   {
     results.push_back(matchLCSWithTree2(lcs, file));
   }
-
-  MatchList matches;
-  for (size_t i = 0; i < results[0].size(); ++i)
-  {
-    Match match;
-    for (size_t j = 0; j < results.size(); ++j)
-    {
-      match.push_back(results[j][i]);
-    }
-    matches.push_back(match);
-  }
-  return matches;
+  return results;
 }
 
-std::pair<MatchList, LCS> intersection2(std::vector<Node *> &files,
-                                        Configuration       &config)
+std::vector<LCS> runLCSRecursively(std::vector<Node *> &files)
 {
   std::vector<std::vector<Node *>>   tokenTables {};
   std::vector<std::vector<LCSToken>> lcsTables;
@@ -1171,8 +1159,13 @@ std::pair<MatchList, LCS> intersection2(std::vector<Node *> &files,
     tokenTables.push_back(tokenTable);
     lcsTables.push_back(nodeTableToLCSTable(tokenTable));
   }
+  return runLCSRecursively(lcsTables);
+}
 
-  auto      result { runLCSRecursively(lcsTables) };
+std::pair<MatchList, LCS> intersection2(std::vector<Node *> &files,
+                                        Configuration       &config)
+{
+  auto      result { runLCSRecursively(files) };
   MatchList resultMatches { matchLCSWithTrees(result[0], files) };
   // for (size_t i = 0; i < resultMatches.size(); ++i)
   // {
@@ -1180,7 +1173,18 @@ std::pair<MatchList, LCS> intersection2(std::vector<Node *> &files,
   //             << resultMatches[i][0]->getTsText() << " "
   //             << resultMatches[i][1]->getTsText() << std::endl;
   // }
-  return { resultMatches, result[0] };
+  MatchList matches;
+  for (size_t i = 0; i < resultMatches[0].size(); ++i)
+  {
+    Match match;
+    for (size_t j = 0; j < resultMatches.size(); ++j)
+    {
+      match.push_back(resultMatches[j][i]);
+    }
+    matches.push_back(match);
+  }
+
+  return { matches, result[0] };
 }
 
 MatchList intersection(const std::vector<std::pair<TreeIndex, Node *>> &indices,
@@ -1231,27 +1235,38 @@ DifferenceResult
   auto &leftSideIntersection { intersectionResult.first };
   auto &leftSideLCS { intersectionResult.second };
 
-  // For now do a cartesian product of the left and right files
-  DifferenceResult differenceResult;
+  std::vector<LCS> subtractionLCSByFiles {};
   for (size_t index = 0; index < leftFiles.size(); index++)
   {
-    FileDifferenceResult fileDifferenceResult;
-    fileDifferenceResult.intersection
-        = extractMatchesPerFile(leftSideIntersection, index);
-
+    std::vector<LCS> allSingleLCSs {};
     for (const auto &rightFile : rightFiles)
     {
       TreeIndex           rightSideIndex(rightFile.get());
       std::vector<Node *> param { leftFiles[index].get(), rightFile.get() };
-      auto                subtraction = intersection2(param, config);
-      auto subtractionLeftSide = extractMatchesPerFile(subtraction.first, 0);
-      fileDifferenceResult.subtraction.insert(
-          fileDifferenceResult.subtraction.end(),
-          subtractionLeftSide.begin(),
-          subtractionLeftSide.end());
+      auto                subtractionLcs = runLCSRecursively(param);
+      auto                intersectionLcsMinusSubtraction { allLCS(leftSideLCS,
+                                                    subtractionLcs[0]) };
+      allSingleLCSs.push_back(intersectionLcsMinusSubtraction[0]);
     }
-    differenceResult.result.push_back(fileDifferenceResult);
+    auto result { runLCSRecursively(allSingleLCSs) };
+    subtractionLCSByFiles.push_back(result[0]);
   }
 
+  // sort subtractionLCSByFiles by lcs size
+  std::sort(subtractionLCSByFiles.begin(),
+            subtractionLCSByFiles.end(),
+            [](const LCS &a, const LCS &b) { return a.size() < b.size(); });
+
+  auto matchListLeft { matchLCSWithTrees(leftSideLCS, leftFilesRaw) };
+  auto matchListRight { matchLCSWithTrees(subtractionLCSByFiles[0],
+                                          leftFilesRaw) };
+  DifferenceResult differenceResult {};
+  for (size_t i { 0 }; i < matchListLeft.size(); ++i)
+  {
+    FileDifferenceResult fdr {};
+    fdr.intersection = matchListLeft[i];
+    fdr.subtraction  = matchListRight[i];
+    differenceResult.result.push_back(fdr);
+  }
   return differenceResult;
 }
