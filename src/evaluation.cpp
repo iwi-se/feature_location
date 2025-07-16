@@ -89,9 +89,9 @@ void sortSingleFileExpressions(std::vector<SingleFileExpression> &expressions)
       fp = expression.leftSide[i].fullPath();
       ++i;
     }
-    while (fp == "/dev/null");
+    while (fp == "/dev/null" && i < expression.leftSide.size());
 
-    size_t size { std::filesystem::file_size(fp) };
+    size_t size { fp == "/dev/null" ? 0 : std::filesystem::file_size(fp) };
     expressionsWithSize.push_back(std::make_pair(expression, size));
   }
   std::sort(expressionsWithSize.begin(),

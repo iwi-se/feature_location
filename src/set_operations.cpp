@@ -121,17 +121,21 @@ bool operator< (const LCS &a, const LCS &b)
   return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
 }
 
-std::vector<LCS> allLCS(const std::vector<LCSToken> &a,
-                        const std::vector<LCSToken> &b)
+LCS lcs(const std::vector<LCSToken> &a, const std::vector<LCSToken> &b)
 {
   if (a == b)
   {
     return { a };
   }
 
-  size_t n = a.size(), m = b.size();
-  // DP table
+  if (a.empty() || b.empty())
+  {
+    return {};
+  }
+
+  size_t                        n = a.size(), m = b.size();
   std::vector<std::vector<int>> dp(n + 1, std::vector<int>(m + 1, 0));
+
   for (size_t i = 1; i <= n; ++i)
   {
     for (size_t j = 1; j <= m; ++j)
@@ -147,43 +151,43 @@ std::vector<LCS> allLCS(const std::vector<LCSToken> &a,
     }
   }
 
-  std::vector<LCS>                           resultSet;
-  std::function<void(size_t, size_t, LCS &)> backtrack
-      = [&](size_t i, size_t j, LCS &current)
+  std::stack<std::tuple<size_t, size_t, LCS>> st;
+  st.push({ n, m, LCS() });
+
+  while (!st.empty())
   {
-    if (!resultSet.empty())
-    {
-      return;
-    }
+    auto [i, j, current] = st.top();
+    st.pop();
+
     if (i == 0 || j == 0)
     {
-      LCS lcs = current;
-      std::reverse(lcs.begin(), lcs.end());
-      resultSet.push_back(lcs);
-      return;
+      if (!current.empty())
+      {
+        std::reverse(current.begin(), current.end());
+        return current;
+      }
+      continue;
     }
+
     if (a[i - 1] == b[j - 1])
     {
-      LCSToken merged { a[i - 1] };
-      current.push_back(merged);
-      backtrack(i - 1, j - 1, current);
-      current.pop_back();
+      LCS newCurrent = current;
+      newCurrent.push_back(a[i - 1]);
+      st.push({ i - 1, j - 1, newCurrent });
     }
     else
     {
       if (dp[i - 1][j] == dp[i][j])
       {
-        backtrack(i - 1, j, current);
+        st.push({ i - 1, j, current });
       }
       if (dp[i][j - 1] == dp[i][j])
       {
-        backtrack(i, j - 1, current);
+        st.push({ i, j - 1, current });
       }
     }
-  };
-  LCS current;
-  backtrack(n, m, current);
-  return resultSet;
+  }
+  return {};
 }
 
 // Example: usage and printing
@@ -221,21 +225,27 @@ std::vector<LCSToken> nodeTableToLCSTable(std::vector<A> &nodeTable)
   return lcs;
 }
 
-std::vector<std::vector<LCSToken>>
-    runLCSRecursively(std::vector<std::vector<LCSToken>> lcsTables)
+LCS runLCSRecursively(std::vector<std::vector<LCSToken>> lcsTables)
 {
   std::vector<std::vector<LCSToken>> currentResult { lcsTables };
+  // Remove duplicate LCS tables
+  std::sort(currentResult.begin(), currentResult.end());
+  auto it = std::unique(currentResult.begin(), currentResult.end());
+  currentResult.erase(it, currentResult.end());
+  std::cout << "Running LCS recursively with " << currentResult.size()
+            << " LCS tables\n";
+
   while (currentResult.size() > 1)
   {
     std::vector<std::vector<LCSToken>> newResult {};
     for (size_t i = 0; i < currentResult.size() - 1; ++i)
     {
-      auto result { allLCS(currentResult[i], currentResult[i + 1]) };
-      newResult.push_back(result[0]);
+      auto result { lcs(currentResult[i], currentResult[i + 1]) };
+      newResult.push_back(result);
     }
     currentResult = std::move(newResult);
   }
-  return currentResult;
+  return currentResult.size() > 0 ? currentResult[0] : std::vector<LCSToken> {};
 }
 
 size_t calculateCommonAncestorProximity(Node *node1, Node *node2)
@@ -508,7 +518,7 @@ MatchList matchLCSWithTrees(LCS &lcs, std::vector<Node *> &files)
   return results;
 }
 
-std::vector<LCS> runLCSRecursively(std::vector<Node *> &files)
+LCS runLCSRecursively(std::vector<Node *> &files)
 {
   std::vector<std::vector<Node *>>   tokenTables {};
   std::vector<std::vector<LCSToken>> lcsTables;
@@ -524,8 +534,12 @@ std::vector<LCS> runLCSRecursively(std::vector<Node *> &files)
 std::pair<MatchList, LCS> intersection(std::vector<Node *> &files,
                                        Configuration       &config)
 {
-  auto      result { runLCSRecursively(files) };
-  MatchList resultMatches { matchLCSWithTrees(result[0], files) };
+  auto result { runLCSRecursively(files) };
+  if (result.empty())
+  {
+    return { {}, {} };
+  }
+  MatchList resultMatches { matchLCSWithTrees(result, files) };
   MatchList matches;
   for (size_t i = 0; i < resultMatches[0].size(); ++i)
   {
@@ -537,7 +551,7 @@ std::pair<MatchList, LCS> intersection(std::vector<Node *> &files,
     matches.push_back(match);
   }
 
-  return { matches, result[0] };
+  return { matches, result };
 }
 
 DifferenceResult
@@ -558,25 +572,63 @@ DifferenceResult
     leftFilesRaw.push_back(node.get());
   }
 
-  auto  intersectionResult = intersection(leftFilesRaw, config);
-  auto &leftSideIntersection { intersectionResult.first };
-  auto &leftSideLCS { intersectionResult.second };
+  auto leftSideLCS = runLCSRecursively(leftFilesRaw);
+
+  if (leftSideLCS.empty())
+  {
+    DifferenceResult dr {};
+    for (auto &f : leftFiles)
+    {
+      dr.result.push_back(FileDifferenceResult {});
+    }
+    return dr;
+  }
+
+  std::set<std::vector<LCSToken>> leftSideUniqueTokenTables {};
+  for (auto leftSideRawPointer : leftFilesRaw)
+  {
+    if (leftSideRawPointer->getTsText() == "")
+    {
+      continue; // skip empty files
+    }
+    auto &leftSideLeaves { leftSideRawPointer->getLeaves() };
+    auto  lcsTable { nodeTableToLCSTable(leftSideLeaves) };
+    leftSideUniqueTokenTables.insert(lcsTable);
+  }
+  std::cout << leftSideUniqueTokenTables.size()
+            << " unique left side token tables found\n";
+
+  std::set<std::vector<LCSToken>> rightSideUniqueTokenTables {};
+  for (auto &rightSideFile : rightFiles)
+  {
+    if (rightSideFile->getTsText() == "")
+    {
+      continue; // skip empty files
+    }
+    auto &rightSideLeaves { rightSideFile->getLeaves() };
+    auto  lcsTable { nodeTableToLCSTable(rightSideLeaves) };
+    rightSideUniqueTokenTables.insert(lcsTable);
+  }
+  std::cout << rightSideUniqueTokenTables.size()
+            << " unique right side token tables found\n";
 
   std::vector<LCS> subtractionLCSByFiles {};
-  for (size_t index = 0; index < leftFiles.size(); index++)
+  for (auto leftSideTokenTable : leftSideUniqueTokenTables)
   {
     std::vector<LCS> allSingleLCSs {};
-    for (const auto &rightFile : rightFiles)
+    for (auto rightSideTokenTable : rightSideUniqueTokenTables)
     {
-      TreeIndex           rightSideIndex(rightFile.get());
-      std::vector<Node *> param { leftFiles[index].get(), rightFile.get() };
-      auto                subtractionLcs = runLCSRecursively(param);
-      auto                intersectionLcsMinusSubtraction { allLCS(leftSideLCS,
-                                                    subtractionLcs[0]) };
-      allSingleLCSs.push_back(intersectionLcsMinusSubtraction[0]);
+      auto subtractionLcs = lcs(leftSideTokenTable, rightSideTokenTable);
+      if (subtractionLcs.empty())
+      {
+        allSingleLCSs.push_back(leftSideLCS);
+        continue; // no LCS found, skip this file
+      }
+      auto intersectionLcsMinusSubtraction { lcs(leftSideLCS, subtractionLcs) };
+      allSingleLCSs.push_back(intersectionLcsMinusSubtraction);
     }
     auto result { runLCSRecursively(allSingleLCSs) };
-    subtractionLCSByFiles.push_back(result[0]);
+    subtractionLCSByFiles.push_back(result);
   }
 
   // sort subtractionLCSByFiles by lcs size
@@ -585,14 +637,20 @@ DifferenceResult
             [](const LCS &a, const LCS &b) { return a.size() < b.size(); });
 
   auto matchListLeft { matchLCSWithTrees(leftSideLCS, leftFilesRaw) };
-  auto matchListRight { matchLCSWithTrees(subtractionLCSByFiles[0],
-                                          leftFilesRaw) };
+
+  MatchList matchListRight {};
+  if (!subtractionLCSByFiles.empty())
+  {
+    matchListRight = matchLCSWithTrees(subtractionLCSByFiles[0], leftFilesRaw);
+  }
+
   DifferenceResult differenceResult {};
   for (size_t i { 0 }; i < matchListLeft.size(); ++i)
   {
     FileDifferenceResult fdr {};
     fdr.intersection = matchListLeft[i];
-    fdr.subtraction  = matchListRight[i];
+    fdr.subtraction  = (i < matchListRight.size() ? matchListRight[i]
+                                                  : std::vector<Node *> {});
     differenceResult.result.push_back(fdr);
   }
   return differenceResult;
