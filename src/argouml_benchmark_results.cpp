@@ -55,6 +55,13 @@ bool isImportDeclaration(Node *node)
   return node != nullptr && node->getTag() == "import_declaration";
 }
 
+bool isComment(Node *node)
+{
+  return node != nullptr
+         && (node->getTag() == "block_comment"
+             || node->getTag() == "line_comment");
+}
+
 std::string getIdentifier(Node *node)
 {
   auto identifier { node->getChildByTag("identifier") };
@@ -67,11 +74,16 @@ std::string getIdentifier(Node *node)
 
 Node *getParentMethodNode(Node *node)
 {
-  while (node != nullptr && !isMethodDeclaration(node))
+  Node *currentMethodNode { nullptr };
+  while (node != nullptr)
   {
+    if (isMethodDeclaration(node))
+    {
+      currentMethodNode = node;
+    }
     node = node->getParent();
   }
-  return node;
+  return currentMethodNode;
 }
 
 Node *getParentClassNode(Node *node)
@@ -555,7 +567,7 @@ OutputLines findRefinementTraces(const std::vector<Node *> &nodes,
     {
       if (isIncludedNodeType(includedNode, config)
           && !isClassDeclaration(includedNode)
-          && !isMethodDeclaration(includedNode))
+          && !isMethodDeclaration(includedNode) && !isComment(includedNode))
       {
         auto traceExtent { isTrace(includedNode, subtractionNodes) };
         if (traceExtent == TraceExtent::refinement
