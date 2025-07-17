@@ -433,7 +433,7 @@ OutputLines findFullTraces(const std::vector<Node *> &nodes,
   for (const auto &classNode : classNodes)
   {
     bool allLeavesFullTrace { true };
-    for (auto leave : classNode->getLeaves())
+    for (auto leave : classNode->getLeafs())
     {
       if (isTrace(leave, subtractionNodes) != TraceExtent::full)
       {
@@ -453,7 +453,7 @@ OutputLines findFullTraces(const std::vector<Node *> &nodes,
   for (const auto &methodNode : methodNodes)
   {
     bool allLeavesFullTrace { true };
-    for (auto leave : methodNode->getLeaves())
+    for (auto leave : methodNode->getLeafs())
     {
       if (isTrace(leave, subtractionNodes) != TraceExtent::full)
       {
@@ -527,7 +527,7 @@ OutputLines findRefinementTraces(const std::vector<Node *> &nodes,
   auto importDeclarations { findAllImportNodes(nodes[0]->getRoot()) };
   for (auto &importDeclaration : importDeclarations)
   {
-    auto leaves { importDeclaration->getLeaves() };
+    auto leaves { importDeclaration->getLeafs() };
     bool isTraceL { false };
     for (auto &leave : leaves)
     {

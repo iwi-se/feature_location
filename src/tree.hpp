@@ -57,7 +57,7 @@ class Node
     Node                *getChildByTag(const std::string &tag);
     Node                *getParent();
     Node                *getRoot();
-    std::vector<Node *> &getLeaves();
+    std::vector<Node *> &getLeafs();
     bool                 getIsInIntersection();
     void                 setIsInIntersection();
     std::vector<Node *>  subtreesNotInIntersection();

@@ -347,7 +347,7 @@ void calculateMappingWeights(Node                                  *&root,
   {
     auto subtree { subtrees.top() };
     subtrees.pop();
-    auto                subtreeLeaves { subtree->getLeaves() };
+    auto                subtreeLeaves { subtree->getLeafs() };
     std::vector<size_t> subtreeTokens {};
     for (auto &leaf : subtreeLeaves)
     {
@@ -395,7 +395,7 @@ void calculateMappingWeights(Node                                  *&root,
 [[nodiscard]] std::vector<Node *> matchLCSWithTree(LCS &lcs, Node *&file)
 {
   // check if lcs and file are the same
-  auto fileTokens { file->getLeaves() };
+  auto fileTokens { file->getLeafs() };
   if (fileTokens.size() == lcs.size())
   {
     // Must be equal, because lcs was done with the same file
@@ -524,7 +524,7 @@ LCS runLCSRecursively(std::vector<Node *> &files)
   std::vector<std::vector<LCSToken>> lcsTables;
   for (auto &file : files)
   {
-    auto &tokenTable { file->getLeaves() };
+    auto &tokenTable { file->getLeafs() };
     tokenTables.push_back(tokenTable);
     lcsTables.push_back(nodeTableToLCSTable(tokenTable));
   }
@@ -591,7 +591,7 @@ DifferenceResult
     {
       continue; // skip empty files
     }
-    auto &leftSideLeaves { leftSideRawPointer->getLeaves() };
+    auto &leftSideLeaves { leftSideRawPointer->getLeafs() };
     auto  lcsTable { nodeTableToLCSTable(leftSideLeaves) };
     leftSideUniqueTokenTables.insert(lcsTable);
   }
@@ -605,7 +605,7 @@ DifferenceResult
     {
       continue; // skip empty files
     }
-    auto &rightSideLeaves { rightSideFile->getLeaves() };
+    auto &rightSideLeaves { rightSideFile->getLeafs() };
     auto  lcsTable { nodeTableToLCSTable(rightSideLeaves) };
     rightSideUniqueTokenTables.insert(lcsTable);
   }
@@ -636,12 +636,14 @@ DifferenceResult
             subtractionLCSByFiles.end(),
             [](const LCS &a, const LCS &b) { return a.size() < b.size(); });
 
-  auto matchListLeft { matchLCSWithTrees(leftSideLCS, leftFilesRaw) };
+  auto matchListLeft { std::vector<std::vector<Node *>> {
+      matchLCSWithTree(leftSideLCS, leftFilesRaw[0]) } };
 
   MatchList matchListRight {};
   if (!subtractionLCSByFiles.empty())
   {
-    matchListRight = matchLCSWithTrees(subtractionLCSByFiles[0], leftFilesRaw);
+    matchListRight.push_back(
+        matchLCSWithTree(subtractionLCSByFiles[0], leftFilesRaw[0]));
   }
 
   DifferenceResult differenceResult {};

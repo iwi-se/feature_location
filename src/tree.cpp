@@ -288,7 +288,7 @@ const std::vector<std::string> &Node::getNodeTypes() const
   return allTypes;
 }
 
-std::vector<Node *> &Node::getLeaves()
+std::vector<Node *> &Node::getLeafs()
 {
   if (connectedLeaves.empty())
   {
@@ -300,7 +300,7 @@ std::vector<Node *> &Node::getLeaves()
     {
       for (auto &child : this->children)
       {
-        auto childResult { child->getLeaves() };
+        auto childResult { child->getLeafs() };
         connectedLeaves.insert(
             connectedLeaves.end(), childResult.begin(), childResult.end());
       }

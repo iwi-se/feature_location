@@ -16,7 +16,7 @@ MatchesPerFile extractMatchesPerFile(const MatchList &matches,
                                      const int       &index);
 
 MatchList intersection(const std::vector<Node *> &nodes1,
-                       Configuration       &config);
+                       Configuration             &config);
 
 struct FileDifferenceResult
 {
@@ -33,6 +33,6 @@ struct DifferenceResult
 DifferenceResult
     difference(const std::vector<std::unique_ptr<Node>> &leftFiles,
                const std::vector<std::unique_ptr<Node>> &rightFiles,
-               Configuration                      &config);
+               Configuration                            &config);
 
 #endif

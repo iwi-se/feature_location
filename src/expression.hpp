@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 struct BasePlusRelativePath
@@ -17,9 +18,20 @@ struct BasePlusRelativePath
     }
 };
 
-bool operator==(const BasePlusRelativePath &lhs, const BasePlusRelativePath &rhs);
+bool operator== (const BasePlusRelativePath &lhs,
+                 const BasePlusRelativePath &rhs);
 
-bool operator<(const BasePlusRelativePath &lhs, const BasePlusRelativePath &rhs);
+bool operator< (const BasePlusRelativePath &lhs,
+                const BasePlusRelativePath &rhs);
+
+template<> struct std::hash<BasePlusRelativePath>
+{
+    std::size_t operator() (BasePlusRelativePath const &s) const noexcept
+    {
+      std::size_t h = std::hash<std::string> {}(s.relative);
+      return h;
+    }
+};
 
 template<typename T> class Expression
 {
@@ -89,7 +101,8 @@ template<typename U> class Expression<std::vector<U>>
 
 using ExpressionSystemName = Expression<std::string>; // S1, S2, S3, ...
 using ExpressionAllFiles
-    = Expression<std::vector<BasePlusRelativePath>>; // contains only files
+    = Expression<std::unordered_set<BasePlusRelativePath>>; // contains only
+                                                            // files
 using SingleFileExpression
     = Expression<BasePlusRelativePath>; // Each element is a single file
 
