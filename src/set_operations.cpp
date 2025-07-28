@@ -3,9 +3,11 @@
 #include "utility.hpp"
 #include <algorithm>
 #include <cstddef>
+#include <iomanip>
 #include <iostream>
 #include <iterator>
 #include <limits>
+#include <map>
 #include <memory>
 #include <queue>
 #include <ranges>
@@ -16,6 +18,8 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+
+std::map<size_t, std::string> hashToTokenMap;
 
 using IndexWithTokenTable = std::pair<size_t, std::vector<Node *>>;
 
@@ -133,6 +137,16 @@ LCS lcs(const std::vector<LCSToken> &a, const std::vector<LCSToken> &b)
     return {};
   }
 
+  std::map<size_t, size_t> tokenCount;
+  for (const auto &token : a)
+  {
+    if (tokenCount.find(token) == tokenCount.end())
+    {
+      tokenCount[token] = 1;
+    }
+    tokenCount[token]++;
+  }
+
   size_t                        n = a.size(), m = b.size();
   std::vector<std::vector<int>> dp(n + 1, std::vector<int>(m + 1, 0));
 
@@ -142,13 +156,16 @@ LCS lcs(const std::vector<LCSToken> &a, const std::vector<LCSToken> &b)
     {
       if (a[i - 1] == b[j - 1])
       {
-        dp[i][j] = dp[i - 1][j - 1] + 1;
+        size_t weight { 20ul - std::min(tokenCount[a[i - 1]], 19ul) };
+        dp[i][j] = dp[i - 1][j - 1] + weight;
       }
       else
       {
         dp[i][j] = std::max(dp[i - 1][j], dp[i][j - 1]);
       }
+      // std::cout << std::setw(5) << std::setfill(' ') << dp[i][j] << " ";
     }
+    // std::cout << std::endl;
   }
 
   std::stack<std::tuple<size_t, size_t, LCS>> st;
@@ -211,6 +228,7 @@ void printLCSs(const std::vector<LCSIndex> &lcss)
 LCSToken nodeToLCSToken(Node *node, size_t index)
 {
   LCSToken token { node->getSubtreeHash() };
+  hashToTokenMap.insert({ token, node->getTsText() });
   return token;
 }
 
@@ -227,6 +245,11 @@ std::vector<LCSToken> nodeTableToLCSTable(std::vector<A> &nodeTable)
 
 LCS runLCSRecursively(std::vector<std::vector<LCSToken>> lcsTables)
 {
+  if (lcsTables.empty())
+  {
+    return {};
+  }
+
   std::vector<std::vector<LCSToken>> currentResult { lcsTables };
   // Remove duplicate LCS tables
   std::sort(currentResult.begin(), currentResult.end());
@@ -235,17 +258,26 @@ LCS runLCSRecursively(std::vector<std::vector<LCSToken>> lcsTables)
   std::cout << "Running LCS recursively with " << currentResult.size()
             << " LCS tables\n";
 
-  while (currentResult.size() > 1)
+  if (currentResult.size() == 1)
   {
-    std::vector<std::vector<LCSToken>> newResult {};
-    for (size_t i = 0; i < currentResult.size() - 1; ++i)
-    {
-      auto result { lcs(currentResult[i], currentResult[i + 1]) };
-      newResult.push_back(result);
-    }
-    currentResult = std::move(newResult);
+    return currentResult[0];
   }
-  return currentResult.size() > 0 ? currentResult[0] : std::vector<LCSToken> {};
+
+  std::vector<std::vector<LCSToken>> newResult {};
+  for (size_t i = 0; i < currentResult.size() - 1; ++i)
+  {
+    auto result { lcs(currentResult[i], currentResult[i + 1]) };
+    newResult.push_back(result);
+  }
+
+  if (newResult.size() > 1)
+  {
+    return runLCSRecursively(newResult);
+  }
+  else
+  {
+    return newResult.size() > 0 ? newResult[0] : std::vector<LCSToken> {};
+  }
 }
 
 size_t calculateCommonAncestorProximity(Node *node1, Node *node2)
@@ -322,6 +354,11 @@ bool checkTokenMappingStillPossible(
       {
         currentIndex = fileIndex;
         foundIndex   = true;
+        // std::cout << "Current file index " << fileIndex << " and mapping
+        // Index "
+        //           << mappingIndex
+        //           << " Token: " << currentMappingOption.node->getTsText()
+        //           << std::endl;
         break;
       }
     }
@@ -573,6 +610,7 @@ DifferenceResult
   }
 
   auto leftSideLCS = runLCSRecursively(leftFilesRaw);
+  std::cout << leftSideLCS.size() << " LCS tokens found for left side files\n";
 
   if (leftSideLCS.empty())
   {
@@ -612,38 +650,24 @@ DifferenceResult
   std::cout << rightSideUniqueTokenTables.size()
             << " unique right side token tables found\n";
 
-  std::vector<LCS> subtractionLCSByFiles {};
-  for (auto leftSideTokenTable : leftSideUniqueTokenTables)
+  LCS result {};
+  for (auto rightSideTokenTable : rightSideUniqueTokenTables)
   {
-    std::vector<LCS> allSingleLCSs {};
-    for (auto rightSideTokenTable : rightSideUniqueTokenTables)
+    auto subtractionLcs = lcs(nodeTableToLCSTable(leftFilesRaw[0]->getLeafs()),
+                              rightSideTokenTable);
+    if (subtractionLcs.size() > result.size())
     {
-      auto subtractionLcs = lcs(leftSideTokenTable, rightSideTokenTable);
-      if (subtractionLcs.empty())
-      {
-        allSingleLCSs.push_back(leftSideLCS);
-        continue; // no LCS found, skip this file
-      }
-      auto intersectionLcsMinusSubtraction { lcs(leftSideLCS, subtractionLcs) };
-      allSingleLCSs.push_back(intersectionLcsMinusSubtraction);
+      result = subtractionLcs;
     }
-    auto result { runLCSRecursively(allSingleLCSs) };
-    subtractionLCSByFiles.push_back(result);
   }
-
-  // sort subtractionLCSByFiles by lcs size
-  std::sort(subtractionLCSByFiles.begin(),
-            subtractionLCSByFiles.end(),
-            [](const LCS &a, const LCS &b) { return a.size() < b.size(); });
 
   auto matchListLeft { std::vector<std::vector<Node *>> {
       matchLCSWithTree(leftSideLCS, leftFilesRaw[0]) } };
 
   MatchList matchListRight {};
-  if (!subtractionLCSByFiles.empty())
+  if (!result.empty())
   {
-    matchListRight.push_back(
-        matchLCSWithTree(subtractionLCSByFiles[0], leftFilesRaw[0]));
+    matchListRight.push_back(matchLCSWithTree(result, leftFilesRaw[0]));
   }
 
   DifferenceResult differenceResult {};

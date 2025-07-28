@@ -90,6 +90,8 @@ SingleFileExpressionResult evaluateExpression(SingleFileExpression expression,
       rightSideTrees.back()->render(0);
     }
   }
+  std::cout << rightSideTrees.size() << " rightside files of "
+            << expression.rightSide.size() << " files are unique" << std::endl;
   auto differenceResult { difference(leftSideTrees, rightSideTrees, config) };
   SingleFileExpressionResult result { differenceResult,
                                       std::move(leftSideTrees),
@@ -347,7 +349,6 @@ std::vector<SingleFileExpression>
   {
     std::unordered_set<BasePlusRelativePath> allFiles { getAllFiles(
         expression) };
-    std::cout << "start" << std::endl;
     for (const auto &fileName : allFiles)
     {
       SingleFileExpression singleFileExpression {};
@@ -359,7 +360,6 @@ std::vector<SingleFileExpression>
         {
           singleFileExpression.leftSide.push_back(*it);
           singleFileExpression.labels = expression.labels;
-          break;
         }
         else
         {
@@ -374,14 +374,16 @@ std::vector<SingleFileExpression>
         {
           singleFileExpression.rightSide.push_back(*it);
           singleFileExpression.labels = expression.labels;
-          break;
         }
       }
 
+      std::cout << "Expression has " << singleFileExpression.leftSide.size()
+                << " left side files and "
+                << singleFileExpression.rightSide.size() << " right side files"
+                << std::endl;
       subexpressions.push_back(singleFileExpression);
     }
   }
 
-  std::cout << "stop" << std::endl;
   return subexpressions;
 }
