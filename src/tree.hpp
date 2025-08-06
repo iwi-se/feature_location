@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -74,6 +75,8 @@ class Node
     void setNodeTypes(const std::vector<std::string> &types);
     const std::vector<std::string> &getNodeTypes() const;
     size_t                          structuralSimilarity {};
+    void setFeatureAFfiliations(const std::set<size_t> &featureAffiliations);
+    std::set<size_t> getFeatureAffiliations();
   private:
     Node                              *parent { nullptr };
     std::vector<std::unique_ptr<Node>> children {};
@@ -87,6 +90,7 @@ class Node
     std::vector<std::string>           allTypes {};
     std::vector<Node *>                connectedLeaves {};
     bool                               isInIntersection { false };
+    std::set<size_t>                   featureAffiliations {};
 
     void setParent(Node *parent);
 };

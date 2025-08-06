@@ -1,7 +1,7 @@
 #include "configuration.hpp"
+#include <fstream>
 #include <iostream>
 #include <yaml-cpp/yaml.h>
-#include <fstream>
 
 Configuration::Configuration(const std::string &filename)
 {
@@ -12,11 +12,15 @@ Configuration::Configuration(const std::string &filename)
   for (const auto &mapping : config["name-path-mappings"])
   {
     namePathMappings[mapping["name"].as<std::string>()] = {};
+    std::vector<std::string> paths;
     for (const auto &path : mapping["paths"])
     {
-      namePathMappings[mapping["name"].as<std::string>()].push_back(
-          path.as<std::string>());
+      paths.push_back(path.as<std::string>());
     }
+    namePathMappings[mapping["name"].as<std::string>()]
+        = System { mapping["name"].as<std::string>(),
+                   paths,
+                   mapping["binary_representation"].as<std::size_t>() };
   }
 
   options.minimumTraceWeight
@@ -40,14 +44,14 @@ Configuration::Configuration(const std::string &filename)
     // Read the node types file
     try
     {
-      
       std::ifstream f(onlySpecificNodes.nodeTypesFile);
       options.nodeTypes = json::parse(f);
     }
     catch (const std::exception &e)
     {
-      std::cerr << "Error parsing node types file: " << onlySpecificNodes.nodeTypesFile << " "
-                << e.what() << std::endl;
+      std::cerr << "Error parsing node types file: "
+                << onlySpecificNodes.nodeTypesFile << " " << e.what()
+                << std::endl;
     }
   }
 
@@ -72,7 +76,7 @@ void Configuration::render()
   for (const auto &mapping : namePathMappings)
   {
     std::cout << "  " << mapping.first << ": " << std::endl;
-    for (const auto &path : mapping.second)
+    for (const auto &path : mapping.second.paths)
     {
       std::cout << "    " << path << std::endl;
     }
@@ -115,7 +119,7 @@ std::vector<ExpressionSystemName>
 std::vector<std::string>
     Configuration::getPathsForSystem(const std::string &systemName) const
 {
-  return namePathMappings.at(systemName);
+  return namePathMappings.at(systemName).paths;
 }
 
 bool Configuration::fileExtensionMatchesLanguage(
@@ -136,4 +140,14 @@ bool Configuration::fileExtensionMatchesLanguage(
            != javaFileExtensions.end();
   }
   return false;
+}
+
+std::string Configuration::getAction()
+{
+  return this->action;
+}
+
+NamePathMappings Configuration::getNamePathMappings() const
+{
+  return namePathMappings;
 }

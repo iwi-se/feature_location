@@ -364,3 +364,13 @@ std::vector<Node *> Node::subtreesNotInIntersection()
   }
   return result;
 }
+
+void Node::setFeatureAFfiliations(const std::set<size_t> &featureAffiliations)
+{
+  this->featureAffiliations = featureAffiliations;
+}
+
+std::set<size_t> Node::getFeatureAffiliations()
+{
+  return this->featureAffiliations;
+}

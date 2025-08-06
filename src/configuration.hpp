@@ -3,17 +3,25 @@
 
 #include "expression.hpp"
 #include <map>
+#include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
 #include <vector>
 #include <yaml-cpp/yaml.h>
-#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
-using NamePathMappings = std::map<std::string, std::vector<std::string>>;
+struct System
+{
+    std::string              name;
+    std::vector<std::string> paths;
+    std::size_t              bitRepresentation; // bitmap of features
+};
+
+using NamePathMappings = std::map<std::string, System>;
 
 class Options
+
 {
   public:
     struct OnlySpecificNodes
@@ -28,8 +36,12 @@ class Options
     bool                             debug {};
     std::optional<OnlySpecificNodes> onlySpecificNodes;
     json                             nodeTypes;
-    std::vector<std::string>         dynamicIncludedTypes; // memorizes at runtime which types are included to avoid recomputation
-    std::vector<std::string>         dynamicExcludedTypes; // memorizes at runtime which types are excluded to avoid recomputation
+    std::vector<std::string>
+        dynamicIncludedTypes; // memorizes at runtime which types are included
+                              // to avoid recomputation
+    std::vector<std::string>
+        dynamicExcludedTypes; // memorizes at runtime which types are excluded
+                              // to avoid recomputation
 };
 
 const std::vector<std::string> cppFileExtensions  = { ".cpp", ".h", ".hpp" };
@@ -40,12 +52,14 @@ class Configuration
   public:
     Configuration(const std::string &filename);
     void                              render();
+    std::string                       getAction();
     std::vector<ExpressionSystemName> getExpressionsToEvaluate() const;
     std::vector<std::string>
         getPathsForSystem(const std::string &systemName) const;
     std::filesystem::path basePath;
     Options               options;
     bool fileExtensionMatchesLanguage(const std::filesystem::path &path) const;
+    NamePathMappings getNamePathMappings() const;
   private:
     std::string                       action;
     NamePathMappings                  namePathMappings;

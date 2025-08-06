@@ -7,18 +7,11 @@
 #include <sstream>
 #include <utility>
 
-enum class CharacterColor
-{
-  TRANSPARENT,
-  GREEN,
-  RED
-};
-
 struct CharacterWithColor
 {
-    std::string    character; // Needed for HTML escape sequences
-    CharacterColor color;
-    size_t         weight { 0 }; // Weight for the character, default is 1
+    std::string character; // Needed for HTML escape sequences
+    std::string color;
+    size_t      weight { 0 }; // Weight for the character, default is 1
 };
 
 enum class RelativePosition
@@ -30,8 +23,7 @@ enum class RelativePosition
 
 CharacterWithColor makeCharacterWithColorFromCharacter(const char &character)
 {
-  return CharacterWithColor { std::string(1, character),
-                              CharacterColor::TRANSPARENT };
+  return CharacterWithColor { std::string(1, character), "" };
 }
 
 RelativePosition getRelativePosition(const SourcePosition &sourcePosition,
@@ -57,9 +49,8 @@ RelativePosition getRelativePosition(const SourcePosition &sourcePosition,
 }
 
 void markCharacterColor(
-    std::vector<std::vector<CharacterWithColor>>   &characterLines,
-    std::vector<std::pair<SourcePosition, size_t>> &sourcePositions,
-    const CharacterColor                           &color)
+    std::vector<std::vector<CharacterWithColor>>        &characterLines,
+    std::vector<std::pair<SourcePosition, std::string>> &sourcePositions)
 {
   if (sourcePositions.size() == 0)
   {
@@ -99,8 +90,7 @@ void markCharacterColor(
               == RelativePosition::INSIDE
           && currentLine[currentColumnIndex].character != " ")
       {
-        currentLine[currentColumnIndex].color  = color;
-        currentLine[currentColumnIndex].weight = currentSourcePosition->second;
+        currentLine[currentColumnIndex].color = currentSourcePosition->second;
       }
     }
   }
@@ -128,7 +118,7 @@ std::string renderCharacterLines(
     std::vector<std::vector<CharacterWithColor>> &characterLines)
 {
   std::stringstream result {};
-  CharacterColor    currentColor { CharacterColor::TRANSPARENT };
+  std::string       currentColor { "" };
   size_t            lineCount { 1 };
   std::stringstream lineNumberDiv {};
   lineNumberDiv << "<div style=\"margin-right: 3px; background-color: "
@@ -142,21 +132,13 @@ std::string renderCharacterLines(
     {
       if (character.color != currentColor)
       {
-        if (currentColor != CharacterColor::TRANSPARENT)
+        if (currentColor != "")
         {
           codeDiv << "</span>";
         }
         currentColor = character.color;
-        if (currentColor == CharacterColor::GREEN)
-        {
-          codeDiv
-              << "<span style=\"background-color:rgb(121, 233, 155);\" title=\""
-              << character.weight << "\">";
-        }
-        else if (currentColor == CharacterColor::RED)
-        {
-          codeDiv << "<span style=\"background-color:rgb(233, 121, 155);\">";
-        }
+        codeDiv << "<span style=\"background-color:" << currentColor
+                << ";\" title=\"" << character.weight << "\">";
       }
       codeDiv << character.character;
     }
@@ -198,59 +180,42 @@ void debugPrintMarkedCharacters(
   {
     for (auto &character : line)
     {
-      if (character.color == CharacterColor::GREEN)
-      {
-        std::cout << character.character << "[green]";
-      }
-      else if (character.color == CharacterColor::RED)
-      {
-        std::cout << character.character << "[red]";
-      }
-      else
-      {
-        std::cout << character.character;
-      }
+      std::cout << character.character << "[" << character.color << "]";
     }
     std::cout << std::endl;
   }
 }
 
-std::string renderFile(std::filesystem::path file,
-                       const Configuration  &config,
-                       std::vector<Node *>   greenNodes,
-                       std::vector<Node *>   redNodes)
+std::string
+    renderFile(std::filesystem::path                       file,
+               const Configuration                        &config,
+               std::vector<std::pair<Node *, std::string>> nodesWithColors)
 {
-  std::vector<std::pair<SourcePosition, size_t>> greenPositions;
-  std::vector<std::pair<SourcePosition, size_t>> redPositions;
+  std::vector<std::pair<SourcePosition, std::string>> positionsWithColors;
 
-  for (auto &node : greenNodes)
+  for (auto &nodeAndColor : nodesWithColors)
   {
-    greenPositions.push_back(
-        std::make_pair(node->getSourcePosition(), node->structuralSimilarity));
+    positionsWithColors.push_back(std::make_pair(
+        nodeAndColor.first->getSourcePosition(), nodeAndColor.second));
   }
 
-  for (auto &node : redNodes)
-  {
-    redPositions.push_back(std::make_pair(node->getSourcePosition(), 0));
-  }
+  // sort by source position
+  std::sort(positionsWithColors.begin(),
+            positionsWithColors.end(),
+            [](const std::pair<SourcePosition, std::string> &a,
+               const std::pair<SourcePosition, std::string> &b)
+            { return a.first < b.first; });
 
   if (config.options.debug)
   {
-    std::cout << "Green positions: " << std::endl;
-    for (auto &position : greenPositions)
+    std::cout << "Positions: " << std::endl;
+    for (auto &position : positionsWithColors)
     {
       std::cout << position.first.getStartLine() << ":"
                 << position.first.getStartColumn() << " - "
                 << position.first.getEndLine() << ":"
-                << position.first.getEndColumn() << std::endl;
-    }
-    std::cout << "Red positions: " << std::endl;
-    for (auto &position : redPositions)
-    {
-      std::cout << position.first.getStartLine() << ":"
-                << position.first.getStartColumn() << " - "
-                << position.first.getEndLine() << ":"
-                << position.first.getEndColumn() << std::endl;
+                << position.first.getEndColumn() << "  " << position.second
+                << std::endl;
     }
   }
 
@@ -287,8 +252,7 @@ std::string renderFile(std::filesystem::path file,
     characterLines.push_back(characters);
   }
 
-  markCharacterColor(characterLines, greenPositions, CharacterColor::GREEN);
-  markCharacterColor(characterLines, redPositions, CharacterColor::RED);
+  markCharacterColor(characterLines, positionsWithColors);
 
   if (config.options.debug)
   {
@@ -300,4 +264,21 @@ std::string renderFile(std::filesystem::path file,
   result += "</pre>";
 
   return result;
+}
+
+std::string renderFile(std::filesystem::path file,
+                       const Configuration  &config,
+                       std::vector<Node *>   greenNodes,
+                       std::vector<Node *>   redNodes)
+{
+  std::vector<std::pair<Node *, std::string>> nodesWithColors {};
+  for (auto &node : greenNodes)
+  {
+    nodesWithColors.push_back(std::make_pair(node, "green"));
+  }
+  for (auto &node : redNodes)
+  {
+    nodesWithColors.push_back(std::make_pair(node, "red"));
+  }
+  renderFile(file, config, nodesWithColors);
 }

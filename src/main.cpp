@@ -2,6 +2,7 @@
 #include "configuration.hpp"
 #include "evaluation.hpp"
 #include "expression.hpp"
+#include "feature_location.hpp"
 #include "render.hpp"
 #include "tree.hpp"
 #include <chrono>
@@ -81,17 +82,8 @@ void renderArgoumlBenchmarkResultsToFiles(
   std::cout << "ArgoUML benchmark results created." << std::endl;
 }
 
-int main(int argc, char *argv[])
+void runDifference(Configuration config)
 {
-  auto startTime = std::chrono::high_resolution_clock::now();
-
-  if (argc != 2)
-  {
-    std::cerr << "Usage: " << argv[0] << " <config.yaml>" << std::endl;
-    return 1;
-  }
-  std::string                       configFile = argv[1];
-  Configuration                     config(configFile);
   std::vector<ExpressionSystemName> expressions
       = config.getExpressionsToEvaluate();
   if (config.options.debug)
@@ -117,11 +109,30 @@ int main(int argc, char *argv[])
           differenceResults, config, expression.labels[0]);
     }
   }
+}
 
-  auto endTime  = std::chrono::high_resolution_clock::now();
-  auto duration = std::chrono::duration<double>(endTime - startTime);
-  std::cout << "\nTotal execution time: " << std::fixed << std::setprecision(3)
-            << duration.count() << " seconds" << std::endl;
+int main(int argc, char *argv[])
+{
+  auto startTime = std::chrono::high_resolution_clock::now();
 
-  return 0;
+  if (argc != 2)
+  {
+    std::cerr << "Usage: " << argv[0] << " <config.yaml>" << std::endl;
+    return 1;
+  }
+  std::string   configFile = argv[1];
+  Configuration config(configFile);
+  if (config.getAction() == "difference")
+  {
+    runDifference(config);
+  }
+  else if (config.getAction() == "feature_location")
+  {
+    featureLocation(config);
+  }
+  else
+  {
+    std::cerr << "Unknown action: " << config.getAction() << std::endl;
+    return 1;
+  }
 }

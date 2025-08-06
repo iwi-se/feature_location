@@ -11,7 +11,7 @@ BASE_CXXFLAGS := -std=c++20 -Wall -Wextra -I./src -MMD -MP
 
 # Debug and Release specific flags
 ifeq ($(BUILD_TYPE),debug)
-    CXXFLAGS := $(BASE_CXXFLAGS) -g -O0 -DDEBUG
+    CXXFLAGS := $(BASE_CXXFLAGS) -g -O0 -DDEBUG -fno-omit-frame-pointer
     BUILD_DIR := debug
 else
     CXXFLAGS := $(BASE_CXXFLAGS) -O3 -DNDEBUG
@@ -38,7 +38,8 @@ SRCS := $(SRC_DIR)/main.cpp \
         $(SRC_DIR)/tree.cpp \
         $(SRC_DIR)/argouml_benchmark_results.cpp \
         $(SRC_DIR)/node_types.cpp \
-        $(SRC_DIR)/expression.cpp
+        $(SRC_DIR)/expression.cpp \
+        $(SRC_DIR)/feature_location.cpp
 
 # Object Files (prefixed with obj directory)
 OBJS := $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
