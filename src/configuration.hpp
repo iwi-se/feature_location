@@ -15,7 +15,7 @@ struct System
 {
     std::string              name;
     std::vector<std::string> paths;
-    std::size_t              bitRepresentation; // bitmap of features
+    std::set<size_t>         containedFeatures;
 };
 
 using NamePathMappings = std::map<std::string, System>;

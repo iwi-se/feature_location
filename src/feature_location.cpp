@@ -1,4 +1,5 @@
 #include "feature_location.hpp"
+#include "configuration.hpp"
 #include "parser.hpp"
 #include "render.hpp"
 #include "set_operations.hpp"
@@ -426,7 +427,7 @@ void analyzeFeatures(const std::vector<DiffResult>& diffResults,
 {
   // Feature 6
   auto                filtered { filterDiffResultsBySrcSystem(
-      filterDiffResultsByAddedFeature(diffResults, 6), "example/i.hpp") };
+      filterDiffResultsByAddedFeature(diffResults, 6), "example/r.hpp") };
   auto                intersection6 { sameSourceIntersection(filtered) };
   std::vector<size_t> tokens6;
   for (auto& line : intersection6.added_lines)
@@ -436,7 +437,7 @@ void analyzeFeatures(const std::vector<DiffResult>& diffResults,
 
   // Feature 1
   auto filtered1 { filterDiffResultsBySrcSystem(
-      filterDiffResultsByAddedFeature(diffResults, 1), "example/i.hpp") };
+      filterDiffResultsByAddedFeature(diffResults, 1), "example/r.hpp") };
   auto intersection1 { sameSourceIntersection(filtered1) };
   auto subtraction1 = sameSourceSubtraction({ intersection1, intersection6 });
   std::vector<std::pair<size_t, std::set<size_t>>> tokens1;
@@ -444,15 +445,15 @@ void analyzeFeatures(const std::vector<DiffResult>& diffResults,
   {
     tokens1.push_back({ line.content, line.feature_affiliations });
   }
-  auto parsedFile1 { parseFile("example/il.hpp", "cpp") };
+  auto parsedFile1 { parseFile("example/rl.hpp", "cpp") };
   auto parsedFileRaw1 { parsedFile1.get() };
   auto matching1 { matchLCSWithTree<size_t>(tokens1, parsedFileRaw1) };
   auto nodesWithColors1 { addColorsToNodes(matching1) };
-  auto rendered1 { renderFile("example/il.hpp", config, nodesWithColors1) };
+  auto rendered1 { renderFile("example/rl.hpp", config, nodesWithColors1) };
 
   // Feature 2
   auto filtered2 { filterDiffResultsBySrcSystem(
-      filterDiffResultsByAddedFeature(diffResults, 2), "example/i.hpp") };
+      filterDiffResultsByAddedFeature(diffResults, 2), "example/r.hpp") };
   auto intersection2 { sameSourceIntersection(filtered2) };
   auto subtraction2 = sameSourceSubtraction({ intersection2, intersection6 });
   std::vector<std::pair<size_t, std::set<size_t>>> tokens2;
@@ -460,11 +461,11 @@ void analyzeFeatures(const std::vector<DiffResult>& diffResults,
   {
     tokens2.push_back({ line.content, line.feature_affiliations });
   }
-  auto parsedFile2 { parseFile("example/ic.hpp", "cpp") };
+  auto parsedFile2 { parseFile("example/rc.hpp", "cpp") };
   auto parsedFileRaw2 { parsedFile2.get() };
   auto matching2 { matchLCSWithTree<size_t>(tokens2, parsedFileRaw2) };
   auto nodesWithColors2 { addColorsToNodes(matching2) };
-  auto rendered2 { renderFile("example/ic.hpp", config, nodesWithColors2) };
+  auto rendered2 { renderFile("example/rc.hpp", config, nodesWithColors2) };
 
   // write rendered to test.html
   std::ofstream outFile("test.html");
@@ -476,96 +477,58 @@ void analyzeFeatures(const std::vector<DiffResult>& diffResults,
   outFile2.close();
 }
 
+std::map<std::string, std::unique_ptr<Node>>
+    parseFiles(const NamePathMappings& npms)
+{
+  std::map<std::string, std::unique_ptr<Node>> nameASTMap;
+  for (auto& mapping : npms)
+  {
+    nameASTMap[mapping.first] = parseFile(mapping.second.paths[0], "cpp");
+  }
+  return nameASTMap;
+}
+
+std::vector<DiffInfo>
+    buildDiffInfos(const NamePathMappings&                       npms,
+                   std::map<std::string, std::unique_ptr<Node>>& nameASTMap)
+{
+  std::vector<DiffInfo> diffs;
+  for (auto& mapping : npms)
+  {
+    for (auto& mapping2 : npms)
+    {
+      if (mapping.first == mapping2.first)
+      {
+        continue; // Skip comparing the same system
+      }
+
+      auto addedFeatures { featureDifference(
+          { mapping2.second.containedFeatures,
+            mapping.second.containedFeatures }) };
+
+      auto removedFeatures { featureDifference(
+          { mapping.second.containedFeatures,
+            mapping2.second.containedFeatures }) };
+
+      DiffInfo diffInfo { mapping.second.paths[0],
+                          mapping2.second.paths[0],
+                          nameASTMap[mapping.first].get(),
+                          nameASTMap[mapping2.first].get(),
+                          addedFeatures,
+                          removedFeatures };
+      diffs.push_back(diffInfo);
+    }
+  }
+  return diffs;
+}
+
 void featureLocation(Configuration config)
 {
   // 1. Get all the diffs to run as DiffInfo
   auto namePathMappings = config.getNamePathMappings();
+  auto parsedFiles { parseFiles(namePathMappings) };
 
-  auto i_parsed { parseFile("example/i.hpp", "cpp") };
-  auto il_parsed { parseFile("example/il.hpp", "cpp") };
-  auto ic_parsed { parseFile("example/ic.hpp", "cpp") };
-  auto icl_parsed { parseFile("example/icl.hpp", "cpp") };
-
-  std::vector<DiffInfo> diffs {
-    DiffInfo {   "example/i.hpp",
-              "example/il.hpp",   i_parsed.get(),
-              il_parsed.get(),
-              { 1, 6 },
-              { 3 }         },
-    DiffInfo {   "example/i.hpp",
-              "example/ic.hpp",   i_parsed.get(),
-              ic_parsed.get(),
-              { 2, 6 },
-              { 4 }         },
-    DiffInfo {   "example/i.hpp",
-              "example/icl.hpp",   i_parsed.get(),
-              icl_parsed.get(),
-              { 1, 2, 5, 6 },
-              { 3, 4 }      },
-
-    DiffInfo {  "example/il.hpp",
-              "example/i.hpp",  il_parsed.get(),
-              i_parsed.get(),
-              { 3 },
-              { 1, 6 }      },
-    DiffInfo {  "example/il.hpp",
-              "example/ic.hpp",  il_parsed.get(),
-              ic_parsed.get(),
-              { 2, 3 },
-              { 1, 4 }      },
-    DiffInfo {  "example/il.hpp",
-              "example/icl.hpp",  il_parsed.get(),
-              icl_parsed.get(),
-              { 2, 5 },
-              { 4 }         },
-
-    DiffInfo {  "example/ic.hpp",
-              "example/i.hpp",  ic_parsed.get(),
-              i_parsed.get(),
-              { 4 },
-              { 2, 6 }      },
-    DiffInfo {  "example/ic.hpp",
-              "example/il.hpp",  ic_parsed.get(),
-              il_parsed.get(),
-              { 1, 4 },
-              { 2, 3 }      },
-    DiffInfo {  "example/ic.hpp",
-              "example/icl.hpp",  ic_parsed.get(),
-              icl_parsed.get(),
-              { 1, 5 },
-              { 3 }         },
-
-    DiffInfo { "example/icl.hpp",
-              "example/i.hpp", icl_parsed.get(),
-              i_parsed.get(),
-              { 3, 4 },
-              { 1, 2, 5, 6 } },
-    DiffInfo { "example/icl.hpp",
-              "example/il.hpp", icl_parsed.get(),
-              il_parsed.get(),
-              { 4 },
-              { 2, 5 }      },
-    DiffInfo { "example/icl.hpp",
-              "example/ic.hpp", icl_parsed.get(),
-              ic_parsed.get(),
-              { 3 },
-              { 1, 5 }      },
-  };
-
-  // for (auto mapping1 : namePathMappings)
-  // {
-  //   for (auto mapping2 : namePathMappings)
-  //   {
-  //     if (mapping1.first == mapping2.first)
-  //     {
-  //       continue; // Skip comparing the same system
-  //     }
-  //
-  //     // TODO: implement real path logic
-  //     diffs.push_back(DiffInfo {
-  //         mapping1.second.paths[0], mapping2.second.paths[0], 0, 0 });
-  //   }
-  // }
+  auto diffs { buildDiffInfos(namePathMappings, parsedFiles) };
 
   // 2. Run the diffinfos
   auto diffResults { runDiffs(diffs) };

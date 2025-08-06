@@ -17,10 +17,17 @@ Configuration::Configuration(const std::string &filename)
     {
       paths.push_back(path.as<std::string>());
     }
-    namePathMappings[mapping["name"].as<std::string>()]
-        = System { mapping["name"].as<std::string>(),
-                   paths,
-                   mapping["binary_representation"].as<std::size_t>() };
+    std::set<size_t> containedFeatures;
+    if (mapping["contained_features"])
+    {
+      for (const auto &feature : mapping["contained_features"])
+      {
+        containedFeatures.insert(feature.as<size_t>());
+      }
+    }
+    namePathMappings[mapping["name"].as<std::string>()] = System {
+      mapping["name"].as<std::string>(), paths, containedFeatures
+    };
   }
 
   options.minimumTraceWeight
