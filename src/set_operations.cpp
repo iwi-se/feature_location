@@ -132,7 +132,8 @@ bool checkTokenMappingStillPossible(
     std::vector<std::vector<MappingEntry>> &mapping,
     size_t                                  mappingIndex)
 {
-  if ((globalFileTokenIndex >= fileTokenIndex && globalFileTokenIndex != 0))
+  if ((globalFileTokenIndex >= fileTokenIndex
+       && globalFileTokenIndex != UINT_MAX))
   {
     return false;
   }

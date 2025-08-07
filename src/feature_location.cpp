@@ -17,8 +17,14 @@ struct DiffLine
     std::set<size_t> feature_affiliations;
 };
 
+struct DiffLineCompareWOSource
+{
+    DiffLine diffline;
+};
+
 // overload operator== for DiffLine to allow comparison
 bool operator== (const DiffLine& lhs, const DiffLine& rhs)
+
 {
   return lhs.source_line == rhs.source_line && lhs.content == rhs.content;
 }
@@ -26,6 +32,18 @@ bool operator== (const DiffLine& lhs, const DiffLine& rhs)
 bool operator< (const DiffLine& lhs, const DiffLine& rhs)
 {
   return lhs.source_line < rhs.source_line;
+}
+
+bool operator== (const DiffLineCompareWOSource& lhs,
+                 const DiffLineCompareWOSource& rhs)
+{
+  return lhs.diffline.content == rhs.diffline.content;
+}
+
+bool operator< (const DiffLineCompareWOSource& lhs,
+                const DiffLineCompareWOSource& rhs)
+{
+  return lhs.diffline.source_line == rhs.diffline.source_line;
 }
 
 struct DiffInfo
@@ -159,7 +177,8 @@ std::string execDiff(const std::string& file1, const std::string& file2)
   std::array<char, 128> buffer;
   std::string           result;
 
-  std::string command = "diff -u --minimal " + file1 + " " + file2;
+  std::string command = "git diff -u --no-index --diff-algorithm=histogram "
+                        + file1 + " " + file2;
 
   // Open the command for reading.
   std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(command.c_str(), "r"),
@@ -214,6 +233,19 @@ std::vector<DiffResult> runDiffs(std::vector<DiffInfo> diffs)
   return results;
 }
 
+bool allSameSource(const std::vector<DiffResult>& diffResults)
+{
+  const auto& firstSource = diffResults[0].info.source;
+  for (const auto& result : diffResults)
+  {
+    if (result.info.source != firstSource)
+    {
+      return false; // If any source differs, return false
+    }
+  }
+  return true; // All sources are the same
+}
+
 std::vector<DiffLine>
     sameSourceIntersection(std::vector<std::vector<DiffLine>> linesPerDiff,
                            std::set<size_t> resultingFeatureAffiliations)
@@ -260,7 +292,39 @@ std::set<size_t> featureIntersection(std::vector<std::set<size_t>> featureSets)
   return intersection;
 }
 
-DiffResult sameSourceIntersection(std::vector<DiffResult> diffResults)
+std::vector<DiffLine>
+    differentSourceIntersection(std::vector<std::vector<DiffLine>> linesPerDiff,
+                                std::set<size_t> resultingFeatureAffiliations)
+{
+  std::vector<DiffLine> intersection;
+  if (linesPerDiff.empty())
+  {
+    return intersection; // Return empty if no results
+  }
+
+  std::vector<std::vector<DiffLineCompareWOSource>> difflinesCompareWrapper {};
+  for (const auto& diffLines : linesPerDiff)
+  {
+    std::vector<DiffLineCompareWOSource> difflines {};
+    for (const auto& line : diffLines)
+    {
+      DiffLineCompareWOSource compareLine { line };
+      difflines.push_back(compareLine);
+    }
+    difflinesCompareWrapper.push_back(difflines);
+  }
+
+  auto lcsResult { runLCSRecursively(difflinesCompareWrapper) };
+  for (auto& line : lcsResult)
+  {
+    line.diffline.feature_affiliations
+        = resultingFeatureAffiliations; // Set the feature affiliations
+    intersection.push_back(line.diffline);
+  }
+  return intersection;
+}
+
+DiffResult intersection(std::vector<DiffResult> diffResults)
 {
   std::vector<std::vector<DiffLine>> addedLinesPerDiff;
   for (const auto& result : diffResults)
@@ -289,11 +353,71 @@ DiffResult sameSourceIntersection(std::vector<DiffResult> diffResults)
   auto featureResultRemoved { featureIntersection(addedFeaturesPerDiff) };
 
   DiffResult intersectionResult;
-  intersectionResult.added_lines
-      = sameSourceIntersection(addedLinesPerDiff, featureResultAdded);
-  intersectionResult.removed_lines
-      = sameSourceIntersection(removedLinesPerDiff, featureResultRemoved);
+  if (allSameSource(diffResults))
+  {
+    intersectionResult.added_lines
+        = differentSourceIntersection(addedLinesPerDiff, featureResultAdded);
+    intersectionResult.removed_lines = differentSourceIntersection(
+        removedLinesPerDiff, featureResultRemoved);
+  }
+  else
+  {
+    intersectionResult.added_lines
+        = differentSourceIntersection(addedLinesPerDiff, featureResultAdded);
+    intersectionResult.removed_lines = differentSourceIntersection(
+        removedLinesPerDiff, featureResultRemoved);
+  }
   return intersectionResult;
+}
+
+std::vector<DiffLine> differentSourceSubtraction(
+    std::vector<std::vector<DiffLine>> diffLinesPerFile,
+    std::set<size_t>                   resultingFeatureAffiliations)
+{
+  std::vector<DiffLine> subtraction;
+  if (diffLinesPerFile.empty())
+  {
+    return subtraction; // Return empty if no results
+  }
+
+  std::vector<std::vector<DiffLineCompareWOSource>> difflinesCompareWrapper {};
+  for (const auto& diffLines : diffLinesPerFile)
+  {
+    std::vector<DiffLineCompareWOSource> difflines {};
+    for (const auto& line : diffLines)
+    {
+      DiffLineCompareWOSource compareLine { line };
+      difflines.push_back(compareLine);
+    }
+    difflinesCompareWrapper.push_back(difflines);
+  }
+
+  std::set<size_t> removedIndices {};
+  for (size_t i { 1 }; i < difflinesCompareWrapper.size(); ++i)
+  {
+    auto res { difflinesCompareWrapper[i] };
+    auto lcsResult { lcs(difflinesCompareWrapper[0], res) };
+    for (auto index : lcsResult.leftIndices)
+    {
+      removedIndices.insert(index);
+    }
+  }
+  for (size_t i {}; i < diffLinesPerFile[0].size(); ++i)
+  {
+    if (removedIndices.find(i) == removedIndices.end())
+    {
+      // If the index is not in the removed indices, add it to the subtraction
+      auto diffLine { diffLinesPerFile[0][i] };
+      diffLine.feature_affiliations
+          = resultingFeatureAffiliations; // Set the feature affiliations
+      subtraction.push_back(diffLine);
+    }
+    else
+    {
+      subtraction.push_back(diffLinesPerFile[0][i]);
+    }
+  }
+  return subtraction;
 }
 
 std::vector<DiffLine>
@@ -360,7 +484,7 @@ std::set<size_t> featureDifference(std::vector<std::set<size_t>> featureSets)
   return difference;
 }
 
-DiffResult sameSourceSubtraction(std::vector<DiffResult> diffResults)
+DiffResult subtraction(std::vector<DiffResult> diffResults)
 {
   std::vector<std::vector<DiffLine>> addedLinesPerDiff;
   for (const auto& result : diffResults)
@@ -390,9 +514,9 @@ DiffResult sameSourceSubtraction(std::vector<DiffResult> diffResults)
 
   DiffResult subtractionResult;
   subtractionResult.added_lines
-      = sameSourceSubtraction(addedLinesPerDiff, featureResultAdded);
+      = differentSourceSubtraction(addedLinesPerDiff, featureResultAdded);
   subtractionResult.removed_lines
-      = sameSourceSubtraction(removedLinesPerDiff, featureResultRemoved);
+      = differentSourceSubtraction(removedLinesPerDiff, featureResultRemoved);
   return subtractionResult;
 }
 
@@ -428,7 +552,7 @@ void analyzeFeatures(const std::vector<DiffResult>& diffResults,
   // Feature 6
   auto                filtered { filterDiffResultsBySrcSystem(
       filterDiffResultsByAddedFeature(diffResults, 6), "example/r.hpp") };
-  auto                intersection6 { sameSourceIntersection(filtered) };
+  auto                intersection6 { intersection(filtered) };
   std::vector<size_t> tokens6;
   for (auto& line : intersection6.added_lines)
   {
@@ -438,8 +562,8 @@ void analyzeFeatures(const std::vector<DiffResult>& diffResults,
   // Feature 1
   auto filtered1 { filterDiffResultsBySrcSystem(
       filterDiffResultsByAddedFeature(diffResults, 1), "example/r.hpp") };
-  auto intersection1 { sameSourceIntersection(filtered1) };
-  auto subtraction1 = sameSourceSubtraction({ intersection1, intersection6 });
+  auto intersection1 { intersection(filtered1) };
+  auto subtraction1 = subtraction({ intersection1, intersection6 });
   std::vector<std::pair<size_t, std::set<size_t>>> tokens1;
   for (auto& line : subtraction1.added_lines)
   {
@@ -454,8 +578,8 @@ void analyzeFeatures(const std::vector<DiffResult>& diffResults,
   // Feature 2
   auto filtered2 { filterDiffResultsBySrcSystem(
       filterDiffResultsByAddedFeature(diffResults, 2), "example/r.hpp") };
-  auto intersection2 { sameSourceIntersection(filtered2) };
-  auto subtraction2 = sameSourceSubtraction({ intersection2, intersection6 });
+  auto intersection2 { intersection(filtered2) };
+  auto subtraction2 = subtraction({ intersection2, intersection6 });
   std::vector<std::pair<size_t, std::set<size_t>>> tokens2;
   for (auto& line : subtraction2.added_lines)
   {
@@ -467,6 +591,39 @@ void analyzeFeatures(const std::vector<DiffResult>& diffResults,
   auto nodesWithColors2 { addColorsToNodes(matching2) };
   auto rendered2 { renderFile("example/rc.hpp", config, nodesWithColors2) };
 
+  // Feature 4
+  auto filtered4 { filterDiffResultsBySrcSystem(
+      filterDiffResultsByAddedFeature(diffResults, 4), "example/rc.hpp") };
+  auto intersection4 { intersection(filtered4) };
+  std::vector<std::pair<size_t, std::set<size_t>>> tokens4;
+  for (auto& line : intersection4.added_lines)
+  {
+    tokens4.push_back({ line.content, line.feature_affiliations });
+  }
+  auto parsedFile4 { parseFile("example/r.hpp", "cpp") };
+  auto parsedFileRaw4 { parsedFile4.get() };
+  auto matching4 { matchLCSWithTree<size_t>(tokens4, parsedFileRaw4) };
+  auto nodesWithColors4 { addColorsToNodes(matching4) };
+  auto rendered4 { renderFile("example/r.hpp", config, nodesWithColors4) };
+
+  // Feature 5
+  auto filtered5 { filterDiffResultsByAddedFeature(diffResults, 5) };
+  auto intersection5 { intersection(filtered5) };
+  std::vector<std::pair<size_t, std::set<size_t>>> tokens5;
+  for (auto& line : intersection5.added_lines)
+  {
+    tokens5.push_back({ line.content, line.feature_affiliations });
+  }
+  std::cout << "Number of tokens for feature 5: " << tokens5.size()
+            << std::endl;
+  std::cout << "Number of tokens for feature 6: " << tokens6.size()
+            << std::endl;
+  auto parsedFile5 { parseFile("example/rcl.hpp", "cpp") };
+  auto parsedFileRaw5 { parsedFile5.get() };
+  auto matching5 { matchLCSWithTree<size_t>(tokens5, parsedFileRaw5) };
+  auto nodesWithColors5 { addColorsToNodes(matching5) };
+  auto rendered5 { renderFile("example/rcl.hpp", config, nodesWithColors5) };
+
   // write rendered to test.html
   std::ofstream outFile("test.html");
   outFile << rendered1;
@@ -475,6 +632,14 @@ void analyzeFeatures(const std::vector<DiffResult>& diffResults,
   std::ofstream outFile2("test2.html");
   outFile2 << rendered2;
   outFile2.close();
+
+  std::ofstream outFile4("test4.html");
+  outFile4 << rendered4;
+  outFile4.close();
+
+  std::ofstream outFile5("test5.html");
+  outFile5 << rendered5;
+  outFile5.close();
 }
 
 std::map<std::string, std::unique_ptr<Node>>
@@ -522,6 +687,27 @@ std::vector<DiffInfo>
   return diffs;
 }
 
+std::string featuresToString(std::set<size_t> s)
+{
+  std::string result;
+  for (auto& el : s)
+  {
+    result += std::to_string(el) + " ";
+  }
+  return result;
+}
+
+void renderDiffInfos(std::vector<DiffInfo> diffs)
+{
+  for (auto& diff : diffs)
+  {
+    std::cout << "Src: " << diff.source << " Dest: " << diff.dest
+              << " Added features: " << featuresToString(diff.added_features)
+              << " Removed features: "
+              << featuresToString(diff.removed_features) << std::endl;
+  }
+}
+
 void featureLocation(Configuration config)
 {
   // 1. Get all the diffs to run as DiffInfo
@@ -529,10 +715,10 @@ void featureLocation(Configuration config)
   auto parsedFiles { parseFiles(namePathMappings) };
 
   auto diffs { buildDiffInfos(namePathMappings, parsedFiles) };
+  renderDiffInfos(diffs);
 
   // 2. Run the diffinfos
   auto diffResults { runDiffs(diffs) };
-  std::cout << diffResults[0].raw_diff_output << std::endl;
 
   // 3. Analyze the features starting with or
   analyzeFeatures(diffResults, config);

@@ -285,7 +285,7 @@ template<typename T, typename U>
   // Iterate through the mapping and always select the Node with the highest
   // weight
   std::vector<Node *> result {};
-  size_t              globalFileTokenIndex { 0 };
+  size_t              globalFileTokenIndex { UINT_MAX };
   for (size_t i { 0 }; i < mapping.size(); ++i)
   {
     auto                     &tokenMapping { mapping[i] };
