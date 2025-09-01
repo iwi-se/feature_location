@@ -3,6 +3,7 @@
 #include "parser.hpp"
 #include "render.hpp"
 #include "set_operations.hpp"
+#include "tree_diff.hpp"
 #include <algorithm>
 #include <fstream>
 #include <regex>
@@ -96,21 +97,61 @@ std::vector<DiffResult>
 }
 
 std::vector<DiffResult>
-    filterDiffResultsByAddedFeature(std::vector<DiffResult> diffResults,
-                                    std::size_t             feature)
+    filterDiffResultsByAddedFeatures(std::vector<DiffResult> diffResults,
+                                     std::vector<size_t>     features)
 {
   std::vector<DiffResult> filteredResults;
   for (const auto& result : diffResults)
   {
-    if (std::find(result.info.added_features.begin(),
-                  result.info.added_features.end(),
-                  feature)
-        != result.info.added_features.end())
+    bool hasAll { true };
+    for (const auto& feature : features)
+    {
+      if (std::find(result.info.added_features.begin(),
+                    result.info.added_features.end(),
+                    feature)
+          == result.info.added_features.end())
+      {
+        hasAll = false;
+        break;
+      }
+    }
+    if (hasAll)
     {
       filteredResults.push_back(result);
     }
   }
   return filteredResults;
+}
+
+std::vector<DiffResult>
+    filterDiffResultsByNotAddedFeatures(std::vector<DiffResult> diffResults,
+                                        std::vector<size_t>     features)
+{
+  std::vector<DiffResult> filteredResults;
+  for (const auto& result : diffResults)
+  {
+    for (const auto& feature : features)
+    {
+      if (std::find(result.info.added_features.begin(),
+                    result.info.added_features.end(),
+                    feature)
+          == result.info.added_features.end())
+      {
+        filteredResults.push_back(result);
+      }
+    }
+  }
+  return filteredResults;
+}
+
+std::string featuresToString(std::set<size_t> s)
+{
+  std::string result;
+  for (auto& el : s)
+  {
+    result += std::to_string(el) + " ";
+  }
+  return result;
 }
 
 void parseDiffOutput(const std::string&     diffOutput,
@@ -177,7 +218,7 @@ std::string execDiff(const std::string& file1, const std::string& file2)
   std::array<char, 128> buffer;
   std::string           result;
 
-  std::string command = "git diff -u --no-index --diff-algorithm=histogram "
+  std::string command = "git diff -u --no-index --diff-algorithm=minimal "
                         + file1 + " " + file2;
 
   // Open the command for reading.
@@ -231,6 +272,45 @@ std::vector<DiffResult> runDiffs(std::vector<DiffInfo> diffs)
     results.push_back(result);
   }
   return results;
+}
+
+std::vector<size_t> runDiffs2(std::vector<size_t> a, std::vector<size_t> b)
+{
+  auto          aFileName { "a.tokens.tmp" };
+  auto          bFileName { "b.tokens.tmp" };
+  std::ofstream aFile { aFileName };
+  std::ofstream bFile { bFileName };
+  for (auto& tok : a)
+  {
+    aFile << tok << "\n";
+  }
+  for (auto& tok : b)
+  {
+    bFile << tok << "\n";
+  }
+  aFile << std::flush;
+  bFile << std::flush;
+  aFile.close();
+  bFile.close();
+
+  auto strResult { execDiff(aFileName, bFileName) };
+
+  std::vector<DiffLine> removedLines;
+  std::set<size_t>      featureAffiliationsRemoved;
+  std::vector<DiffLine> addedLines;
+  std::set<size_t>      featureAffiliationsAdded;
+  parseDiffOutput(strResult,
+                  removedLines,
+                  featureAffiliationsRemoved,
+                  addedLines,
+                  featureAffiliationsAdded);
+
+  std::vector<size_t> result {};
+  for (auto& line : addedLines)
+  {
+    result.push_back(line.content);
+  }
+  return result;
 }
 
 bool allSameSource(const std::vector<DiffResult>& diffResults)
@@ -359,6 +439,7 @@ DiffResult intersection(std::vector<DiffResult> diffResults)
         = differentSourceIntersection(addedLinesPerDiff, featureResultAdded);
     intersectionResult.removed_lines = differentSourceIntersection(
         removedLinesPerDiff, featureResultRemoved);
+    intersectionResult.info.added_features = featureResultAdded;
   }
   else
   {
@@ -366,6 +447,7 @@ DiffResult intersection(std::vector<DiffResult> diffResults)
         = differentSourceIntersection(addedLinesPerDiff, featureResultAdded);
     intersectionResult.removed_lines = differentSourceIntersection(
         removedLinesPerDiff, featureResultRemoved);
+    intersectionResult.info.removed_features = featureResultRemoved;
   }
   return intersectionResult;
 }
@@ -517,6 +599,8 @@ DiffResult subtraction(std::vector<DiffResult> diffResults)
       = differentSourceSubtraction(addedLinesPerDiff, featureResultAdded);
   subtractionResult.removed_lines
       = differentSourceSubtraction(removedLinesPerDiff, featureResultRemoved);
+  subtractionResult.info.added_features   = featureResultAdded;
+  subtractionResult.info.removed_features = featureResultRemoved;
   return subtractionResult;
 }
 
@@ -546,101 +630,164 @@ std::vector<std::pair<Node*, std::string>>
   return nodesWithColors;
 }
 
+void analyzeFeature(const std::vector<DiffResult>& diffResults,
+                    Configuration                  config,
+                    size_t                         feature)
+{
+  auto filtered { filterDiffResultsByAddedFeatures(diffResults, { feature }) };
+  std::sort(
+      filtered.begin(),
+      filtered.end(),
+      [](const DiffResult& a, const DiffResult& b)
+      { return a.info.added_features.size() <= b.info.added_features.size(); });
+  auto differenceResult { intersection(filtered) };
+
+  if (differenceResult.info.added_features.size() > 1)
+  {
+    std::vector<DiffResult> filteredSubtract { diffResults };
+    for (auto& f : differenceResult.info.added_features)
+    {
+      std::cout << "Hello" << std::endl;
+      if (f == feature)
+      {
+        continue;
+      }
+
+      filteredSubtract
+          = filterDiffResultsByAddedFeatures(filteredSubtract, { f });
+    }
+    auto intersectionSubtract { intersection(filteredSubtract) };
+    differenceResult = subtraction({ differenceResult, intersectionSubtract });
+    if (differenceResult.info.added_features.size() > 1)
+    {
+      std::cout << "Cannot compute feature " << feature << ". Got features "
+                << featuresToString(differenceResult.info.added_features)
+                << std::endl;
+    }
+  }
+
+  std::vector<std::pair<size_t, std::set<size_t>>> tokens;
+  for (auto& line : differenceResult.added_lines)
+  {
+    tokens.push_back({ line.content, line.feature_affiliations });
+  }
+  auto file { filtered[0].info.dest };
+  auto parsedFile { parseFile(file, "cpp") };
+  auto parsedFileRaw { parsedFile.get() };
+  auto matching { matchLCSWithTree<size_t>(tokens, parsedFileRaw) };
+  auto nodesWithColors { addColorsToNodes(matching) };
+  auto rendered { renderFile(file, config, nodesWithColors) };
+
+  std::ofstream outFile("feature" + std::to_string(feature) + ".html");
+  outFile << rendered;
+  outFile.close();
+}
+
+void renderTokensToFile(std::vector<size_t> tokenHashes,
+                        std::string         file,
+                        std::string         featureName,
+                        Configuration       config)
+{
+  std::vector<std::pair<size_t, std::set<size_t>>> tokens;
+  for (auto& hash : tokenHashes)
+  {
+    tokens.push_back({ hash, { 1 } });
+  }
+  auto parsedFile { parseFile(file, "cpp") };
+  auto parsedFileRaw { parsedFile.get() };
+  auto matching { matchLCSWithTree<size_t>(tokens, parsedFileRaw) };
+  auto nodesWithColors { addColorsToNodes(matching) };
+  auto rendered { renderFile(file, config, nodesWithColors) };
+
+  std::ofstream outFile("feature" + featureName + ".html");
+  outFile << rendered;
+  outFile.close();
+}
+
+void test(std::map<std::string, std::unique_ptr<Node>>& parsedFiles,
+          const Configuration&                          config)
+{
+  std::vector<size_t> s1 {};
+  std::vector<size_t> s2 {};
+  std::vector<size_t> s3 {};
+  std::vector<size_t> s4 {};
+  for (auto& lv : parsedFiles["S1"]->getLeafs())
+  {
+    s1.push_back(lv->getSubtreeHash());
+  }
+  for (auto& lv : parsedFiles["S2"]->getLeafs())
+  {
+    s2.push_back(lv->getSubtreeHash());
+  }
+  for (auto& lv : parsedFiles["S3"]->getLeafs())
+  {
+    s3.push_back(lv->getSubtreeHash());
+  }
+  for (auto& lv : parsedFiles["S4"]->getLeafs())
+  {
+    s4.push_back(lv->getSubtreeHash());
+  }
+  auto res1_6 { runDiffs2(s1, s2) };
+  auto res2_6 { runDiffs2(s1, s3) };
+  auto res1_2_5_6 { runDiffs2(s1, s4) };
+  auto res1 { runDiffs2(res2_6, res1_6) };
+  auto res6 { runDiffs2(res1, res1_6) };
+  auto res2 { runDiffs2(res6, res2_6) };
+  auto res1_5 { runDiffs2(res2_6, res1_2_5_6) };
+  auto res5 { runDiffs2(res1, res1_5) };
+
+  renderTokensToFile(res1, "example/rl.hpp", "1", config);
+  renderTokensToFile(res2, "example/rc.hpp", "2", config);
+  renderTokensToFile(res6, "example/rl.hpp", "6", config);
+  renderTokensToFile(res5, "example/rcl.hpp", "5", config);
+  renderTokensToFile(res1_5, "example/rcl.hpp", "1_5", config);
+}
+
+void test2(std::map<std::string, std::unique_ptr<Node>>& parsedFiles,
+           const Configuration&                          config)
+{
+  auto res { diffTrees(parsedFiles["S1"].get(), parsedFiles["S2"].get()) };
+
+  for (auto& edit : res)
+  {
+    auto lineStart { (edit.type == Edit::Insert ? "+ " : "- ") };
+    // auto leaves { edit.node->getLeafs() };
+    // for (auto& leaf : leaves)
+    // {
+    //   std::cout << lineStart << leaf->getTsText() << std::endl;
+    // }
+    if (edit.node->isLeaf())
+    {
+      std::cout << lineStart << edit.node->getTsText() << std::endl;
+    }
+  }
+}
+
 void analyzeFeatures(const std::vector<DiffResult>& diffResults,
                      Configuration                  config)
 {
-  // Feature 6
-  auto                filtered { filterDiffResultsBySrcSystem(
-      filterDiffResultsByAddedFeature(diffResults, 6), "example/r.hpp") };
-  auto                intersection6 { intersection(filtered) };
-  std::vector<size_t> tokens6;
-  for (auto& line : intersection6.added_lines)
-  {
-    tokens6.push_back(line.content);
-  }
+  // Start with or-features
+  // const auto& or_features { config.featureInfo.or_ };
+  // for (size_t i { or_features.size() }; i >= 1; i--)
+  // {
+  //   auto current_i { i - 1 };
+  //   auto current_feature { or_features[current_i] };
+  // }
 
-  // Feature 1
-  auto filtered1 { filterDiffResultsBySrcSystem(
-      filterDiffResultsByAddedFeature(diffResults, 1), "example/r.hpp") };
-  auto intersection1 { intersection(filtered1) };
-  auto subtraction1 = subtraction({ intersection1, intersection6 });
-  std::vector<std::pair<size_t, std::set<size_t>>> tokens1;
-  for (auto& line : subtraction1.added_lines)
-  {
-    tokens1.push_back({ line.content, line.feature_affiliations });
-  }
-  auto parsedFile1 { parseFile("example/rl.hpp", "cpp") };
-  auto parsedFileRaw1 { parsedFile1.get() };
-  auto matching1 { matchLCSWithTree<size_t>(tokens1, parsedFileRaw1) };
-  auto nodesWithColors1 { addColorsToNodes(matching1) };
-  auto rendered1 { renderFile("example/rl.hpp", config, nodesWithColors1) };
+  // test(diffResults, config);
+  // test2(diffResults, config);
 
-  // Feature 2
-  auto filtered2 { filterDiffResultsBySrcSystem(
-      filterDiffResultsByAddedFeature(diffResults, 2), "example/r.hpp") };
-  auto intersection2 { intersection(filtered2) };
-  auto subtraction2 = subtraction({ intersection2, intersection6 });
-  std::vector<std::pair<size_t, std::set<size_t>>> tokens2;
-  for (auto& line : subtraction2.added_lines)
-  {
-    tokens2.push_back({ line.content, line.feature_affiliations });
-  }
-  auto parsedFile2 { parseFile("example/rc.hpp", "cpp") };
-  auto parsedFileRaw2 { parsedFile2.get() };
-  auto matching2 { matchLCSWithTree<size_t>(tokens2, parsedFileRaw2) };
-  auto nodesWithColors2 { addColorsToNodes(matching2) };
-  auto rendered2 { renderFile("example/rc.hpp", config, nodesWithColors2) };
-
-  // Feature 4
-  auto filtered4 { filterDiffResultsBySrcSystem(
-      filterDiffResultsByAddedFeature(diffResults, 4), "example/rc.hpp") };
-  auto intersection4 { intersection(filtered4) };
-  std::vector<std::pair<size_t, std::set<size_t>>> tokens4;
-  for (auto& line : intersection4.added_lines)
-  {
-    tokens4.push_back({ line.content, line.feature_affiliations });
-  }
-  auto parsedFile4 { parseFile("example/r.hpp", "cpp") };
-  auto parsedFileRaw4 { parsedFile4.get() };
-  auto matching4 { matchLCSWithTree<size_t>(tokens4, parsedFileRaw4) };
-  auto nodesWithColors4 { addColorsToNodes(matching4) };
-  auto rendered4 { renderFile("example/r.hpp", config, nodesWithColors4) };
-
-  // Feature 5
-  auto filtered5 { filterDiffResultsByAddedFeature(diffResults, 5) };
-  auto intersection5 { intersection(filtered5) };
-  std::vector<std::pair<size_t, std::set<size_t>>> tokens5;
-  for (auto& line : intersection5.added_lines)
-  {
-    tokens5.push_back({ line.content, line.feature_affiliations });
-  }
-  std::cout << "Number of tokens for feature 5: " << tokens5.size()
-            << std::endl;
-  std::cout << "Number of tokens for feature 6: " << tokens6.size()
-            << std::endl;
-  auto parsedFile5 { parseFile("example/rcl.hpp", "cpp") };
-  auto parsedFileRaw5 { parsedFile5.get() };
-  auto matching5 { matchLCSWithTree<size_t>(tokens5, parsedFileRaw5) };
-  auto nodesWithColors5 { addColorsToNodes(matching5) };
-  auto rendered5 { renderFile("example/rcl.hpp", config, nodesWithColors5) };
-
-  // write rendered to test.html
-  std::ofstream outFile("test.html");
-  outFile << rendered1;
-  outFile.close();
-
-  std::ofstream outFile2("test2.html");
-  outFile2 << rendered2;
-  outFile2.close();
-
-  std::ofstream outFile4("test4.html");
-  outFile4 << rendered4;
-  outFile4.close();
-
-  std::ofstream outFile5("test5.html");
-  outFile5 << rendered5;
-  outFile5.close();
+  // analyzeFeature(diffResults, config, 1);
+  // analyzeFeature(diffResults, config, 2);
+  // analyzeFeature(diffResults, config, 3);
+  // analyzeFeature(diffResults, config, 4);
+  // analyzeFeature(diffResults, config, 5);
+  // analyzeFeature(diffResults, config, 6);
+  // analyzeFeature(diffResults, config, 7);
+  // analyzeFeature(diffResults, config, 8);
 }
+
+void analyzeFeaturesDiff() { }
 
 std::map<std::string, std::unique_ptr<Node>>
     parseFiles(const NamePathMappings& npms)
@@ -687,16 +834,6 @@ std::vector<DiffInfo>
   return diffs;
 }
 
-std::string featuresToString(std::set<size_t> s)
-{
-  std::string result;
-  for (auto& el : s)
-  {
-    result += std::to_string(el) + " ";
-  }
-  return result;
-}
-
 void renderDiffInfos(std::vector<DiffInfo> diffs)
 {
   for (auto& diff : diffs)
@@ -717,9 +854,11 @@ void featureLocation(Configuration config)
   auto diffs { buildDiffInfos(namePathMappings, parsedFiles) };
   renderDiffInfos(diffs);
 
-  // 2. Run the diffinfos
-  auto diffResults { runDiffs(diffs) };
+  test2(parsedFiles, config);
 
-  // 3. Analyze the features starting with or
-  analyzeFeatures(diffResults, config);
+  // // 2. Run the diffinfos
+  // auto diffResults { runDiffs(diffs) };
+  //
+  // // 3. Analyze the features starting with or
+  // analyzeFeatures(diffResults, config);
 }

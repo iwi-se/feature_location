@@ -77,6 +77,7 @@ class Node
     size_t                          structuralSimilarity {};
     void setFeatureAFfiliations(const std::set<size_t> &featureAffiliations);
     std::set<size_t> getFeatureAffiliations();
+    std::string      getNodeRep();
   private:
     Node                              *parent { nullptr };
     std::vector<std::unique_ptr<Node>> children {};

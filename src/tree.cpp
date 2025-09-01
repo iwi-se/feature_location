@@ -374,3 +374,15 @@ std::set<size_t> Node::getFeatureAffiliations()
 {
   return this->featureAffiliations;
 }
+
+std::string Node::getNodeRep()
+{
+  if (this->isLeaf())
+  {
+    return this->getTsText();
+  }
+  else
+  {
+    return this->getTag();
+  }
+}

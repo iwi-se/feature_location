@@ -407,7 +407,7 @@ LCSResult<T> lcs(const std::vector<T> &a, const std::vector<T> &b)
     {
       if (a[i - 1] == b[j - 1])
       {
-        size_t weight { 20ul - std::min(tokenCount[a[i - 1]], 19ul) };
+        size_t weight { 5ul - std::min(tokenCount[a[i - 1]], 4ul) };
         dp[i][j] = dp[i - 1][j - 1] + weight;
       }
       else

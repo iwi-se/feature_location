@@ -18,6 +18,14 @@ struct System
     std::set<size_t>         containedFeatures;
 };
 
+struct FeatureInfo
+{
+    std::vector<size_t> or_;
+    std::vector<size_t> and_;
+    std::vector<size_t> not_;
+    std::vector<size_t> f_;
+};
+
 using NamePathMappings = std::map<std::string, System>;
 
 class Options
@@ -60,6 +68,7 @@ class Configuration
     Options               options;
     bool fileExtensionMatchesLanguage(const std::filesystem::path &path) const;
     NamePathMappings getNamePathMappings() const;
+    FeatureInfo      featureInfo;
   private:
     std::string                       action;
     NamePathMappings                  namePathMappings;

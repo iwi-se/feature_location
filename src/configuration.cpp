@@ -30,6 +30,11 @@ Configuration::Configuration(const std::string &filename)
     };
   }
 
+  featureInfo.or_  = config["feature_info"]["or"].as<std::vector<size_t>>();
+  featureInfo.and_ = config["feature_info"]["and"].as<std::vector<size_t>>();
+  featureInfo.not_ = config["feature_info"]["not"].as<std::vector<size_t>>();
+  featureInfo.f_   = config["feature_info"]["f"].as<std::vector<size_t>>();
+
   options.minimumTraceWeight
       = config["options"]["minimum_trace_weight"].as<int>();
   options.onlyNamedNodes = config["options"]["only_named_nodes"].as<bool>();
