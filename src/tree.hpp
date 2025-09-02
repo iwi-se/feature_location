@@ -74,7 +74,7 @@ class Node
 
     void setNodeTypes(const std::vector<std::string> &types);
     const std::vector<std::string> &getNodeTypes() const;
-    size_t                          structuralSimilarity {};
+    size_t                          weight {};
     void setFeatureAFfiliations(const std::set<size_t> &featureAffiliations);
     std::set<size_t> getFeatureAffiliations();
     std::string      getNodeRep();

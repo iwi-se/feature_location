@@ -1,0 +1,85 @@
+action: feature_location
+feature_info:
+  or: [6]
+  and: [5]
+  not: [3,4]
+  f: [1,2]
+name-path-mappings:
+  # - name: S1
+  #   paths: [example/r.hpp]
+  #   contained_features: [3, 4]
+  # - name: S2
+  #   paths: [example/rl.hpp]
+  #   contained_features: [1,4,6]
+  # - name: S3
+  #   paths: [example/rc.hpp]
+  #   contained_features: [2,3,6]
+  # - name: S4
+  #   paths: [example/rcl.hpp]
+  #   contained_features: [1,2,5,6]
+  - name: S1
+    paths: [example/r.hpp]
+    contained_features: [3, 4]
+  - name: S2
+    paths: [example/rl.hpp]
+    contained_features: [1,4,6]
+  - name: S3
+    paths: [example/rc.hpp]
+    contained_features: [2,3,6]
+  - name: S4
+    paths: [example/rcl.hpp]
+    contained_features: [1,2,5,6]
+options:
+  minimum_trace_weight: 1
+  only_named_nodes: true
+  language: cpp
+  debug: false
+  only_specific_nodes:
+    node_types_file: "node_types_cpp.json"
+    node_types: [
+      "statement",
+      "expression",
+      "declaration",
+      "type_specifier",
+      "function_definition",
+      "preproc_include"
+    ]
+expressions:
+  - left-side: [S2, S8]
+    right-side: [S3, S5]
+    labels:
+      - logging_1
+      - logging
+      - F
+  - left-side: [S2, S8]
+    right-side: [S1, S7]
+    labels:
+      - logging_2
+      - logging
+      - F
+  - left-side: [S3, S8]
+    right-side: [S1, S6]
+    labels:
+      - checked
+      - F
+  - left-side: [S5, S6]
+    right-side: [S1, S4]
+    labels:
+      - iterative
+      - F
+  - left-side: [S7]
+    right-side: [S3, S5]
+    labels:
+      - checked_and_iterative
+      - F
+  - left-side: [S2, S7]
+    right-side: [S1, S5]
+    labels:
+      - logging_or_checked
+      - O
+  - left-side: [S1, S2, S3, S4]
+    right-side: []
+    labels:
+      - test
+run:
+  - test
